@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Receipt Processor
 
 An advanced expense processing system that automatically processes receipts from Gmail, matches them with transactions, and exports the results to Google Sheets.
@@ -134,3 +135,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Support
 
 For support, please open an issue in the GitHub repository. 
+=======
+# RECEIPT-PROCESSOR
+>>>>>>> ccd7f3feee2087d9614a598559618c52abf6abc5
