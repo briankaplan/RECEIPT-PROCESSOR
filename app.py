@@ -1,4 +1,3 @@
-
 from flask import Flask, request, render_template, jsonify, send_file
 from pymongo import MongoClient
 from datetime import datetime
@@ -8,33 +7,21 @@ import csv
 from dotenv import load_dotenv
 from io import StringIO
 
-# Load environment variables
-load_dotenv()
-
-# Logger setup
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# App setup
-app = Flask(__name__)
-app.config["UPLOAD_FOLDER"] = "downloads"
-os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
-os.makedirs("data", exist_ok=True)
-
-# MongoDB setup
-mongo = MongoClient(os.getenv("MONGO_URI"))
-db = mongo.get_database()
-
-# Import internal components
 from multi_gmail_client import MultiGmailClient
 from receipt_downloader import ReceiptDownloader
 from huggingface_client import HuggingFaceClient
 from bank_matcher import BankMatcher
 from mongo_client import MongoDBClient
-from config import Config
 from teller_client import TellerClient
+from config import Config
 
-# App config
+# Load env
+load_dotenv()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Flask setup
+app = Flask(__name__)
 app.config.from_object(Config)
 
 # Clients
@@ -42,6 +29,8 @@ gmail_client = MultiGmailClient()
 mongo_client = MongoDBClient()
 huggingface_client = HuggingFaceClient()
 bank_matcher = BankMatcher()
+mongo = MongoClient(os.getenv("MONGO_URI"))
+db = mongo.get_database()
 
 @app.route("/connect")
 def connect_page():
@@ -53,10 +42,8 @@ def save_token():
     token = data.get("accessToken")
     user_id = data.get("userId")
     enrollment_id = data.get("enrollmentId")
-
     if not token or not user_id:
         return jsonify({"error": "Missing fields"}), 400
-
     db.teller_tokens.update_one(
         {"userId": user_id},
         {"$set": {
@@ -71,51 +58,33 @@ def save_token():
 @app.route("/teller/accounts", methods=["GET"])
 def get_accounts():
     user_id = request.args.get("userId")
-    if not user_id:
-        return jsonify({"error": "Missing userId"}), 400
-
     rec = db.teller_tokens.find_one({"userId": user_id})
     if not rec:
         return jsonify({"error": "No access token found"}), 404
-
     tc = TellerClient(access_token=rec["accessToken"])
-    try:
-        accounts = tc.get_accounts()
-        return jsonify({"accounts": accounts})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    return jsonify({"accounts": tc.get_accounts()})
 
 @app.route("/teller/transactions", methods=["GET"])
 def get_transactions():
     user_id = request.args.get("userId")
-    if not user_id:
-        return jsonify({"error": "Missing userId"}), 400
-
     rec = db.teller_tokens.find_one({"userId": user_id})
     if not rec:
-        return jsonify({"error": "No access token found"}), 404
-
+        return jsonify({"error": "No token found"}), 404
     tc = TellerClient(access_token=rec["accessToken"])
-    try:
-        all_tx = []
-        for acct in tc.get_accounts():
-            tx = tc.get_transactions(account_id=acct["id"])
-            all_tx.extend(tx)
-        return jsonify({"transactions": all_tx})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    all_tx = []
+    for acct in tc.get_accounts():
+        tx = tc.get_transactions(account_id=acct["id"])
+        all_tx.extend(tx)
+    return jsonify({"transactions": all_tx})
 
 @app.route("/match-all", methods=["GET"])
 def match_all_receipts_to_teller():
     try:
         messages = gmail_client.fetch_receipt_metadata_parallel(days=30)
-        account_email = 'brian@downhome.com'
-        service = gmail_client.accounts[account_email]["service"]
-
+        service = gmail_client.accounts['brian@downhome.com']["service"]
         downloader = ReceiptDownloader(ocr_processor=huggingface_client)
         parsed_receipts = downloader.download_and_process_attachments_parallel(
-            service=service,
-            messages=messages[:15]
+            service=service, messages=messages[:15]
         )
 
         user_id = request.args.get("userId", "default")
@@ -132,11 +101,7 @@ def match_all_receipts_to_teller():
         for receipt in parsed_receipts:
             matches = bank_matcher.find_matches(receipt, transactions)
             summary = bank_matcher.generate_summary_report(matches)
-            record = {
-                "receipt": receipt,
-                "matches": matches,
-                "summary": summary
-            }
+            record = {"receipt": receipt, "matches": matches, "summary": summary}
             if mongo_client.is_connected():
                 mongo_client.save_match_result(record)
             results.append(record)
@@ -185,4 +150,6 @@ def export_csv():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    os.makedirs("downloads", exist_ok=True)
+    os.makedirs("data", exist_ok=True)
+    app.run(host="0.0.0.0", port=5000, debug=True) 

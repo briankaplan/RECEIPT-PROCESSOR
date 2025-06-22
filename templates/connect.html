@@ -7,13 +7,12 @@
     <script src="https://cdn.teller.io/connect/connect.js"></script>
     <script>
       var tellerConnect = TellerConnect.setup({
-        applicationId: "app_pbvpiocruhfnvkhf1k000",
-        environment: "sandbox", // or "development", "production"
+        applicationId: "YOUR_TELLER_APP_ID",
+        environment: "production", // or "development" or "sandbox"
         products: ["accounts", "transactions"],
         onSuccess: function(enrollment) {
-          // Enrollment contains accessToken
           fetch("/teller/save-token", {
-           method: "POST",
+            method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               accessToken: enrollment.accessToken,
