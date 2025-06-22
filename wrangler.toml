@@ -1,0 +1,15 @@
+name = "receipt-worker"
+type = "javascript"
+
+account_id = "33950783df90825d4b885322a8ea2f2f"
+workers_dev = true
+compatibility_date = "2024-06-22"
+
+main = "src/index.js"
+
+r2_buckets = [
+  { binding = "RECEIPT_BUCKET", bucket_name = "your-r2-bucket" }
+]
+
+[env.production]
+routes = ["https://yourdomain.com/*"]

@@ -1,0 +1,707 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Gmail Receipt Processor{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">Gmail Receipt Processor Dashboard</h1>
+    </div>
+</div>
+
+<!-- Connection Status Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5>Gmail Accounts</h5>
+                        <h2 id="gmail-accounts">{{ stats.authenticated_accounts }}/{{ stats.total_accounts }}</h2>
+                        <small>Connected</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i data-feather="mail" size="32"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card" id="mongo-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5>MongoDB</h5>
+                        <h2 id="mongo-status">{{ 'Connected' if stats.mongo_connected else 'Disconnected' }}</h2>
+                        <small>Database</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i data-feather="database" size="32"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card" id="r2-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5>R2 Storage</h5>
+                        <h2 id="r2-status">{{ 'Connected' if stats.r2_connected else 'Disconnected' }}</h2>
+                        <small>File Storage</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i data-feather="cloud" size="32"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card" id="sheets-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5>Google Sheets</h5>
+                        <h2 id="sheets-status">{{ 'Connected' if stats.sheets_connected else 'Disconnected' }}</h2>
+                        <small>Export</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i data-feather="file-text" size="32"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Features Row -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card" id="ai-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5>AI Categorization</h5>
+                        <h2 id="ai-status">{{ 'Connected' if stats.ai_connected else 'Disconnected' }}</h2>
+                        <small>Intelligent Receipt Analysis</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i data-feather="cpu" size="32"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card bg-gradient-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5>AI Features</h5>
+                        <ul class="list-unstyled mb-0">
+                            <li><i data-feather="check" size="16"></i> Smart Expense Categorization</li>
+                            <li><i data-feather="check" size="16"></i> Business Purpose Detection</li>
+                            <li><i data-feather="check" size="16"></i> Tax Deductibility Analysis</li>
+                            <li><i data-feather="check" size="16"></i> Merchant Type Classification</li>
+                        </ul>
+                    </div>
+                    <div class="align-self-center">
+                        <i data-feather="zap" size="32"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Teller Bank Integration Row -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card" id="teller-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5>Live Bank Feed</h5>
+                        <h2 id="teller-status">{{ 'Connected' if stats.teller_connected else 'Disconnected' }}</h2>
+                        <small id="bank-accounts-count">{{ stats.bank_accounts }} accounts</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i data-feather="credit-card" size="32"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card bg-gradient-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5>Bank Features</h5>
+                        <ul class="list-unstyled mb-0">
+                            <li><i data-feather="calendar" size="16"></i> Live Transaction Feeds</li>
+                            <li><i data-feather="search" size="16"></i> Intelligent Receipt Matching</li>
+                            <li><i data-feather="clock" size="16"></i> Historical Data Access</li>
+                            <li><i data-feather="link" size="16"></i> Auto-Match Future Charges</li>
+                        </ul>
+                    </div>
+                    <div class="align-self-center">
+                        <i data-feather="trending-up" size="32"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5>Processed Emails</h5>
+                        <h2 id="processed-count">{{ stats.processed_count }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i data-feather="check-circle" size="32"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5>Receipts Found</h5>
+                        <h2 id="receipts-count">{{ stats.receipts_count }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i data-feather="file" size="32"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5>Bank Statements</h5>
+                        <h2 id="bank-count">{{ stats.bank_statements }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i data-feather="credit-card" size="32"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5>Failed Emails</h5>
+                        <h2 id="failed-count">{{ stats.failed_count }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i data-feather="x-circle" size="32"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <button id="scan-btn" class="btn btn-outline-primary btn-lg w-100">
+                            <i data-feather="search"></i>
+                            Scan Gmail
+                        </button>
+                        <small class="text-muted">Scan for new emails with attachments</small>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <button id="process-btn" class="btn btn-primary btn-lg w-100">
+                            <i data-feather="play"></i>
+                            Process Receipts
+                        </button>
+                        <small class="text-muted">Download and process receipt attachments</small>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <button id="upload-btn" class="btn btn-outline-success btn-lg w-100" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                            <i data-feather="upload"></i>
+                            Upload Bank Data
+                        </button>
+                        <small class="text-muted">Upload bank statement JSON file</small>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <button id="export-btn" class="btn btn-outline-info btn-lg w-100">
+                            <i data-feather="file-text"></i>
+                            Export to Sheets
+                        </button>
+                        <small class="text-muted">Export receipt data to Google Sheets</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bank Transactions Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Live Bank Transactions & Intelligent Matching</h5>
+            </div>
+            <div class="card-body">
+                <!-- Date Range Selector -->
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label for="startDate" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="startDate" value="">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="endDate" class="form-label">End Date</label>
+                        <input type="date" class="form-control" id="endDate" value="">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="bankAccount" class="form-label">Bank Account</label>
+                        <select class="form-select" id="bankAccount">
+                            <option value="">All Accounts</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button id="load-transactions-btn" class="btn btn-primary me-2">
+                            <i data-feather="refresh-cw"></i> Load Transactions
+                        </button>
+                        <button id="match-receipts-btn" class="btn btn-success">
+                            <i data-feather="link"></i> Match Receipts
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Bank Accounts Display -->
+                <div id="bank-accounts-section" class="mb-3" style="display: none;">
+                    <h6>Connected Bank Accounts</h6>
+                    <div id="bank-accounts-list" class="row"></div>
+                </div>
+                
+                <!-- Transactions Table -->
+                <div id="transactions-section" style="display: none;">
+                    <h6>Bank Transactions</h6>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Description</th>
+                                    <th>Merchant</th>
+                                    <th>Amount</th>
+                                    <th>Category</th>
+                                    <th>Account</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactions-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Receipt Matches Display -->
+                <div id="matches-section" style="display: none;">
+                    <h6>Intelligent Receipt Matches</h6>
+                    <div id="matches-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Additional Receipt Capture Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Additional Receipt Capture Methods</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <button id="google-photos-btn" class="btn btn-outline-success btn-lg w-100">
+                            <i data-feather="camera"></i>
+                            Scan Google Photos
+                        </button>
+                        <small class="text-muted">Find receipts in Google Photos</small>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <button id="camera-capture-btn" class="btn btn-outline-primary btn-lg w-100" data-bs-toggle="modal" data-bs-target="#cameraModal">
+                            <i data-feather="smartphone"></i>
+                            Camera Capture
+                        </button>
+                        <small class="text-muted">Take photo of receipt</small>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <button id="batch-upload-btn" class="btn btn-outline-warning btn-lg w-100" data-bs-toggle="modal" data-bs-target="#batchUploadModal">
+                            <i data-feather="upload-cloud"></i>
+                            Batch Upload
+                        </button>
+                        <small class="text-muted">Upload multiple receipt images</small>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <button id="comprehensive-export-btn" class="btn btn-outline-info btn-lg w-100">
+                            <i data-feather="file-text"></i>
+                            Comprehensive Export
+                        </button>
+                        <small class="text-muted">Export all data with exact fields</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Camera Capture Modal -->
+<div class="modal fade" id="cameraModal" tabindex="-1" aria-labelledby="cameraModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cameraModalLabel">Camera Receipt Capture</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center">
+                    <video id="camera-video" width="100%" height="300" autoplay style="display: none;"></video>
+                    <canvas id="camera-canvas" width="100%" height="300" style="display: none;"></canvas>
+                    <div id="camera-placeholder" class="p-4 border rounded">
+                        <i data-feather="camera" size="48"></i>
+                        <p class="mt-2">Click "Start Camera" to begin</p>
+                    </div>
+                </div>
+                <div class="mt-3 text-center">
+                    <button id="start-camera-btn" class="btn btn-primary">Start Camera</button>
+                    <button id="capture-photo-btn" class="btn btn-success" style="display: none;">Capture Photo</button>
+                    <button id="retake-photo-btn" class="btn btn-warning" style="display: none;">Retake</button>
+                    <button id="save-photo-btn" class="btn btn-info" style="display: none;">Save & Process</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Batch Upload Modal -->
+<div class="modal fade" id="batchUploadModal" tabindex="-1" aria-labelledby="batchUploadModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="batchUploadModalLabel">Batch Receipt Upload</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="batch-upload-form" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="batch-files" class="form-label">Select Receipt Images</label>
+                        <input type="file" class="form-control" id="batch-files" name="files" multiple accept="image/*,.pdf">
+                        <div class="form-text">Select multiple image files (PNG, JPG, PDF). Maximum 10MB per file.</div>
+                    </div>
+                    <div id="file-preview" class="row"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="upload-batch-btn" class="btn btn-primary">Upload & Process</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Results Section -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Processing Results</h5>
+            </div>
+            <div class="card-body">
+                <div id="results-area">
+                    <p class="text-muted text-center">Click "Scan Gmail" or "Process Receipts" to see results here.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Upload Bank Statement Data</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="upload-form" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="bank-file" class="form-label">Bank Statement JSON File</label>
+                        <input type="file" class="form-control" id="bank-file" accept=".json" required>
+                        <div class="form-text">
+                            Upload a JSON file containing bank statement data. Expected format:
+                            <code>[{"date": "2023-01-15", "amount": -25.50, "description": "Coffee Shop"}]</code>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="upload-submit" class="btn btn-primary">Upload</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Processing Modal -->
+<div class="modal fade" id="processingModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Processing...</h5>
+            </div>
+            <div class="modal-body text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-3" id="processing-message">Please wait while we process your request...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const scanBtn = document.getElementById('scan-btn');
+    const processBtn = document.getElementById('process-btn');
+    const uploadSubmit = document.getElementById('upload-submit');
+    const exportBtn = document.getElementById('export-btn');
+    const processingModal = new bootstrap.Modal(document.getElementById('processingModal'));
+    const uploadModal = new bootstrap.Modal(document.getElementById('uploadModal'));
+    
+    // Scan Gmail
+    scanBtn.addEventListener('click', function() {
+        showProcessing('Scanning Gmail for emails with attachments...');
+        
+        fetch('/api/scan_emails')
+            .then(response => response.json())
+            .then(data => {
+                hideProcessing();
+                if (data.success) {
+                    showResults('scan', data);
+                    showAlert('success', `Found ${data.new_emails} new emails with attachments out of ${data.total_emails} total emails.`);
+                } else {
+                    showAlert('danger', 'Error scanning emails: ' + data.error);
+                }
+            })
+            .catch(error => {
+                hideProcessing();
+                showAlert('danger', 'Network error: ' + error.message);
+            });
+    });
+    
+    // Process Receipts
+    processBtn.addEventListener('click', function() {
+        showProcessing('Processing receipt attachments...');
+        
+        fetch('/api/process_receipts', {
+            method: 'POST'
+        })
+            .then(response => response.json())
+            .then(data => {
+                hideProcessing();
+                if (data.success) {
+                    showResults('process', data.results);
+                    showAlert('success', `Processed ${data.results.processed} emails, found ${data.results.receipts_found} receipts.`);
+                    updateStats();
+                } else {
+                    showAlert('danger', 'Error processing receipts: ' + data.error);
+                }
+            })
+            .catch(error => {
+                hideProcessing();
+                showAlert('danger', 'Network error: ' + error.message);
+            });
+    });
+    
+    // Upload Bank Data
+    uploadSubmit.addEventListener('click', function() {
+        const fileInput = document.getElementById('bank-file');
+        const file = fileInput.files[0];
+        
+        if (!file) {
+            showAlert('warning', 'Please select a file to upload.');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        uploadModal.hide();
+        showProcessing('Uploading bank statement data...');
+        
+        fetch('/api/upload_bank_statements', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                hideProcessing();
+                if (data.success) {
+                    showAlert('success', data.message);
+                    updateStats();
+                    fileInput.value = '';
+                } else {
+                    showAlert('danger', 'Error uploading file: ' + data.error);
+                }
+            })
+            .catch(error => {
+                hideProcessing();
+                showAlert('danger', 'Network error: ' + error.message);
+            });
+    });
+    
+    function showProcessing(message) {
+        document.getElementById('processing-message').textContent = message;
+        processingModal.show();
+    }
+    
+    function hideProcessing() {
+        processingModal.hide();
+    }
+    
+    function showResults(type, data) {
+        const resultsArea = document.getElementById('results-area');
+        
+        if (type === 'scan') {
+            let html = `<h6>Scan Results</h6>`;
+            html += `<p>Total emails: ${data.total_emails}, New emails: ${data.new_emails}</p>`;
+            
+            if (data.emails && data.emails.length > 0) {
+                html += `<div class="table-responsive">`;
+                html += `<table class="table table-sm">`;
+                html += `<thead><tr><th>Subject</th><th>Sender</th><th>Date</th></tr></thead><tbody>`;
+                
+                data.emails.forEach(email => {
+                    html += `<tr>`;
+                    html += `<td>${escapeHtml(email.subject)}</td>`;
+                    html += `<td>${escapeHtml(email.sender)}</td>`;
+                    html += `<td>${escapeHtml(email.date)}</td>`;
+                    html += `</tr>`;
+                });
+                
+                html += `</tbody></table></div>`;
+            }
+            
+            resultsArea.innerHTML = html;
+        } else if (type === 'process') {
+            let html = `<h6>Processing Results</h6>`;
+            html += `<p>Processed: ${data.processed}, Failed: ${data.failed}, Receipts found: ${data.receipts_found}</p>`;
+            
+            if (data.details && data.details.length > 0) {
+                html += `<div class="accordion" id="resultsAccordion">`;
+                
+                data.details.forEach((detail, index) => {
+                    html += `<div class="accordion-item">`;
+                    html += `<h2 class="accordion-header" id="heading${index}">`;
+                    html += `<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${index}">`;
+                    html += `${escapeHtml(detail.filename)} - ${detail.matches.length} matches`;
+                    html += `</button></h2>`;
+                    html += `<div id="collapse${index}" class="accordion-collapse collapse" data-bs-parent="#resultsAccordion">`;
+                    html += `<div class="accordion-body">`;
+                    
+                    if (detail.receipt_data) {
+                        html += `<h6>Receipt Data:</h6>`;
+                        html += `<ul>`;
+                        if (detail.receipt_data.merchant) html += `<li>Merchant: ${escapeHtml(detail.receipt_data.merchant)}</li>`;
+                        if (detail.receipt_data.date) html += `<li>Date: ${escapeHtml(detail.receipt_data.date)}</li>`;
+                        if (detail.receipt_data.total_amount) html += `<li>Amount: $${detail.receipt_data.total_amount.toFixed(2)}</li>`;
+                        html += `</ul>`;
+                    }
+                    
+                    if (detail.matches.length > 0) {
+                        html += `<h6>Bank Statement Matches:</h6>`;
+                        detail.matches.forEach(match => {
+                            html += `<div class="alert alert-info">`;
+                            html += `<strong>Confidence: ${(match.confidence * 100).toFixed(1)}%</strong><br>`;
+                            html += `Description: ${escapeHtml(match.transaction.description || 'N/A')}<br>`;
+                            html += `Amount: $${Math.abs(match.transaction.amount || 0).toFixed(2)}<br>`;
+                            html += `Date: ${escapeHtml(match.transaction.date || 'N/A')}`;
+                            if (match.match_reasons && match.match_reasons.length > 0) {
+                                html += `<br>Reasons: ${match.match_reasons.join(', ')}`;
+                            }
+                            html += `</div>`;
+                        });
+                    }
+                    
+                    html += `</div></div></div>`;
+                });
+                
+                html += `</div>`;
+            }
+            
+            resultsArea.innerHTML = html;
+        }
+    }
+    
+    function updateStats() {
+        fetch('/api/status')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('processed-count').textContent = data.status.processed_emails;
+                    document.getElementById('failed-count').textContent = data.status.failed_emails;
+                    document.getElementById('bank-count').textContent = data.status.bank_statements;
+                    document.getElementById('files-count').textContent = data.status.downloaded_files;
+                }
+            });
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+});
+</script>
+{% endblock %}

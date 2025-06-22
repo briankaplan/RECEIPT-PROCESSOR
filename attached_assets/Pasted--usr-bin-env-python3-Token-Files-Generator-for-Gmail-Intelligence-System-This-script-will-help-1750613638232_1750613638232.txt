@@ -1,0 +1,248 @@
+#!/usr/bin/env python3
+“””
+Token Files Generator for Gmail Intelligence System
+This script will help you generate and refresh all required token files
+“””
+
+import os
+import pickle
+import json
+from pathlib import Path
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+from googleapiclient.discovery import build
+
+# Gmail API scopes
+
+SCOPES = [
+‘https://www.googleapis.com/auth/gmail.readonly’,
+‘https://www.googleapis.com/auth/gmail.modify’,
+‘https://www.googleapis.com/auth/gmail.send’
+]
+
+class TokenGenerator:
+def **init**(self):
+self.accounts = {
+‘kaplan.brian@gmail.com’: {
+‘email’: ‘kaplan.brian@gmail.com’,
+‘pickle_file’: ‘gmail_tokens/kaplan.brian_at_gmail.com.pickle’,
+‘client_file’: ‘gmail_tokens/kaplan.brian_at_gmail.com_token.json’,
+‘port’: 8080
+},
+‘brian@downhome.com’: {
+‘email’: ‘brian@downhome.com’,
+‘pickle_file’: ‘gmail_tokens/brian_at_downhome.com.pickle’,
+‘client_file’: ‘gmail_tokens/brian_at_downhome.com_token.json’,
+‘port’: 8082
+},
+‘brian@musiccityrodeo.com’: {
+‘email’: ‘brian@musiccityrodeo.com’,
+‘pickle_file’: ‘gmail_tokens/brian_at_musiccityrodeo.com.pickle’,
+‘client_file’: ‘gmail_tokens/brian_at_musiccityrodeo.com_token.json’,
+‘port’: 8081
+}
+}
+
+```
+    # Create tokens directory if it doesn't exist
+    Path('gmail_tokens').mkdir(exist_ok=True)
+
+def create_credentials_template(self):
+    """Create a template credentials.json file"""
+    template = {
+        "installed": {
+            "client_id": "YOUR_CLIENT_ID.apps.googleusercontent.com",
+            "project_id": "YOUR_PROJECT_ID",
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+            "client_secret": "YOUR_CLIENT_SECRET",
+            "redirect_uris": ["urn:ietf:wg:oauth:2.0:oob", "http://localhost"]
+        }
+    }
+    
+    with open('gmail_tokens/credentials_template.json', 'w') as f:
+        json.dump(template, f, indent=2)
+    
+    print("✅ Created credentials_template.json")
+    print("📝 Please update with your actual Google Cloud Console credentials")
+
+def generate_token_for_account(self, email, credentials_file='gmail_tokens/credentials.json'):
+    """Generate OAuth token for a specific account"""
+    if not os.path.exists(credentials_file):
+        print(f"❌ Credentials file not found: {credentials_file}")
+        print("📝 Please create credentials.json from Google Cloud Console")
+        return False
+    
+    account = self.accounts[email]
+    pickle_file = account['pickle_file']
+    port = account['port']
+    
+    creds = None
+    
+    # Load existing token if available
+    if os.path.exists(pickle_file):
+        with open(pickle_file, 'rb') as token:
+            creds = pickle.load(token)
+            print(f"📁 Loaded existing token for {email}")
+    
+    # Refresh or create new token
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            print(f"🔄 Refreshing token for {email}")
+            creds.refresh(Request())
+        else:
+            print(f"🌐 Creating new token for {email}")
+            print(f"🚀 Browser will open on port {port}")
+            flow = InstalledAppFlow.from_client_secrets_file(
+                credentials_file, SCOPES)
+            creds = flow.run_local_server(port=port)
+        
+        # Save the token
+        with open(pickle_file, 'wb') as token:
+            pickle.dump(creds, token)
+        print(f"💾 Saved token for {email}")
+    
+    # Test the token
+    try:
+        service = build('gmail', 'v1', credentials=creds)
+        profile = service.users().getProfile(userId='me').execute()
+        print(f"✅ Token verified for {email} - {profile['emailAddress']}")
+        return True
+    except Exception as e:
+        print(f"❌ Token verification failed for {email}: {e}")
+        return False
+
+def generate_all_tokens(self):
+    """Generate tokens for all accounts"""
+    print("🚀 Starting token generation for all accounts...")
+    
+    credentials_file = 'gmail_tokens/credentials.json'
+    if not os.path.exists(credentials_file):
+        print(f"❌ Main credentials file not found: {credentials_file}")
+        self.create_credentials_template()
+        return
+    
+    for email in self.accounts.keys():
+        print(f"\n📧 Processing {email}...")
+        success = self.generate_token_for_account(email, credentials_file)
+        if not success:
+            print(f"❌ Failed to generate token for {email}")
+
+def refresh_token(self, email):
+    """Refresh token for specific account"""
+    if email not in self.accounts:
+        print(f"❌ Unknown email: {email}")
+        return False
+    
+    account = self.accounts[email]
+    pickle_file = account['pickle_file']
+    
+    if not os.path.exists(pickle_file):
+        print(f"❌ Token file not found: {pickle_file}")
+        return False
+    
+    try:
+        with open(pickle_file, 'rb') as token:
+            creds = pickle.load(token)
+        
+        if creds.expired and creds.refresh_token:
+            print(f"🔄 Refreshing token for {email}")
+            creds.refresh(Request())
+            
+            with open(pickle_file, 'wb') as token:
+                pickle.dump(creds, token)
+            print(f"✅ Token refreshed for {email}")
+            return True
+        else:
+            print(f"✅ Token for {email} is still valid")
+            return True
+            
+    except Exception as e:
+        print(f"❌ Failed to refresh token for {email}: {e}")
+        return False
+
+def check_all_tokens(self):
+    """Check status of all tokens"""
+    print("🔍 Checking status of all tokens...\n")
+    
+    for email, account in self.accounts.items():
+        pickle_file = account['pickle_file']
+        
+        if os.path.exists(pickle_file):
+            try:
+                with open(pickle_file, 'rb') as token:
+                    creds = pickle.load(token)
+                
+                if creds.valid:
+                    print(f"✅ {email}: Valid token")
+                elif creds.expired:
+                    if creds.refresh_token:
+                        print(f"🔄 {email}: Expired but can refresh")
+                    else:
+                        print(f"❌ {email}: Expired, needs re-authentication")
+                else:
+                    print(f"❓ {email}: Invalid token")
+                    
+            except Exception as e:
+                print(f"❌ {email}: Error reading token - {e}")
+        else:
+            print(f"❌ {email}: No token file found")
+```
+
+def main():
+generator = TokenGenerator()
+
+```
+print("Gmail Token Generator")
+print("===================")
+print()
+print("1. Check all tokens")
+print("2. Generate template credentials file")
+print("3. Generate tokens for all accounts")
+print("4. Generate token for specific account")
+print("5. Refresh token for specific account")
+print()
+
+choice = input("Choose an option (1-5): ").strip()
+
+if choice == '1':
+    generator.check_all_tokens()
+
+elif choice == '2':
+    generator.create_credentials_template()
+
+elif choice == '3':
+    generator.generate_all_tokens()
+
+elif choice == '4':
+    print("\nAvailable accounts:")
+    for i, email in enumerate(generator.accounts.keys(), 1):
+        print(f"{i}. {email}")
+    
+    try:
+        account_choice = int(input("\nChoose account number: ")) - 1
+        email = list(generator.accounts.keys())[account_choice]
+        generator.generate_token_for_account(email)
+    except (ValueError, IndexError):
+        print("❌ Invalid choice")
+
+elif choice == '5':
+    print("\nAvailable accounts:")
+    for i, email in enumerate(generator.accounts.keys(), 1):
+        print(f"{i}. {email}")
+    
+    try:
+        account_choice = int(input("\nChoose account number: ")) - 1
+        email = list(generator.accounts.keys())[account_choice]
+        generator.refresh_token(email)
+    except (ValueError, IndexError):
+        print("❌ Invalid choice")
+
+else:
+    print("❌ Invalid choice")
+```
+
+if **name** == “**main**”:
+main()

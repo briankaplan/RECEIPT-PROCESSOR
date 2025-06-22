@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+  <head><title>Connect Teller</title></head>
+  <body>
+    <h1>Link your bank account</h1>
+    <button id="teller-connect">Connect with Teller</button>
+    <script src="https://cdn.teller.io/connect/connect.js"></script>
+    <script>
+      var tellerConnect = TellerConnect.setup({
+        applicationId: "app_pbvpiocruhfnvkhf1k000",
+        environment: "sandbox", // or "development", "production"
+        products: ["accounts", "transactions"],
+        onSuccess: function(enrollment) {
+          // Enrollment contains accessToken
+          fetch("/teller/save-token", {
+           method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              accessToken: enrollment.accessToken,
+              userId: enrollment.user.id,
+              enrollmentId: enrollment.enrollment.id
+            })
+          })
+          .then(r => r.json())
+          .then(console.log)
+          .catch(console.error);
+        },
+        onExit: function() {
+          console.log("Flow closed by user");
+        }
+      });
+      document.getElementById("teller-connect").onclick = () => tellerConnect.open();
+    </script>
+  </body>
+</html>
