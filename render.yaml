@@ -7,7 +7,7 @@ services:
     plan: free
     region: oregon
     buildCommand: poetry install
-    startCommand: gunicorn app:app
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
     autoDeployTrigger: commit
     healthCheckPath: /status
     branch: main
@@ -29,6 +29,8 @@ services:
         value: INFO
       
       # MongoDB Database
+      - key: MONGO_URI
+        value: "mongodb+srv://kaplanbrian:tixvob-7Nefza-pijtaq@expense.1q8c63f.mongodb.net/?retryWrites=true&w=majority&appName=Expense"
       - key: MONGODB_URI
         value: "mongodb+srv://kaplanbrian:tixvob-7Nefza-pijtaq@expense.1q8c63f.mongodb.net/?retryWrites=true&w=majority&appName=Expense"
       - key: MONGODB_DATABASE
