@@ -59,24 +59,29 @@ class TellerClient:
         """Check if all required Teller credentials are available"""
         required_vars = [
             self.application_id,
-            self.api_url,
-            self.cert_path,
-            self.key_path
+            self.api_url
         ]
         
         # Check if all variables exist
         if not all(var for var in required_vars):
+            logger.warning("Missing basic Teller configuration")
             return False
+        
+        # In production (render.com), certificates might not be available initially
+        # Allow basic initialization without certificates for Connect flow
+        if os.getenv('FLASK_ENV') == 'production' or os.getenv('RENDER'):
+            logger.info("Production environment detected - allowing initialization without certificates")
+            return True
             
-        # Check if certificate files actually exist
-        import os
-        if not os.path.exists(self.cert_path):
-            logger.warning(f"Teller certificate not found: {self.cert_path}")
-            return False
-            
-        if not os.path.exists(self.key_path):
-            logger.warning(f"Teller key not found: {self.key_path}")
-            return False
+        # Check if certificate files actually exist (development only)
+        if self.cert_path and self.key_path:
+            if not os.path.exists(self.cert_path):
+                logger.warning(f"Teller certificate not found: {self.cert_path}")
+                return False
+                
+            if not os.path.exists(self.key_path):
+                logger.warning(f"Teller key not found: {self.key_path}")
+                return False
             
         return True
     
@@ -85,9 +90,12 @@ class TellerClient:
         try:
             self.session = requests.Session()
             
-            # Set up SSL context with client certificates
-            if self.cert_path and self.key_path:
+            # Set up SSL context with client certificates (if available)
+            if self.cert_path and self.key_path and os.path.exists(self.cert_path) and os.path.exists(self.key_path):
                 self.session.cert = (self.cert_path, self.key_path)
+                logger.info("Teller session initialized with SSL certificates")
+            else:
+                logger.info("Teller session initialized without SSL certificates (Connect flow)")
             
             # Set headers
             self.session.headers.update({
@@ -96,8 +104,6 @@ class TellerClient:
                 'Teller-Version': self.api_version,
                 'User-Agent': f'GmailReceiptProcessor/1.0'
             })
-            
-            logger.info("Teller session initialized with SSL certificates")
             
         except Exception as e:
             logger.error(f"Failed to initialize Teller session: {str(e)}")

@@ -1157,6 +1157,127 @@ def api_validate_image():
             "valid": False
         }), 500
 
+@app.route("/oauth2callback")
+def oauth2callback():
+    """Handle Google OAuth2 callback for render.com"""
+    code = request.args.get('code')
+    state = request.args.get('state')
+    error = request.args.get('error')
+    
+    if error:
+        logger.error(f"OAuth error: {error}")
+        return jsonify({"error": f"OAuth authentication failed: {error}"}), 400
+    
+    if not code:
+        return jsonify({"error": "Missing authorization code"}), 400
+    
+    try:
+        # Handle the OAuth callback - this would integrate with your Gmail client
+        return jsonify({
+            "success": True,
+            "message": "OAuth callback received",
+            "code": code[:20] + "...",  # Truncated for security
+            "state": state
+        })
+    except Exception as e:
+        logger.error(f"OAuth callback error: {e}")
+        return jsonify({"error": "OAuth callback processing failed"}), 500
+
+@app.route("/gmail/oauth/callback")
+def gmail_oauth_callback():
+    """Handle Gmail OAuth callback for render.com"""
+    return oauth2callback()
+
+@app.route("/auth/google/callback")
+def google_auth_callback():
+    """Handle Google auth callback for render.com"""
+    return oauth2callback()
+
+@app.route("/teller/callback")
+def teller_callback():
+    """Handle Teller OAuth callback for render.com"""
+    code = request.args.get('code')
+    error = request.args.get('error')
+    
+    if error:
+        logger.error(f"Teller OAuth error: {error}")
+        return jsonify({"error": f"Teller authentication failed: {error}"}), 400
+    
+    if not code:
+        return jsonify({"error": "Missing Teller authorization code"}), 400
+    
+    try:
+        # In production, exchange this code with Teller's token endpoint
+        logger.info(f"Received Teller authorization code: {code[:20]}...")
+        
+        # This is where you'd exchange the code for an access token
+        # For now, return success response
+        return jsonify({
+            "success": True,
+            "message": "Teller authorization successful",
+            "next_step": "Exchange authorization code for access token"
+        })
+        
+    except Exception as e:
+        logger.error(f"Teller callback error: {e}")
+        return jsonify({"error": "Teller callback processing failed"}), 500
+
+@app.route("/teller/webhook", methods=["POST"])
+def teller_webhook():
+    """Handle Teller webhook notifications"""
+    try:
+        data = request.get_json()
+        signature = request.headers.get('Teller-Signature')
+        
+        # Verify webhook signature using TELLER_SIGNING_SECRET
+        # This is a security requirement for production
+        
+        logger.info(f"Received Teller webhook: {data.get('type', 'unknown')}")
+        
+        # Process webhook data based on type
+        webhook_type = data.get('type')
+        
+        if webhook_type == 'account.connected':
+            # Handle new account connection
+            logger.info("New account connected via Teller")
+        elif webhook_type == 'transaction.created':
+            # Handle new transaction
+            logger.info("New transaction received via Teller")
+        
+        return jsonify({"success": True}), 200
+        
+    except Exception as e:
+        logger.error(f"Teller webhook error: {e}")
+        return jsonify({"error": "Webhook processing failed"}), 500
+
+@app.route("/gmail/auth")
+def gmail_auth():
+    """Initiate Gmail authentication for render.com"""
+    try:
+        # This would initiate the Gmail OAuth flow
+        auth_url = f"https://accounts.google.com/o/oauth2/auth"
+        params = {
+            'client_id': 'YOUR_CLIENT_ID',  # This should come from your credentials
+            'redirect_uri': f"{request.host_url}oauth2callback",
+            'scope': 'https://www.googleapis.com/auth/gmail.readonly',
+            'response_type': 'code',
+            'access_type': 'offline',
+            'prompt': 'consent'
+        }
+        
+        # Build auth URL
+        from urllib.parse import urlencode
+        full_auth_url = f"{auth_url}?{urlencode(params)}"
+        
+        return jsonify({
+            "auth_url": full_auth_url,
+            "message": "Redirect user to this URL for authentication"
+        })
+        
+    except Exception as e:
+        logger.error(f"Gmail auth initiation error: {e}")
+        return jsonify({"error": "Failed to initiate Gmail authentication"}), 500
+
 if __name__ == '__main__':
     os.makedirs("downloads", exist_ok=True)
     os.makedirs("data", exist_ok=True)

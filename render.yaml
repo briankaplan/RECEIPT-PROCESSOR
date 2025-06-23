@@ -6,8 +6,8 @@ services:
     repo: https://github.com/briankaplan/RECEIPT-PROCESSOR
     plan: free
     region: oregon
-    buildCommand: poetry install
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120
     autoDeployTrigger: commit
     healthCheckPath: /status
     branch: main
@@ -64,7 +64,7 @@ services:
       - key: TELLER_API_VERSION
         value: 2020-10-12
       - key: TELLER_WEBHOOK_URL
-        value: https://hkdk.events/f1fn3xdomboeft
+        value: https://receipt-processor.onrender.com/teller/webhook
       - key: TELLER_SIGNING_SECRET
         value: q7xdfvnwf6nbajjghgzbnzaut4tm4sck
       - key: TELLER_SIGNING_KEY
