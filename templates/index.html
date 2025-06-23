@@ -6,7 +6,7 @@
     <title>Receipt Processor Pro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <!-- Socket.io removed - using HTTP polling instead -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -874,53 +874,18 @@
     </div>
 
     <script>
-        // Initialize WebSocket connection
-        const socket = io('/dashboard');
+        // Initialize without WebSocket (using HTTP polling instead)
         let stats = {};
         let logEntries = [];
 
-        // Connection management
-        socket.on('connect', () => {
+        // Simulate connection status (always connected for HTTP mode)
+        function initializeConnection() {
             updateConnectionStatus(true);
-            socket.emit('request_status');
-            addLogEntry('🔗 Connected to real-time server', 'success');
-        });
+            addLogEntry('🔗 Dashboard initialized successfully', 'success');
+        }
 
-        socket.on('disconnect', () => {
-            updateConnectionStatus(false);
-            addLogEntry('❌ Disconnected from server', 'error');
-        });
-
-        // Real-time updates
-        socket.on('stats_update', (data) => {
-            stats = data;
-            updateDashboard(data);
-        });
-
-        socket.on('processing_log', (data) => {
-            addLogEntry(data.message, data.level);
-        });
-
-        socket.on('status_update', (data) => {
-            updateProcessingStatus(data);
-        });
-
-        socket.on('system_health', (data) => {
-            updateSystemHealth(data);
-        });
-
-        // Listen for new scanned receipts
-        socket.on('new_receipt_scanned', (data) => {
-            addLogEntry(`📱 New receipt scanned: ${data.vendor || 'Unknown vendor'} - ${data.total_amount || '0.00'}`, 'success');
-            // Request fresh stats
-            socket.emit('request_status');
-        });
-
-        // Listen for batch uploads
-        socket.on('batch_upload_complete', (data) => {
-            addLogEntry(`📚 Batch upload complete: ${data.processed_count} receipts processed`, 'success');
-            socket.emit('request_status');
-        });
+        // HTTP-based updates (removed WebSocket dependencies)
+        // Real-time updates now handled by periodic HTTP requests
 
         // UI Functions
         function updateConnectionStatus(connected) {
@@ -1242,6 +1207,7 @@
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', () => {
             initializeTheme();
+            initializeConnection(); // Initialize connection status
             updateStatusFromAPI(); // Use our new function
             
             // Auto-refresh status every 30 seconds
@@ -1252,17 +1218,10 @@
             addLogEntry('💡 Use Ctrl+S to open camera scanner, Ctrl+P to process receipts', 'info');
         });
 
-        // Auto-refresh every 30 seconds
-        setInterval(() => {
-            if (socket.connected) {
-                socket.emit('request_status');
-            }
-        }, 30000);
-
         // Page visibility API for better performance
         document.addEventListener('visibilitychange', () => {
-            if (!document.hidden && socket.connected) {
-                socket.emit('request_status');
+            if (!document.hidden) {
+                updateStatusFromAPI();
                 addLogEntry('👀 Dashboard back in focus - refreshing data', 'info');
             }
         });

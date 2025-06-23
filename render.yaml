@@ -70,9 +70,9 @@ services:
       - key: TELLER_SIGNING_KEY
         value: "cXLqnm451Bi1sMtKTPWOwdFz3gMtNYPn2hVkgXxy9gc="
       - key: TELLER_CERT_PATH
-        value: ./credentials/teller_cert.pem
+        value: /etc/secrets/teller_certificate.pem
       - key: TELLER_KEY_PATH
-        value: ./credentials/teller_key.pem
+        value: /etc/secrets/teller_private_key.pem
       
       # AI Services
       - key: HUGGINGFACE_API_KEY
@@ -100,7 +100,7 @@ services:
       - key: GMAIL_ACCOUNT_1_ENABLED
         value: "true"
       - key: GMAIL_ACCOUNT_1_PICKLE_FILE
-        value: ./gmail_tokens/kaplan_brian_gmail.pickle
+        value: /etc/secrets/kaplan_brian_gmail.pickle
       - key: GMAIL_ACCOUNT_1_PORT
         value: "8080"
       
@@ -112,7 +112,7 @@ services:
       - key: GMAIL_ACCOUNT_2_ENABLED
         value: "true"
       - key: GMAIL_ACCOUNT_2_PICKLE_FILE
-        value: ./gmail_tokens/brian_downhome.pickle
+        value: /etc/secrets/brian_downhome.pickle
       - key: GMAIL_ACCOUNT_2_PORT
         value: "8081"
       
@@ -124,17 +124,17 @@ services:
       - key: GMAIL_ACCOUNT_3_ENABLED
         value: "true"
       - key: GMAIL_ACCOUNT_3_PICKLE_FILE
-        value: ./gmail_tokens/brian_musiccityrodeo.pickle
+        value: /etc/secrets/brian_musiccityrodeo.pickle
       - key: GMAIL_ACCOUNT_3_PORT
         value: "8082"
       
       # Google Services Configuration
       - key: GOOGLE_CREDENTIALS_PATH
-        value: ./credentials/gmail_credentials.json
+        value: /etc/secrets/gmail_credentials.json
       - key: GOOGLE_SERVICE_ACCOUNT_PATH
-        value: ./credentials/service_account.json
+        value: /etc/secrets/service_account.json
       - key: GOOGLE_APPLICATION_CREDENTIALS
-        value: ./credentials/service_account.json
+        value: /etc/secrets/service_account.json
       - key: GOOGLE_VISION_API_KEY
         value: AIzaSyBZ9qhpU4qn0QzUPLs4tZfKII52BEOELzc
       - key: GOOGLE_SHEETS_ID

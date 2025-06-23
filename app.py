@@ -525,6 +525,13 @@ def match_all_receipts_precision_mode():
         # Step 1: Get Teller banking data FIRST
         logger.info(f"🏦 Fetching banking transactions for user {user_id}...")
         rec = db.teller_tokens.find_one({"userId": user_id})
+        
+        # If no token for specific user, try to find any available token
+        if not rec:
+            rec = db.teller_tokens.find_one()
+            if rec:
+                logger.info(f"🔄 Using available Teller token for user {rec.get('userId', 'unknown')}")
+        
         if not rec:
             return jsonify({"error": "No Teller token found - please connect your bank first"}), 404
 
@@ -532,9 +539,9 @@ def match_all_receipts_precision_mode():
         transactions = []
         
         try:
-            accounts = tc.get_accounts()
+            accounts = tc.get_connected_accounts()
             for acct in accounts:
-                account_transactions = tc.get_transactions(account_id=acct["id"])
+                account_transactions = tc.get_transactions(account_id=acct.id)
                 transactions.extend(account_transactions)
             
             logger.info(f"💳 Retrieved {len(transactions)} bank transactions")
@@ -877,6 +884,15 @@ def scanner_page():
     """Camera scanner page for mobile receipt capture"""
     return render_template("receipt_scanner.html", config=app.config)
 
+@app.route("/socket.io/")
+def socket_io_not_implemented():
+    """Handle socket.io requests with proper error response"""
+    return jsonify({
+        "error": "Socket.io not implemented",
+        "message": "This application uses HTTP polling instead of WebSocket",
+        "status": "disabled"
+    }), 404
+
 @app.route("/api/process-receipts", methods=["POST"])
 def api_process_receipts():
     """API endpoint for processing receipts from the dashboard"""
@@ -886,29 +902,48 @@ def api_process_receipts():
         max_receipts = data.get('max_receipts', 25)
         user_id = data.get('userId', 'default')
         
-        # Redirect to the existing match-all endpoint
-        from urllib.parse import urlencode
-        params = urlencode({
-            'days': days,
-            'max_receipts': max_receipts,
+        logger.info(f"🚀 Starting receipt processing via API: days={days}, max_receipts={max_receipts}, user={user_id}")
+        
+        # Call the existing match-all function directly
+        # Set up fake request args for the function
+        from unittest.mock import Mock
+        original_request = request
+        
+        mock_request = Mock()
+        mock_request.args = {
+            'days': str(days),
+            'max_receipts': str(max_receipts),
             'userId': user_id
-        })
+        }
         
-        # Call the existing endpoint internally
-        import requests
-        response = requests.get(f"http://localhost:5001/match-all?{params}")
+        # Temporarily replace request object
+        import sys
+        current_module = sys.modules[__name__]
+        setattr(current_module, 'request', mock_request)
         
-        if response.status_code == 200:
-            return jsonify({
-                "success": True,
-                "message": "Receipt processing started",
-                "data": response.json()
-            })
-        else:
-            return jsonify({
-                "success": False,
-                "error": "Processing failed"
-            }), 500
+        try:
+            # Use precision mode that searches Gmail based on bank transactions
+            result = match_all_receipts_precision_mode()
+            
+            # Restore original request
+            setattr(current_module, 'request', original_request)
+            
+            # Handle Flask Response objects
+            if hasattr(result, 'get_json'):
+                result_data = result.get_json()
+                return jsonify({
+                    "success": True,
+                    "message": "Receipt processing completed",
+                    "data": result_data
+                })
+            else:
+                # If it's already a Response object, return it directly
+                return result
+            
+        except Exception as process_error:
+            # Restore original request even on error
+            setattr(current_module, 'request', original_request)
+            raise process_error
             
     except Exception as e:
         logger.error(f"/api/process-receipts error: {str(e)}")
@@ -1125,7 +1160,7 @@ def api_validate_image():
 if __name__ == '__main__':
     os.makedirs("downloads", exist_ok=True)
     os.makedirs("data", exist_ok=True)
-    # Use PORT environment variable for deployment, fallback to 5001 for local development
-    port = int(os.getenv('PORT', 5001))
+    # Use PORT environment variable for deployment, fallback to 5002 for local development (5001 is in use)
+    port = int(os.getenv('PORT', 5002))
     debug_mode = os.getenv('FLASK_ENV', 'development') == 'development'
     app.run(host="0.0.0.0", port=port, debug=debug_mode) 

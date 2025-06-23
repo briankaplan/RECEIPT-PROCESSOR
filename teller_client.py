@@ -63,7 +63,22 @@ class TellerClient:
             self.cert_path,
             self.key_path
         ]
-        return all(var for var in required_vars)
+        
+        # Check if all variables exist
+        if not all(var for var in required_vars):
+            return False
+            
+        # Check if certificate files actually exist
+        import os
+        if not os.path.exists(self.cert_path):
+            logger.warning(f"Teller certificate not found: {self.cert_path}")
+            return False
+            
+        if not os.path.exists(self.key_path):
+            logger.warning(f"Teller key not found: {self.key_path}")
+            return False
+            
+        return True
     
     def _initialize_session(self):
         """Initialize SSL session with Teller certificates"""
@@ -100,6 +115,10 @@ class TellerClient:
         except Exception as e:
             logger.error(f"Teller connection test failed: {str(e)}")
             return False
+    
+    def get_accounts(self) -> List[TellerAccount]:
+        """Alias for get_connected_accounts for backward compatibility"""
+        return self.get_connected_accounts()
     
     def get_connected_accounts(self) -> List[TellerAccount]:
         """Get list of connected bank accounts"""

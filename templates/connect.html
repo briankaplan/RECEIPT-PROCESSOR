@@ -1,16 +1,143 @@
 <!doctype html>
 <html>
-  <head><title>Connect Teller</title></head>
+  <head>
+    <title>Connect Bank Account - Receipt Processor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        margin: 0;
+        padding: 20px;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .connect-container {
+        background: white;
+        padding: 40px;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        text-align: center;
+        max-width: 400px;
+        width: 100%;
+      }
+      .connect-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 10px;
+      }
+      .connect-subtitle {
+        color: #64748b;
+        margin-bottom: 30px;
+        line-height: 1.6;
+      }
+      .connect-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 16px 32px;
+        border-radius: 12px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        width: 100%;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+      }
+      .connect-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+      }
+      .connect-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+      .status-message {
+        margin-top: 20px;
+        padding: 12px;
+        border-radius: 8px;
+        font-weight: 500;
+        display: none;
+      }
+      .status-success {
+        background: #ecfdf5;
+        color: #065f46;
+        border: 1px solid #34d399;
+      }
+      .status-error {
+        background: #fef2f2;
+        color: #991b1b;
+        border: 1px solid #ef4444;
+      }
+      .back-link {
+        display: inline-block;
+        margin-top: 20px;
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 500;
+      }
+      .back-link:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
   <body>
-    <h1>Link your bank account</h1>
-    <button id="teller-connect">Connect with Teller</button>
+    <div class="connect-container">
+      <h1 class="connect-title">🏦 Connect Bank</h1>
+      <p class="connect-subtitle">
+        Securely link your bank account to enable intelligent receipt matching and transaction analysis.
+      </p>
+      
+      {% if config.TELLER_ENVIRONMENT == 'sandbox' %}
+      <div style="background: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9rem;">
+        <strong>🧪 Sandbox Mode - Use Test Credentials:</strong><br>
+        <strong>Any Bank:</strong> Username: <code>username</code>, Password: <code>password</code><br>
+        <strong>For OTP Flow:</strong> Username: <code>otp</code>, Password: <code>password</code><br>
+        <strong>For Challenge Flow:</strong> Username: <code>challenge</code>, Password: <code>password</code><br>
+        <em>Note: All institutions behave identically in sandbox mode</em>
+      </div>
+      {% endif %}
+      
+      <button id="teller-connect" class="connect-btn">
+        <span id="connect-text">🔗 Connect with Teller</span>
+      </button>
+      
+      <div id="status-message" class="status-message"></div>
+      
+      <a href="/" class="back-link">← Back to Dashboard</a>
+    </div>
+
     <script src="https://cdn.teller.io/connect/connect.js"></script>
     <script>
+      const connectBtn = document.getElementById('teller-connect');
+      const connectText = document.getElementById('connect-text');
+      const statusMessage = document.getElementById('status-message');
+
+      function showStatus(message, isError = false) {
+        statusMessage.textContent = message;
+        statusMessage.className = `status-message ${isError ? 'status-error' : 'status-success'}`;
+        statusMessage.style.display = 'block';
+      }
+
+      function setLoading(loading) {
+        connectBtn.disabled = loading;
+        connectText.textContent = loading ? '⏳ Connecting...' : '🔗 Connect with Teller';
+      }
+
+      // Initialize Teller Connect with correct products
       var tellerConnect = TellerConnect.setup({
         applicationId: "{{ config.TELLER_APPLICATION_ID }}",
-        environment: "{{ config.TELLER_ENVIRONMENT }}", // or "development" or "sandbox"
-        products: ["accounts", "transactions"],
+        environment: "{{ config.TELLER_ENVIRONMENT }}",
+        products: ["transactions"], // Fixed: Use correct Teller product names
         onSuccess: function(enrollment) {
+          console.log('Teller enrollment successful:', enrollment);
+          setLoading(true);
+          showStatus('🎉 Connection successful! Saving credentials...');
+          
           fetch("/teller/save-token", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -20,15 +147,52 @@
               enrollmentId: enrollment.enrollment.id
             })
           })
-          .then(r => r.json())
-          .then(console.log)
-          .catch(console.error);
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+            return response.json();
+          })
+          .then(result => {
+            console.log('Token saved successfully:', result);
+            showStatus('✅ Bank account connected successfully! Redirecting...');
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 2000);
+          })
+          .catch(error => {
+            console.error('Error saving token:', error);
+            showStatus('❌ Failed to save connection. Please try again.', true);
+            setLoading(false);
+          });
         },
         onExit: function() {
-          console.log("Flow closed by user");
+          console.log("Teller Connect flow closed by user");
+          showStatus('Connection cancelled by user.', true);
+        },
+        onEvent: function(eventName, eventData) {
+          console.log('Teller event:', eventName, eventData);
+          if (eventName === 'error') {
+            showStatus(`Connection error: ${eventData.message || 'Unknown error'}`, true);
+          }
         }
       });
-      document.getElementById("teller-connect").onclick = () => tellerConnect.open();
+
+      connectBtn.onclick = function() {
+        try {
+          statusMessage.style.display = 'none';
+          tellerConnect.open();
+        } catch (error) {
+          console.error('Error opening Teller Connect:', error);
+          showStatus('❌ Failed to open bank connection. Please check your configuration.', true);
+        }
+      };
+
+      // Test Teller configuration on page load
+      console.log('Teller Config:', {
+        applicationId: "{{ config.TELLER_APPLICATION_ID }}",
+        environment: "{{ config.TELLER_ENVIRONMENT }}"
+      });
     </script>
   </body>
 </html>

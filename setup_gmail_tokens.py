@@ -24,17 +24,20 @@ class GmailTokenSetup:
         self.accounts = {
             'kaplan.brian@gmail.com': {
                 'email': 'kaplan.brian@gmail.com',
-                'pickle_file': 'gmail_tokens/kaplan.brian_at_gmail.com.pickle',
+                'pickle_file': 'gmail_tokens/kaplan_brian_gmail.pickle',
+                'credentials_file': 'gmail_tokens/credentials_kaplan.json',
                 'port': 8080
             },
             'brian@downhome.com': {
                 'email': 'brian@downhome.com',
-                'pickle_file': 'gmail_tokens/brian_at_downhome.com.pickle',
+                'pickle_file': 'gmail_tokens/brian_downhome.pickle',
+                'credentials_file': 'gmail_tokens/credentials_downhome.json',
                 'port': 8082
             },
             'brian@musiccityrodeo.com': {
                 'email': 'brian@musiccityrodeo.com',
-                'pickle_file': 'gmail_tokens/brian_at_musiccityrodeo.com.pickle',
+                'pickle_file': 'gmail_tokens/brian_musiccityrodeo.pickle',
+                'credentials_file': 'gmail_tokens/credentials_mcr.json',
                 'port': 8081
             }
         }
@@ -63,12 +66,17 @@ class GmailTokenSetup:
         print("✅ Template created at gmail_tokens/credentials_template.json")
         print("⚠️  Replace this with your actual Google Cloud credentials.")
 
-    def generate_token_for_account(self, email, credentials_file='gmail_tokens/credentials.json'):
+    def generate_token_for_account(self, email, credentials_file=None):
+        account = self.accounts[email]
+        
+        # Use account-specific credentials file
+        if credentials_file is None:
+            credentials_file = account['credentials_file']
+            
         if not os.path.exists(credentials_file):
             print(f"❌ Missing credentials file: {credentials_file}")
             return False
 
-        account = self.accounts[email]
         pickle_file = account['pickle_file']
         port = account['port']
         creds = None
@@ -88,7 +96,9 @@ class GmailTokenSetup:
             if not creds:
                 try:
                     flow = InstalledAppFlow.from_client_secrets_file(credentials_file, SCOPES)
-                    creds = flow.run_local_server(port=port)
+                    # Force offline access to get refresh token
+                    flow.redirect_uri = f'http://localhost:{port}'
+                    creds = flow.run_local_server(port=port, access_type='offline', prompt='consent')
                 except Exception as e:
                     print(f"❌ OAuth flow failed: {e}")
                     return False
