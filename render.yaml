@@ -1,0 +1,91 @@
+# Exported from Render on 2025-06-23T15:31:30Z
+services:
+  - type: web
+    name: RECEIPT-PROCESSOR
+    runtime: python
+    repo: https://github.com/briankaplan/RECEIPT-PROCESSOR
+    plan: free
+    region: oregon
+    buildCommand: poetry install
+    startCommand: gunicorn app:app
+    autoDeployTrigger: commit
+    healthCheckPath: /status
+    branch: main
+    envVars:
+      # Core Flask Configuration
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_DEBUG
+        value: "false"
+      - key: SECRET_KEY
+        sync: false
+      - key: UPLOAD_FOLDER
+        value: uploads
+      
+      # MongoDB Database
+      - key: MONGO_URI
+        sync: false
+      - key: MONGODB_DATABASE
+        value: expense
+      
+      # Teller Banking API
+      - key: TELLER_APP_ID
+        sync: false
+      - key: TELLER_SECRET
+        sync: false
+      - key: TELLER_ENVIRONMENT
+        value: sandbox
+      - key: TELLER_WEBHOOK_URL
+        value: https://hkdk.events/f1fn3xdomboeft
+      - key: TELLER_SIGNING_SECRET
+        sync: false
+      - key: TELLER_SIGNING_KEY
+        sync: false
+      
+      # AI Services
+      - key: HF_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      
+      # Cloudflare R2 Storage
+      - key: R2_ENDPOINT
+        sync: false
+      - key: R2_ACCESS_KEY
+        sync: false
+      - key: R2_SECRET_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
+        value: expensesbk
+      - key: R2_PUBLIC_URL
+        sync: false
+      
+      # Gmail API Configuration
+      - key: GMAIL_ACCOUNT_1_EMAIL
+        sync: false
+      - key: GMAIL_ACCOUNT_1_TOKEN_PATH
+        sync: false
+      - key: GMAIL_ACCOUNT_2_EMAIL
+        sync: false
+      - key: GMAIL_ACCOUNT_2_TOKEN_PATH
+        sync: false
+      - key: GMAIL_ACCOUNT_3_EMAIL
+        sync: false
+      - key: GMAIL_ACCOUNT_3_TOKEN_PATH
+        sync: false
+      
+      # Google Service Account & API
+      - key: GOOGLE_SERVICE_ACCOUNT_PATH
+        sync: false
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        value: credentials/service-account.json
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REFRESH_TOKEN
+        sync: false
+      - key: GOOGLE_API_USER
+        sync: false
+
+version: "1" 
