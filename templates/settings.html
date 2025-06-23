@@ -266,11 +266,12 @@
             <!-- Dynamic content based on selection -->
           </div>
           
-          <div id="webhook-group" class="form-group" style="display: none;">
-            <label for="webhook-url" class="form-label">Development Webhook URL</label>
-            <input type="url" id="webhook-url" name="webhook_url" class="form-input" 
-                   placeholder="https://your-ngrok-url.ngrok.io/teller/webhook">
-            <div class="help-text">Enter your ngrok tunnel URL for development testing</div>
+          <div id="webhook-info" class="form-group">
+            <label class="form-label">Permanent Webhook URL</label>
+            <div class="config-value" style="padding: 12px; background: #f0f9ff; border: 1px solid #0ea5e9; color: #0c4a6e;">
+              https://receipt-processor.onrender.com/teller/webhook
+            </div>
+            <div class="help-text">✅ No ngrok needed! This permanent URL works for all environments</div>
           </div>
           
           <div class="form-group">
@@ -311,18 +312,18 @@
       const environmentDescriptions = {
         sandbox: {
           title: '🧪 Sandbox Environment',
-          description: 'Uses test data and fake transactions. Perfect for development and testing. Uses render.com URLs automatically.',
-          features: ['✅ Test transactions', '✅ No real bank data', '✅ Unlimited testing']
+          description: 'Uses test data and fake transactions. Perfect for initial development and testing.',
+          features: ['✅ Test transactions', '✅ No real bank data', '✅ Unlimited testing', '✅ Permanent webhook URL']
         },
         development: {
           title: '🛠️ Development Environment',
-          description: 'Local development with ngrok tunneling. Use this for local testing with live webhook events.',
-          features: ['✅ Local Flask server', '✅ ngrok tunnel required', '✅ Live webhook testing']
+          description: 'Real banking data with development-tier Teller API. Perfect for testing with live data.',
+          features: ['✅ Real bank connections', '✅ Live transaction data', '✅ Permanent webhook URL']
         },
         production: {
           title: '🚀 Production Environment',
-          description: 'Live environment with real bank data and transactions. Uses render.com URLs automatically.',
-          features: ['✅ Real bank accounts', '✅ Live transactions', '✅ Production security']
+          description: 'Live environment with real bank data and transactions. Enterprise-grade security.',
+          features: ['✅ Real bank accounts', '✅ Live transactions', '✅ Production security', '✅ Permanent webhook URL']
         }
       };
 
@@ -338,12 +339,8 @@
           </ul>
         `;
         
-        // Show webhook URL input only for development
-        if (selected === 'development') {
-          webhookGroup.style.display = 'block';
-        } else {
-          webhookGroup.style.display = 'none';
-        }
+        // Webhook info is always visible since we use permanent URLs
+        // No need to toggle webhook input anymore
       }
 
       function showAlert(message, type = 'success') {

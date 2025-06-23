@@ -54,7 +54,7 @@ class Config:
     
     # Teller Configuration
     TELLER_APPLICATION_ID = os.getenv('TELLER_APPLICATION_ID', 'app_pbvpiocruhfnvkhf1k000')
-    TELLER_ENVIRONMENT = os.getenv('TELLER_ENVIRONMENT', 'development')  # Changed to development for real data
+    TELLER_ENVIRONMENT = os.getenv('TELLER_ENVIRONMENT', 'development')  # Development tier for REAL banking data
     TELLER_API_URL = os.getenv('TELLER_API_URL', 'https://api.teller.io')
     TELLER_WEBHOOK_URL = os.getenv('TELLER_WEBHOOK_URL', 'https://receipt-processor.onrender.com/teller/webhook')
     TELLER_SIGNING_SECRET = os.getenv('TELLER_SIGNING_SECRET', 'q7xdfvnwf6nbajjghgzbnzaut4tm4sck')
