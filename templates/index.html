@@ -1088,7 +1088,7 @@
 
         // Action Functions
         function requestStatusUpdate() {
-            socket.emit('request_status');
+            updateStatusFromAPI();
             addLogEntry('🔄 Refreshing dashboard status...', 'info');
         }
 
@@ -1191,10 +1191,61 @@
             }
         });
 
+        // Status Update Function
+        function updateStatusFromAPI() {
+            fetch('/status')
+                .then(response => response.json())
+                .then(data => {
+                    const services = data.services || {};
+                    
+                    // Update Gmail status
+                    const gmailConnected = services.gmail && services.gmail.status === 'connected';
+                    const gmailDetails = services.gmail?.details || {};
+                    const gmailValue = `${gmailDetails.connected_accounts || 0}/${gmailDetails.total_accounts || 0}`;
+                    updateStatusIndicator('gmailStatus', 'gmailValue', gmailConnected, gmailValue);
+                    
+                    // Update MongoDB status
+                    const mongoConnected = services.mongodb && services.mongodb.status === 'connected';
+                    const mongoValue = mongoConnected ? 'Connected' : 'Offline';
+                    updateStatusIndicator('mongoStatus', 'mongoValue', mongoConnected, mongoValue);
+                    
+                    // Update AI Engine status
+                    const aiConnected = services.huggingface && services.huggingface.status === 'connected';
+                    const aiValue = aiConnected ? 'Active' : 'Inactive';
+                    updateStatusIndicator('aiStatus', 'aiValue', aiConnected, aiValue);
+                    
+                    // Update Banking status
+                    const tellerConnected = services.teller && services.teller.status === 'configured';
+                    const tellerDetails = services.teller?.details || {};
+                    const bankValue = `${tellerDetails.connected_users || 0} Banks`;
+                    updateStatusIndicator('bankStatus', 'bankValue', tellerConnected, bankValue);
+                    
+                    // Update Storage status
+                    const r2Connected = services.r2 && services.r2.status === 'connected';
+                    const storageValue = r2Connected ? 'Cloud' : 'Local';
+                    updateStatusIndicator('storageStatus', 'storageValue', r2Connected, storageValue);
+                    
+                    // Update Export status (assuming CSV is always available)
+                    updateStatusIndicator('exportStatus', 'exportValue', true, 'CSV');
+                    
+                    // Update last update time
+                    document.getElementById('lastUpdate').textContent = new Date().toLocaleString();
+                    
+                    addLogEntry('✅ Status updated successfully', 'success');
+                })
+                .catch(error => {
+                    console.error('Error fetching status:', error);
+                    addLogEntry('❌ Failed to update status', 'error');
+                });
+        }
+
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', () => {
             initializeTheme();
-            requestStatusUpdate();
+            updateStatusFromAPI(); // Use our new function
+            
+            // Auto-refresh status every 30 seconds
+            setInterval(updateStatusFromAPI, 30000);
             
             // Welcome message
             addLogEntry('🎉 Receipt Processor Pro initialized', 'success');
