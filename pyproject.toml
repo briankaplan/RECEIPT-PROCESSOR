@@ -4,47 +4,47 @@ version = "1.0.0"
 description = "Receipt processing application with Gmail integration and AI analysis"
 requires-python = ">=3.11"
 authors = [
-{name = "Your Name", email = "your.email@example.com"}
+    { name = "Your Name", email = "your.email@example.com" }
 ]
 readme = "README.md"
-license = {text = "MIT"}
+license = { text = "MIT" }
 classifiers = [
-"Development Status :: 4 - Beta",
-"Intended Audience :: End Users/Desktop",
-"License :: OSI Approved :: MIT License",
-"Operating System :: OS Independent",
-"Programming Language :: Python :: 3",
-"Programming Language :: Python :: 3.11",
-"Programming Language :: Python :: 3.12",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12"
 ]
 
 dependencies = [
-"flask>=3.1.1",
-"pymongo>=4.13.2",
-"google-api-python-client>=2.173.0",
-"google-auth>=2.40.3",
-"google-auth-httplib2>=0.2.0",
-"google-auth-oauthlib>=1.2.2",
-"gspread>=6.2.1",
-"pillow>=11.2.1",
-"pytesseract>=0.3.13",
-"python-dotenv>=1.1.0",
-"requests>=2.32.4",
-"boto3>=1.38.41",
-"botocore>=1.38.41",
-"cryptography>=45.0.4",
-"openai>=1.90.0",
-"pycryptodome>=3.23.0",
-"pypdf2>=3.0.1",
-"gunicorn>=21.2.0",
+    "flask>=3.1.1",
+    "pymongo>=4.13.2",
+    "google-api-python-client>=2.173.0",
+    "google-auth>=2.40.3",
+    "google-auth-httplib2>=0.2.0",
+    "google-auth-oauthlib>=1.2.2",
+    "gspread>=6.2.1",
+    "pillow>=11.2.1",
+    "pytesseract>=0.3.13",
+    "python-dotenv>=1.1.0",
+    "requests>=2.32.4",
+    "boto3>=1.38.41",
+    "botocore>=1.38.41",
+    "cryptography>=45.0.4",
+    "openai>=1.90.0",
+    "pycryptodome>=3.23.0",
+    "pypdf2>=3.0.1",
+    "gunicorn>=21.2.0"
 ]
 
 [project.optional-dependencies]
 dev = [
-"pytest>=7.0.0",
-"black>=23.0.0",
-"flake8>=6.0.0",
-"mypy>=1.0.0",
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0"
 ]
 
 [project.urls]
@@ -58,23 +58,20 @@ build-backend = "hatchling.build"
 
 [tool.black]
 line-length = 88
-target-version = [‘py311’]
-include = ‘.pyi?$’
-extend-exclude = ‘’’
+target-version = ["py311"]
+include = ".pyi?$"
+extend-exclude = """
 /(
-
-# directories
-
-.eggs
-| .git
-| .hg
-| .mypy_cache
-| .tox
-| .venv
-| build
-| dist
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
 )/
-‘’’
+"""
 
 [tool.mypy]
 python_version = "3.11"
