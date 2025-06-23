@@ -212,7 +212,7 @@ def get_system_status():
         
         # Teller Status (check if any users have tokens)
         try:
-            if db:
+            if db is not None:
                 teller_tokens = db.teller_tokens.count_documents({})
                 status["services"]["teller"] = {
                     "status": "configured" if teller_tokens > 0 else "not_configured",
@@ -247,7 +247,7 @@ def get_system_status():
 
 @app.route("/teller/save-token", methods=["POST"])
 def save_token():
-    if not db:
+    if db is None:
         return jsonify({"error": "Database not available"}), 503
         
     data = request.get_json()
@@ -274,7 +274,7 @@ def save_token():
 
 @app.route("/teller/accounts", methods=["GET"])
 def get_accounts():
-    if not db:
+    if db is None:
         return jsonify({"error": "Database not available"}), 503
         
     user_id = request.args.get("userId")
@@ -296,7 +296,7 @@ def get_accounts():
 
 @app.route("/teller/transactions", methods=["GET"])
 def get_transactions():
-    if not db:
+    if db is None:
         return jsonify({"error": "Database not available"}), 503
         
     user_id = request.args.get("userId")
