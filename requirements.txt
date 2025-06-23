@@ -27,13 +27,6 @@ pytesseract==0.3.13
 # PDF Processing
 PyPDF2==3.0.1
 
-# AI and NLP
-sentence-transformers==2.5.0
-transformers==4.35.2
-tokenizers==0.15.0
-torch>=2.5.0
-accelerate==0.25.0
-
 # Cloudflare R2 support (via boto3)
 boto3==1.34.106
 
@@ -43,4 +36,6 @@ lxml==5.2.1
 
 # Utility
 tqdm==4.66.4
-# Force rebuild for torch dependency fix
+
+# Removed unused AI/ML dependencies to fix Rust compilation errors:
+# sentence-transformers, transformers, tokenizers, torch, accelerate
