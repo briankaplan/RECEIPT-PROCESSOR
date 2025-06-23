@@ -2,7 +2,6 @@ import re
 import logging
 from datetime import datetime, timedelta
 from difflib import SequenceMatcher
-from teller_client import get_all_recent_transactions  # ✅ Teller integration
 
 logger = logging.getLogger(__name__)
 
@@ -13,12 +12,22 @@ class BankMatcher:
         self.amount_tolerance = 0.01  # $0.01 tolerance for amount matching
         self.date_tolerance_days = 3   # 3 days tolerance for date matching
 
-    def fetch_and_process_teller_transactions(self):
-        """Fetch recent transactions from Teller"""
+    def fetch_and_process_teller_transactions(self, teller_client):
+        """Fetch recent transactions from Teller using provided client"""
         print("🔄 Fetching Teller transactions...")
-        transactions = get_all_recent_transactions(days=7)
-        print(f"✅ Retrieved {len(transactions)} transactions from Teller.")
-        return transactions
+        if not teller_client or not teller_client.is_connected():
+            print("❌ Teller client not connected")
+            return []
+        
+        # Get all connected accounts and their transactions
+        all_transactions = []
+        accounts = teller_client.get_connected_accounts()
+        for account in accounts:
+            transactions = teller_client.get_transactions(account.id, limit=50)
+            all_transactions.extend([tx.raw_data for tx in transactions])
+        
+        print(f"✅ Retrieved {len(all_transactions)} transactions from Teller.")
+        return all_transactions
 
     def find_matches(self, receipt_data, bank_statements):
         """Find matching bank transactions for a receipt"""

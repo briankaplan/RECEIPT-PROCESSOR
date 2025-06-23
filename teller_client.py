@@ -36,7 +36,7 @@ class TellerAccount:
 class TellerClient:
     """Teller API client for live bank transaction feeds and intelligent receipt matching"""
     
-    def __init__(self):
+    def __init__(self, access_token=None):
         self.application_id = os.getenv('TELLER_APPLICATION_ID')
         self.api_url = os.getenv('TELLER_API_URL', 'https://api.teller.io')
         self.api_version = os.getenv('TELLER_API_VERSION', '2020-10-12')

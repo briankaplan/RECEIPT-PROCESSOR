@@ -7,8 +7,8 @@
     <script src="https://cdn.teller.io/connect/connect.js"></script>
     <script>
       var tellerConnect = TellerConnect.setup({
-        applicationId: "YOUR_TELLER_APP_ID",
-        environment: "production", // or "development" or "sandbox"
+        applicationId: "{{ config.TELLER_APPLICATION_ID }}",
+        environment: "{{ config.TELLER_ENVIRONMENT }}", // or "development" or "sandbox"
         products: ["accounts", "transactions"],
         onSuccess: function(enrollment) {
           fetch("/teller/save-token", {

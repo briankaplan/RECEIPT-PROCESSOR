@@ -9,30 +9,34 @@ class Config:
     GMAIL_CREDENTIALS = os.environ.get('GMAIL_CREDENTIALS')
     GMAIL_TOKEN = os.environ.get('GMAIL_TOKEN')
     
-    # Gmail Accounts Configuration
-    GMAIL_ACCOUNTS = {
-        'kaplan.brian@gmail.com': {
-            'email': 'kaplan.brian@gmail.com',
-            'display_name': 'Personal Gmail',
-            'pickle_file': 'gmail_tokens/kaplan.brian_at_gmail.com.pickle',
-            'enabled': True,
-            'port': 8080
-        },
-        'brian@downhome.com': {
-            'email': 'brian@downhome.com', 
-            'display_name': 'Down Home Business',
-            'pickle_file': 'gmail_tokens/brian_at_downhome.com.pickle',
-            'enabled': True,
-            'port': 8082
-        },
-        'brian@musiccityrodeo.com': {
-            'email': 'brian@musiccityrodeo.com',
-            'display_name': 'Music City Rodeo', 
-            'pickle_file': 'gmail_tokens/brian_at_musiccityrodeo.com.pickle',
-            'enabled': True,
-            'port': 8081
+    # Gmail Accounts Configuration - Load from environment variables
+    @staticmethod
+    def get_gmail_accounts():
+        return {
+            os.environ.get('GMAIL_ACCOUNT_1_EMAIL', 'account1@gmail.com'): {
+                'email': os.environ.get('GMAIL_ACCOUNT_1_EMAIL', 'account1@gmail.com'),
+                'display_name': os.environ.get('GMAIL_ACCOUNT_1_DISPLAY_NAME', 'Account 1'),
+                'pickle_file': os.environ.get('GMAIL_ACCOUNT_1_PICKLE_FILE', 'gmail_tokens/account1.pickle'),
+                'enabled': os.environ.get('GMAIL_ACCOUNT_1_ENABLED', 'true').lower() == 'true',
+                'port': int(os.environ.get('GMAIL_ACCOUNT_1_PORT', '8080'))
+            },
+            os.environ.get('GMAIL_ACCOUNT_2_EMAIL', 'account2@domain.com'): {
+                'email': os.environ.get('GMAIL_ACCOUNT_2_EMAIL', 'account2@domain.com'),
+                'display_name': os.environ.get('GMAIL_ACCOUNT_2_DISPLAY_NAME', 'Account 2'),
+                'pickle_file': os.environ.get('GMAIL_ACCOUNT_2_PICKLE_FILE', 'gmail_tokens/account2.pickle'),
+                'enabled': os.environ.get('GMAIL_ACCOUNT_2_ENABLED', 'true').lower() == 'true',
+                'port': int(os.environ.get('GMAIL_ACCOUNT_2_PORT', '8081'))
+            },
+            os.environ.get('GMAIL_ACCOUNT_3_EMAIL', 'account3@domain.com'): {
+                'email': os.environ.get('GMAIL_ACCOUNT_3_EMAIL', 'account3@domain.com'),
+                'display_name': os.environ.get('GMAIL_ACCOUNT_3_DISPLAY_NAME', 'Account 3'),
+                'pickle_file': os.environ.get('GMAIL_ACCOUNT_3_PICKLE_FILE', 'gmail_tokens/account3.pickle'),
+                'enabled': os.environ.get('GMAIL_ACCOUNT_3_ENABLED', 'true').lower() == 'true',
+                'port': int(os.environ.get('GMAIL_ACCOUNT_3_PORT', '8082'))
+            }
         }
-    }
+    
+    GMAIL_ACCOUNTS = get_gmail_accounts()
     
     # MongoDB Configuration
     MONGODB_URI = os.environ.get('MONGODB_URI')

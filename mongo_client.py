@@ -21,20 +21,41 @@ class MongoDBClient:
         self._connect()
     
     def _connect(self):
-        """Connect to MongoDB"""
+        """Connect to MongoDB with graceful error handling"""
         try:
             # Get MongoDB connection string from environment
             mongo_uri = os.getenv('MONGODB_URI') or os.getenv('MONGO_URI')
             
             if not mongo_uri:
-                logger.warning("No MongoDB URI found in environment variables")
+                logger.warning("No MongoDB URI found in environment variables (MONGODB_URI or MONGO_URI)")
                 return False
             
-            # Connect to MongoDB
-            self.client = MongoClient(mongo_uri)
+            # Validate URI format
+            if not mongo_uri.startswith(('mongodb://', 'mongodb+srv://')):
+                logger.error("Invalid MongoDB URI format")
+                return False
             
-            # Get database name from URI or use default
+            # Connect to MongoDB with timeout settings
+            self.client = MongoClient(
+                mongo_uri,
+                serverSelectionTimeoutMS=5000,  # 5 second timeout
+                connectTimeoutMS=5000,
+                socketTimeoutMS=5000,
+                retryWrites=True
+            )
+            
+            # Get database name from URI or environment
             db_name = os.getenv('MONGODB_DATABASE', 'gmail_receipt_processor')
+            
+            # Extract database name from URI if not specified
+            if '/' in mongo_uri and db_name == 'gmail_receipt_processor':
+                try:
+                    uri_db = mongo_uri.split('/')[-1].split('?')[0]
+                    if uri_db and uri_db != mongo_uri:
+                        db_name = uri_db
+                except:
+                    pass
+            
             self.db = self.client[db_name]
             
             # Initialize collections
@@ -44,7 +65,7 @@ class MongoDBClient:
             
             # Test connection
             self.client.admin.command('ping')
-            logger.info(f"Connected to MongoDB database: {db_name}")
+            logger.info(f"✅ Connected to MongoDB database: {db_name}")
             
             # Create indexes for better performance
             self._create_indexes()
@@ -52,8 +73,13 @@ class MongoDBClient:
             return True
             
         except Exception as e:
-            logger.error(f"Failed to connect to MongoDB: {str(e)}")
+            logger.warning(f"MongoDB connection failed: {str(e)}")
+            logger.info("📝 Application will continue without MongoDB persistence")
             self.client = None
+            self.db = None
+            self.receipts_collection = None
+            self.bank_statements_collection = None
+            self.processed_emails_collection = None
             return False
     
     def _create_indexes(self):
@@ -349,6 +375,82 @@ class MongoDBClient:
             logger.error(f"Error searching receipts: {str(e)}")
             return []
     
+    def save_match_result(self, match_data: Dict) -> bool:
+        """Save receipt matching results"""
+        if not self.is_connected():
+            logger.error("MongoDB not connected")
+            return False
+        
+        try:
+            # Add timestamp if not present
+            if 'timestamp' not in match_data:
+                match_data['timestamp'] = datetime.utcnow().isoformat()
+            
+            # Use match_results collection
+            if not hasattr(self, 'match_results_collection'):
+                self.match_results_collection = self.db['match_results']
+            
+            self.match_results_collection.insert_one(match_data)
+            logger.info("Saved match result to MongoDB")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error saving match result: {str(e)}")
+            return False
+    
+    def get_all_match_results(self) -> List[Dict]:
+        """Get all match results from MongoDB"""
+        if not self.is_connected():
+            logger.error("MongoDB not connected")
+            return []
+        
+        try:
+            if not hasattr(self, 'match_results_collection'):
+                self.match_results_collection = self.db['match_results']
+                
+            results = list(self.match_results_collection.find({}, {'_id': 0}))
+            return results
+            
+        except Exception as e:
+            logger.error(f"Error getting match results: {str(e)}")
+            return []
+    
+    def save_camera_capture(self, capture_data: Dict) -> bool:
+        """Save camera capture data"""
+        if not self.is_connected():
+            logger.error("MongoDB not connected")
+            return False
+        
+        try:
+            if not hasattr(self, 'camera_captures_collection'):
+                self.camera_captures_collection = self.db['camera_captures']
+            
+            self.camera_captures_collection.insert_one(capture_data)
+            logger.info("Saved camera capture to MongoDB")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error saving camera capture: {str(e)}")
+            return False
+    
+    def save_batch_upload(self, batch_data: Dict) -> bool:
+        """Save batch upload data"""
+        if not self.is_connected():
+            logger.error("MongoDB not connected")
+            return False
+        
+        try:
+            if not hasattr(self, 'batch_uploads_collection'):
+                self.batch_uploads_collection = self.db['batch_uploads']
+            
+            self.batch_uploads_collection.insert_one(batch_data)
+            logger.info("Saved batch upload to MongoDB")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error saving batch upload: {str(e)}")
+            return False
+
     def get_stats(self) -> Dict:
         """Get database statistics"""
         if not self.is_connected():
@@ -357,7 +459,10 @@ class MongoDBClient:
                 'receipts_count': 0,
                 'bank_statements_count': 0,
                 'processed_emails_count': 0,
-                'failed_emails_count': 0
+                'failed_emails_count': 0,
+                'match_results_count': 0,
+                'camera_captures_count': 0,
+                'batch_uploads_count': 0
             }
         
         try:
@@ -366,12 +471,27 @@ class MongoDBClient:
             processed_count = self.processed_emails_collection.count_documents({'status': 'processed'})
             failed_count = self.processed_emails_collection.count_documents({'status': 'failed'})
             
+            # Initialize collections if they don't exist
+            if not hasattr(self, 'match_results_collection'):
+                self.match_results_collection = self.db['match_results']
+            if not hasattr(self, 'camera_captures_collection'):
+                self.camera_captures_collection = self.db['camera_captures']
+            if not hasattr(self, 'batch_uploads_collection'):
+                self.batch_uploads_collection = self.db['batch_uploads']
+            
+            match_results_count = self.match_results_collection.count_documents({})
+            camera_captures_count = self.camera_captures_collection.count_documents({})
+            batch_uploads_count = self.batch_uploads_collection.count_documents({})
+            
             return {
                 'connected': True,
                 'receipts_count': receipts_count,
                 'bank_statements_count': bank_statements_count,
                 'processed_emails_count': processed_count,
-                'failed_emails_count': failed_count
+                'failed_emails_count': failed_count,
+                'match_results_count': match_results_count,
+                'camera_captures_count': camera_captures_count,
+                'batch_uploads_count': batch_uploads_count
             }
             
         except Exception as e:
@@ -381,5 +501,8 @@ class MongoDBClient:
                 'receipts_count': 0,
                 'bank_statements_count': 0,
                 'processed_emails_count': 0,
-                'failed_emails_count': 0
+                'failed_emails_count': 0,
+                'match_results_count': 0,
+                'camera_captures_count': 0,
+                'batch_uploads_count': 0
             }
