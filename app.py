@@ -16,6 +16,7 @@ from teller_client import TellerClient
 from expense_categorizer import ExpenseCategorizer
 from r2_client import R2Client
 from config import Config
+from environment_manager import EnvironmentManager
 
 # Load env
 load_dotenv()
@@ -32,6 +33,7 @@ huggingface_client = HuggingFaceClient()
 bank_matcher = BankMatcher()
 expense_categorizer = ExpenseCategorizer()
 r2_client = R2Client()
+environment_manager = EnvironmentManager()
 
 # Initialize MongoDB clients with error handling
 try:
@@ -1277,6 +1279,71 @@ def gmail_auth():
     except Exception as e:
         logger.error(f"Gmail auth initiation error: {e}")
         return jsonify({"error": "Failed to initiate Gmail authentication"}), 500
+
+@app.route("/settings")
+def settings_page():
+    """Settings page for environment configuration"""
+    current_config = environment_manager.get_current_environment()
+    return render_template("settings.html", config=current_config)
+
+@app.route("/api/update-environment", methods=["POST"])
+def update_environment():
+    """Update Teller environment configuration"""
+    try:
+        data = request.get_json()
+        environment = data.get('environment', 'sandbox')
+        webhook_url = data.get('webhook_url')
+        
+        # Use the environment manager to switch environments
+        result = environment_manager.switch_environment(environment, webhook_url)
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'environment': result['environment'],
+                'webhook_url': result['webhook_url'],
+                'message': 'Configuration updated successfully. Push to GitHub to deploy to Render.'
+            })
+        else:
+            return jsonify({'error': result['error']}), 500
+            
+    except Exception as e:
+        logger.error(f"Environment update error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+
+@app.route("/api/get-environment", methods=["GET"])
+def get_current_environment():
+    """Get current environment configuration"""
+    try:
+        config = environment_manager.get_current_environment()
+        return jsonify(config)
+        
+    except Exception as e:
+        logger.error(f"Get environment error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route("/api/deploy-environment", methods=["POST"])
+def deploy_environment():
+    """Deploy current configuration to Render"""
+    try:
+        data = request.get_json() or {}
+        commit_message = data.get('message', 'Deploy environment configuration changes')
+        
+        success = environment_manager.deploy_to_render(commit_message)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Successfully deployed to Render. Check the deployment status in your Render dashboard.'
+            })
+        else:
+            return jsonify({'error': 'Deployment failed'}), 500
+            
+    except Exception as e:
+        logger.error(f"Deploy error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     os.makedirs("downloads", exist_ok=True)

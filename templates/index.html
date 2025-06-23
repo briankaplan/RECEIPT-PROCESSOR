@@ -586,10 +586,16 @@
                     <div class="d-flex flex-column align-items-md-end">
                         <small class="opacity-75 mb-1">Last Updated</small>
                         <h6 id="lastUpdate" class="mb-3">Just now</h6>
-                        <button class="action-btn" onclick="requestStatusUpdate()">
-                            <i class="fas fa-sync-alt me-2"></i>
-                            Refresh
-                        </button>
+                        <div class="d-flex gap-2">
+                            <a href="/settings" class="action-btn text-decoration-none">
+                                <i class="fas fa-cog me-2"></i>
+                                Settings
+                            </a>
+                            <button class="action-btn" onclick="requestStatusUpdate()">
+                                <i class="fas fa-sync-alt me-2"></i>
+                                Refresh
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
