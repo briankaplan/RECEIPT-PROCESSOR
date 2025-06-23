@@ -1125,4 +1125,7 @@ def api_validate_image():
 if __name__ == '__main__':
     os.makedirs("downloads", exist_ok=True)
     os.makedirs("data", exist_ok=True)
-    app.run(host="0.0.0.0", port=5001, debug=True) 
+    # Use PORT environment variable for deployment, fallback to 5001 for local development
+    port = int(os.getenv('PORT', 5001))
+    debug_mode = os.getenv('FLASK_ENV', 'development') == 'development'
+    app.run(host="0.0.0.0", port=port, debug=debug_mode) 
