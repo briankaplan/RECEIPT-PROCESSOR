@@ -17,75 +17,127 @@ services:
         value: production
       - key: FLASK_DEBUG
         value: "false"
+      - key: DEBUG
+        value: "false"
       - key: SECRET_KEY
-        sync: false
+        value: receipt_processor_super_secret_key_change_in_production_2024
       - key: UPLOAD_FOLDER
         value: uploads
+      - key: MAX_CONTENT_LENGTH
+        value: "16777216"
+      - key: LOG_LEVEL
+        value: INFO
       
       # MongoDB Database
-      - key: MONGO_URI
-        sync: false
+      - key: MONGODB_URI
+        value: "mongodb+srv://kaplanbrian:tixvob-7Nefza-pijtaq@expense.1q8c63f.mongodb.net/?retryWrites=true&w=majority&appName=Expense"
       - key: MONGODB_DATABASE
         value: expense
+      - key: MONGODB_COLLECTION
+        value: receipts
+      
+      # Processing Configuration
+      - key: MAX_CONCURRENT_PROCESSING
+        value: "3"
+      - key: MAX_EMAILS_PER_BATCH
+        value: "50"
+      - key: PROCESSING_DAYS
+        value: "30"
+      - key: AI_CONFIDENCE_THRESHOLD
+        value: "0.7"
+      - key: AMOUNT_TOLERANCE
+        value: "0.01"
+      - key: DATE_TOLERANCE_DAYS
+        value: "3"
+      - key: LOCAL_EXPORT_ENABLED
+        value: "true"
       
       # Teller Banking API
-      - key: TELLER_APP_ID
-        sync: false
-      - key: TELLER_SECRET
-        sync: false
+      - key: TELLER_APPLICATION_ID
+        value: app_pbvpiocruhfnvkhf1k000
       - key: TELLER_ENVIRONMENT
         value: sandbox
+      - key: TELLER_API_URL
+        value: https://api.teller.io
+      - key: TELLER_API_VERSION
+        value: 2020-10-12
       - key: TELLER_WEBHOOK_URL
         value: https://hkdk.events/f1fn3xdomboeft
       - key: TELLER_SIGNING_SECRET
-        sync: false
+        value: q7xdfvnwf6nbajjghgzbnzaut4tm4sck
       - key: TELLER_SIGNING_KEY
-        sync: false
+        value: "cXLqnm451Bi1sMtKTPWOwdFz3gMtNYPn2hVkgXxy9gc="
+      - key: TELLER_CERT_PATH
+        value: ./credentials/teller_cert.pem
+      - key: TELLER_KEY_PATH
+        value: ./credentials/teller_key.pem
       
       # AI Services
-      - key: HF_API_KEY
-        sync: false
+      - key: HUGGINGFACE_API_KEY
+        value: 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
       - key: OPENAI_API_KEY
-        sync: false
+        value: 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
       
       # Cloudflare R2 Storage
       - key: R2_ENDPOINT
-        sync: false
+        value: https://33950783df90825d4b885322a8ea2f2f.r2.cloudflarestorage.com
       - key: R2_ACCESS_KEY
-        sync: false
+        value: 154b6375ad63f0852482f4551047785c
       - key: R2_SECRET_KEY
-        sync: false
-      - key: R2_BUCKET_NAME
+        value: 1f77f1dd75b20bbd913e0dab79057e10b96f6ca69197c6476165880dfba692a5
+      - key: R2_BUCKET
         value: expensesbk
       - key: R2_PUBLIC_URL
-        sync: false
+        value: https://pub-33950783df90825d4b885322a8ea2f2f.r2.dev
       
-      # Gmail API Configuration
+      # Gmail API Configuration - Account 1 (Personal)
       - key: GMAIL_ACCOUNT_1_EMAIL
-        sync: false
-      - key: GMAIL_ACCOUNT_1_TOKEN_PATH
-        sync: false
-      - key: GMAIL_ACCOUNT_2_EMAIL
-        sync: false
-      - key: GMAIL_ACCOUNT_2_TOKEN_PATH
-        sync: false
-      - key: GMAIL_ACCOUNT_3_EMAIL
-        sync: false
-      - key: GMAIL_ACCOUNT_3_TOKEN_PATH
-        sync: false
+        value: kaplan.brian@gmail.com
+      - key: GMAIL_ACCOUNT_1_DISPLAY_NAME
+        value: "Personal Gmail"
+      - key: GMAIL_ACCOUNT_1_ENABLED
+        value: "true"
+      - key: GMAIL_ACCOUNT_1_PICKLE_FILE
+        value: ./gmail_tokens/kaplan_brian_gmail.pickle
+      - key: GMAIL_ACCOUNT_1_PORT
+        value: "8080"
       
-      # Google Service Account & API
+      # Gmail API Configuration - Account 2 (Down Home Business)
+      - key: GMAIL_ACCOUNT_2_EMAIL
+        value: brian@downhome.com
+      - key: GMAIL_ACCOUNT_2_DISPLAY_NAME
+        value: "Down Home Business"
+      - key: GMAIL_ACCOUNT_2_ENABLED
+        value: "true"
+      - key: GMAIL_ACCOUNT_2_PICKLE_FILE
+        value: ./gmail_tokens/brian_downhome.pickle
+      - key: GMAIL_ACCOUNT_2_PORT
+        value: "8081"
+      
+      # Gmail API Configuration - Account 3 (Music City Rodeo)
+      - key: GMAIL_ACCOUNT_3_EMAIL
+        value: brian@musiccityrodeo.com
+      - key: GMAIL_ACCOUNT_3_DISPLAY_NAME
+        value: "Music City Rodeo"
+      - key: GMAIL_ACCOUNT_3_ENABLED
+        value: "true"
+      - key: GMAIL_ACCOUNT_3_PICKLE_FILE
+        value: ./gmail_tokens/brian_musiccityrodeo.pickle
+      - key: GMAIL_ACCOUNT_3_PORT
+        value: "8082"
+      
+      # Google Services Configuration
+      - key: GOOGLE_CREDENTIALS_PATH
+        value: ./credentials/gmail_credentials.json
       - key: GOOGLE_SERVICE_ACCOUNT_PATH
-        sync: false
+        value: ./credentials/service_account.json
       - key: GOOGLE_APPLICATION_CREDENTIALS
-        value: credentials/service-account.json
-      - key: GOOGLE_CLIENT_ID
-        sync: false
-      - key: GOOGLE_CLIENT_SECRET
-        sync: false
-      - key: GOOGLE_REFRESH_TOKEN
-        sync: false
-      - key: GOOGLE_API_USER
-        sync: false
+        value: ./credentials/service_account.json
+      - key: GOOGLE_VISION_API_KEY
+        value: AIzaSyBZ9qhpU4qn0QzUPLs4tZfKII52BEOELzc
+      - key: GOOGLE_SHEETS_ID
+        value: 1Pa4prgHYiYnxSD1qw88HT-cnwhG4u74uCIN4v8rS18Y
+      - key: GOOGLE_SHEETS_NAME
+        value: "Receipt Dashboard"
 
 version: "1" 
