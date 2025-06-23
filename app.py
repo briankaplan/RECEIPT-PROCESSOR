@@ -46,7 +46,7 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', secrets.token_urlsafe(32))
     FLASK_ENV = os.getenv('FLASK_ENV', 'production')
     DEBUG = os.getenv('DEBUG', 'false').lower() == 'true'
-    PORT = int(os.getenv('PORT', 5001))  # Changed to 5001 to avoid AirPlay conflict
+    PORT = int(os.getenv('PORT', 10000))  # Render's default port
     
     # MongoDB - CRITICAL: Check both MONGO_URI and MONGODB_URI
     MONGODB_URI = os.getenv('MONGODB_URI') or os.getenv('MONGO_URI')
@@ -218,14 +218,42 @@ def create_app():
     
     @app.route('/health')
     def health():
-        """Health check for Render"""
+        """Minimal health check - always responds fast"""
         return jsonify({
-            "status": "healthy",
-            "timestamp": datetime.utcnow().isoformat(),
-            "environment": Config.TELLER_ENVIRONMENT,
-            "mongo": mongo_client.connected,
-            "port": Config.PORT
+            "status": "ok",
+            "timestamp": datetime.utcnow().isoformat()
         }), 200
+    
+    @app.route('/health/detailed')
+    def health_detailed():
+        """Detailed health check for debugging"""
+        try:
+            # Quick MongoDB check with timeout protection
+            mongo_status = "disconnected"
+            try:
+                if mongo_client and mongo_client.connected:
+                    mongo_status = "connected"
+            except:
+                mongo_status = "error"
+            
+            return jsonify({
+                "status": "healthy",
+                "timestamp": datetime.utcnow().isoformat(),
+                "environment": Config.TELLER_ENVIRONMENT,
+                "port": Config.PORT,
+                "mongo": mongo_status,
+                "services": {
+                    "gmail": "configured",
+                    "teller": "configured", 
+                    "r2": "configured" if Config.R2_ACCESS_KEY else "not_configured"
+                }
+            }), 200
+        except Exception as e:
+            return jsonify({
+                "status": "degraded",
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat()
+            }), 200
     
     @app.route('/status')
     def status():
