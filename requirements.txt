@@ -42,3 +42,4 @@ lxml==5.2.1
 
 # Utility
 tqdm==4.66.4
+# Force rebuild for torch dependency fix
