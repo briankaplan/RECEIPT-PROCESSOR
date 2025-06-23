@@ -27,13 +27,53 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.config.from_object(Config)
 
-# Initialize clients
-gmail_client = MultiGmailClient()
-huggingface_client = HuggingFaceClient()
-bank_matcher = BankMatcher()
-expense_categorizer = ExpenseCategorizer()
-r2_client = R2Client()
-environment_manager = EnvironmentManager()
+# Initialize clients lazily to avoid startup hanging
+gmail_client = None
+huggingface_client = None
+bank_matcher = None
+expense_categorizer = None
+r2_client = None
+environment_manager = None
+
+def get_gmail_client():
+    global gmail_client
+    if gmail_client is None:
+        try:
+            gmail_client = MultiGmailClient()
+        except Exception as e:
+            logger.error(f"Failed to initialize Gmail client: {e}")
+            gmail_client = False
+    return gmail_client
+
+def get_huggingface_client():
+    global huggingface_client
+    if huggingface_client is None:
+        try:
+            huggingface_client = HuggingFaceClient()
+        except Exception as e:
+            logger.error(f"Failed to initialize HuggingFace client: {e}")
+            huggingface_client = False
+    return huggingface_client
+
+def get_r2_client():
+    global r2_client
+    if r2_client is None:
+        try:
+            r2_client = R2Client()
+        except Exception as e:
+            logger.error(f"Failed to initialize R2 client: {e}")
+            r2_client = False
+    return r2_client
+
+def get_environment_manager():
+    global environment_manager
+    if environment_manager is None:
+        try:
+            environment_manager = EnvironmentManager()
+        except Exception as e:
+            logger.error(f"Failed to initialize Environment manager: {e}")
+            environment_manager = False
+    return environment_manager
 
 # Initialize MongoDB clients with error handling
 try:
@@ -90,9 +130,11 @@ def index():
         
         # Gmail Status
         try:
-            gmail_stats = gmail_client.get_stats()
-            stats['authenticated_accounts'] = gmail_stats.get('connected_accounts', 0)
-            stats['total_accounts'] = gmail_stats.get('total_accounts', 3)
+            client = get_gmail_client()
+            if client and client is not False:
+                gmail_stats = client.get_stats()
+                stats['authenticated_accounts'] = gmail_stats.get('connected_accounts', 0)
+                stats['total_accounts'] = gmail_stats.get('total_accounts', 3)
         except:
             pass
         
@@ -108,8 +150,10 @@ def index():
         
         # HuggingFace AI Status
         try:
-            hf_stats = huggingface_client.get_stats()
-            stats['ai_connected'] = hf_stats.get('connected', False)
+            client = get_huggingface_client()
+            if client and client is not False:
+                hf_stats = client.get_stats()
+                stats['ai_connected'] = hf_stats.get('connected', False)
         except:
             pass
         
@@ -124,8 +168,12 @@ def index():
         
         # R2 Storage Status
         try:
-            r2_stats = r2_client.get_stats()
-            stats['r2_connected'] = r2_stats.get('connected', False)
+            client = get_r2_client()
+            if client and client is not False:
+                r2_stats = client.get_stats()
+                stats['r2_connected'] = r2_stats.get('connected', False)
+            else:
+                stats['r2_connected'] = False
         except:
             stats['r2_connected'] = False
         
@@ -163,11 +211,15 @@ def get_system_status():
         
         # Gmail Status
         try:
-            gmail_stats = gmail_client.get_stats()
-            status["services"]["gmail"] = {
-                "status": "connected" if gmail_stats["connected_accounts"] > 0 else "disconnected",
-                "details": gmail_stats
-            }
+            client = get_gmail_client()
+            if client and client is not False:
+                gmail_stats = client.get_stats()
+                status["services"]["gmail"] = {
+                    "status": "connected" if gmail_stats["connected_accounts"] > 0 else "disconnected",
+                    "details": gmail_stats
+                }
+            else:
+                status["services"]["gmail"] = {"status": "not_configured", "error": "Gmail client not available"}
         except Exception as e:
             status["services"]["gmail"] = {"status": "error", "error": str(e)}
         
@@ -194,11 +246,15 @@ def get_system_status():
         
         # HuggingFace Status
         try:
-            hf_stats = huggingface_client.get_stats()
-            status["services"]["huggingface"] = {
-                "status": "connected" if hf_stats["connected"] else "disconnected",
-                "details": hf_stats
-            }
+            client = get_huggingface_client()
+            if client and client is not False:
+                hf_stats = client.get_stats()
+                status["services"]["huggingface"] = {
+                    "status": "connected" if hf_stats["connected"] else "disconnected",
+                    "details": hf_stats
+                }
+            else:
+                status["services"]["huggingface"] = {"status": "not_configured", "error": "HuggingFace client not available"}
         except Exception as e:
             status["services"]["huggingface"] = {"status": "error", "error": str(e)}
         
