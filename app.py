@@ -195,6 +195,16 @@ def index():
         }
         return render_template("index.html", config=app.config, stats=fallback_stats)
 
+@app.route("/health")
+def health_check():
+    """Health check endpoint for deployment monitoring"""
+    return jsonify({
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": "1.0.0",
+        "environment": os.getenv('FLASK_ENV', 'production')
+    })
+
 @app.route("/connect")
 def connect_page():
     return render_template("connect.html", config=app.config)
