@@ -18,9 +18,9 @@ services:
       - key: PORT
         value: 10000
       - key: FLASK_DEBUG
-        value: false
+        value: "false"
       - key: DEBUG
-        value: false
+        value: "false"
       - key: SECRET_KEY
         value: receipt_processor_super_secret_key_change_in_production_2024
       - key: UPLOAD_FOLDER
