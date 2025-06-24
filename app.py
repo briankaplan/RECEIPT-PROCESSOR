@@ -793,124 +793,138 @@ def create_app():
                                         if ai_client.is_connected():
                                             receipt_data = ai_client.extract_receipt_from_text(email_data['body'])
                                     
-                                    # If we found receipt data, save it
-                                    if receipt_data and receipt_data.get('amount', 0) > 0:
-                                        # Try to find matching bank transaction
-                                        matching_transaction = None
-                                        bank_matched = False
+                                    # Save to database if we found receipt data
+                                    if receipt_data:
+                                        receipt_data['gmail_account'] = email
+                                        receipt_data['email_id'] = message['id']
+                                        receipt_data['processing_job_id'] = job_id
                                         
-                                        if receipt_data.get('date'):
-                                            receipt_date = receipt_data['date']
-                                            if isinstance(receipt_date, str):
-                                                try:
-                                                    receipt_date = datetime.fromisoformat(receipt_date.replace('Z', '+00:00'))
-                                                except:
-                                                    receipt_date = datetime.utcnow()
+                                        if mongo_client.save_receipt(receipt_data, message['id'], email):
+                                            account_receipts += 1
+                                            total_receipts_found += 1
                                             
-                                            date_range_start = receipt_date - timedelta(days=3)
-                                            date_range_end = receipt_date + timedelta(days=3)
-                                            amount_tolerance = receipt_data['amount'] * 0.05
-                                            
-                                            potential_matches = mongo_client.db.bank_transactions.find({
-                                                "date": {"$gte": date_range_start, "$lte": date_range_end},
-                                                "amount": {
-                                                    "$gte": -(receipt_data['amount'] + amount_tolerance),
-                                                    "$lte": -(receipt_data['amount'] - amount_tolerance)
-                                                }
-                                            })
-                                            
-                                            for bank_txn in potential_matches:
-                                                matching_transaction = str(bank_txn.get('_id'))
-                                                bank_matched = True
-                                                break
+                                            # Try to match with bank transactions
+                                            if teller_client.is_connected():
+                                                match_result = teller_client.find_matching_transaction(receipt_data)
+                                                if match_result:
+                                                    total_matched += 1
+                                                    logger.info(f"✅ Matched receipt to bank transaction")
+                                    
+                                    # Break early if we hit limits
+                                    if account_receipts >= max_receipts // 3:  # Divide by number of accounts
+                                        break
                                         
-                                        # Create comprehensive receipt record
-                                        receipt_record = {
-                                            "email_id": message['id'],
-                                            "account": email,
-                                            "gmail_account": email,
-                                            "subject": email_data.get('subject', ''),
-                                            "sender": email_data.get('from', ''),
-                                            "date": receipt_data.get('date', email_data.get('date', datetime.utcnow())),
-                                            "amount": receipt_data.get('amount', 0),
-                                            "merchant": receipt_data.get('merchant', 'Unknown Merchant'),
-                                            "category": receipt_data.get('category', 'Uncategorized'),
-                                            "description": receipt_data.get('description', ''),
-                                            "ai_confidence": receipt_data.get('confidence', 0.0),
-                                            "bank_matched": bank_matched,
-                                            "matching_transaction": matching_transaction,
-                                            "status": "processed",
-                                            "processing_job_id": job_id,
-                                            "created_at": datetime.utcnow(),
-                                            "ocr_text": receipt_data.get('text', ''),
-                                            "items": receipt_data.get('items', []),
-                                            "receipt_type": "Email Receipt",
-                                            "raw_email_data": {
-                                                "message_id": email_data.get('message_id'),
-                                                "thread_id": email_data.get('thread_id'),
-                                                "labels": email_data.get('labels', [])
-                                            }
-                                        }
-                                        
-                                        # Use upsert to avoid duplicates
-                                        mongo_client.db.receipts.replace_one(
-                                            {"email_id": receipt_record["email_id"], "account": receipt_record["account"]},
-                                            receipt_record,
-                                            upsert=True
-                                        )
-                                        
-                                        account_receipts += 1
-                                        total_receipts_found += 1
-                                        
-                                        if bank_matched:
-                                            total_matched += 1
-                                            
                                 except Exception as e:
-                                    logger.error(f"Error processing message {message.get('id')}: {e}")
-                                    continue
+                                    logger.error(f"❌ Failed to process message {message.get('id')}: {e}")
+                                    processing_results["errors"].append(f"Message processing: {str(e)}")
                                     
                         except Exception as e:
-                            logger.error(f"Error with query '{query}' for {email}: {e}")
-                            continue
+                            logger.error(f"❌ Query failed for {email}: {query} - {e}")
+                            processing_results["errors"].append(f"Query {query}: {str(e)}")
                     
-                    logger.info(f"✅ Processed {account_receipts} receipts from {email} ({emails_scanned} emails scanned)")
+                    logger.info(f"📧 {email}: Found {account_receipts} receipts from {emails_scanned} emails")
                     
                 except Exception as e:
-                    processing_results["errors"].append(f"Error processing {email}: {str(e)}")
-                    logger.error(f"❌ Error processing {email}: {e}")
+                    logger.error(f"❌ Failed to process account {email}: {e}")
+                    processing_results["errors"].append(f"Account {email}: {str(e)}")
             
-            # Update final results
-            final_results = {
-                "success": True,
-                "receipts_found": total_receipts_found,
-                "matched": total_matched,
-                "processed_at": datetime.utcnow().isoformat(),
-                "days_processed": days,
-                "accounts_processed": len(Config.GMAIL_ACCOUNTS),
-                "processing_job_id": job_id,
-                "match_rate": f"{(total_matched/max(total_receipts_found, 1)*100):.1f}%" if total_receipts_found > 0 else "0%"
-            }
+            # Update processing job
+            processing_results.update({
+                "completed_at": datetime.utcnow(),
+                "status": "completed",
+                "final_results": {
+                    "receipts_found": total_receipts_found,
+                    "matched_transactions": total_matched,
+                    "accounts_processed": len(Config.GMAIL_ACCOUNTS)
+                }
+            })
             
-            # Calculate real totals
-            if total_receipts_found > 0:
-                receipts = list(mongo_client.db.receipts.find({"processing_job_id": job_id}))
-                final_results["total_amount"] = sum([r.get('amount', 0) for r in receipts])
-                final_results["categories_found"] = list(set([r.get('category', 'Uncategorized') for r in receipts]))
-            
-            # Update job status
-            from bson import ObjectId
             mongo_client.db.processing_jobs.update_one(
                 {"_id": ObjectId(job_id)},
-                {"$set": {"status": "completed", "final_results": final_results, "completed_at": datetime.utcnow()}}
+                {"$set": processing_results}
             )
             
-            logger.info(f"🎉 Processing completed: {total_receipts_found} receipts, {total_matched} matched")
+            # Calculate match rate
+            match_rate = f"{(total_matched/total_receipts_found*100):.0f}%" if total_receipts_found > 0 else "0%"
             
-            return jsonify(final_results)
+            return jsonify({
+                "success": True,
+                "processing_job_id": job_id,
+                "receipts_found": total_receipts_found,
+                "matched": total_matched,
+                "match_rate": match_rate,
+                "accounts_processed": len(Config.GMAIL_ACCOUNTS),
+                "days_processed": days,
+                "processed_at": datetime.utcnow().isoformat()
+            })
             
         except Exception as e:
-            logger.error(f"Process receipts error: {e}")
-            return jsonify({"error": str(e)}), 500
+            logger.error(f"❌ Receipt processing failed: {e}")
+            return jsonify({"error": f"Receipt processing failed: {str(e)}"}), 500
+
+    @app.route('/api/test-gmail-simple', methods=['POST'])
+    def api_test_gmail_simple():
+        """Simple Gmail search test for debugging"""
+        try:
+            from multi_gmail_client import MultiGmailClient
+            
+            gmail_client = MultiGmailClient()
+            gmail_client.init_services()
+            
+            results = {
+                "accounts_tested": 0,
+                "total_emails_found": 0,
+                "details": []
+            }
+            
+            for email, account_info in Config.GMAIL_ACCOUNTS.items():
+                account_result = {
+                    "email": email,
+                    "connected": False,
+                    "simple_search_results": 0,
+                    "has_attachment_results": 0,
+                    "recent_emails_results": 0,
+                    "error": None
+                }
+                
+                try:
+                    # Test connection
+                    if gmail_client.connect_account(email):
+                        account_result["connected"] = True
+                        results["accounts_tested"] += 1
+                        
+                        # Test 1: Very simple search
+                        simple_messages = gmail_client.search_messages(email, "is:inbox", max_results=10, days_back=30)
+                        account_result["simple_search_results"] = len(simple_messages)
+                        
+                        # Test 2: Emails with attachments
+                        attachment_messages = gmail_client.search_messages(email, "has:attachment", max_results=10, days_back=30)
+                        account_result["has_attachment_results"] = len(attachment_messages)
+                        
+                        # Test 3: Recent emails (last 7 days)
+                        recent_messages = gmail_client.search_messages(email, "newer_than:7d", max_results=5, days_back=7)
+                        account_result["recent_emails_results"] = len(recent_messages)
+                        
+                        total_found = account_result["simple_search_results"] + account_result["has_attachment_results"] + account_result["recent_emails_results"]
+                        results["total_emails_found"] += total_found
+                        
+                    else:
+                        account_result["error"] = "Failed to connect"
+                        
+                except Exception as e:
+                    account_result["error"] = str(e)
+                
+                results["details"].append(account_result)
+            
+            return jsonify({
+                "success": True,
+                "results": results,
+                "timestamp": datetime.utcnow().isoformat()
+            })
+            
+        except Exception as e:
+            logger.error(f"❌ Gmail simple test failed: {e}")
+            return jsonify({"error": f"Gmail test failed: {str(e)}"}), 500
     
     @app.route('/api/export-sheets', methods=['POST'])
     def api_export_sheets():
