@@ -52,9 +52,9 @@ class Config:
     MONGODB_URI = os.getenv('MONGODB_URI') or os.getenv('MONGO_URI')
     MONGODB_DATABASE = os.getenv('MONGODB_DATABASE', 'expense')
     
-    # Teller Configuration
+    # Teller Configuration - FORCE DEVELOPMENT MODE FOR REAL BANKING
     TELLER_APPLICATION_ID = os.getenv('TELLER_APPLICATION_ID', 'app_pbvpiocruhfnvkhf1k000')
-    TELLER_ENVIRONMENT = os.getenv('TELLER_ENVIRONMENT', 'development')  # Development tier for REAL banking data
+    TELLER_ENVIRONMENT = 'development'  # FORCE development tier for REAL banking data
     TELLER_API_URL = os.getenv('TELLER_API_URL', 'https://api.teller.io')
     TELLER_WEBHOOK_URL = os.getenv('TELLER_WEBHOOK_URL', 'https://receipt-processor.onrender.com/teller/webhook')
     TELLER_SIGNING_SECRET = os.getenv('TELLER_SIGNING_SECRET', 'q7xdfvnwf6nbajjghgzbnzaut4tm4sck')
