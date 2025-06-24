@@ -471,6 +471,12 @@
                 <small>Export to Google Sheets</small>
             </button>
             
+            <button class="action-btn" onclick="createTestReceipts()">
+                <i class="fas fa-plus-circle"></i>
+                <div>Create Test Receipts</div>
+                <small>Generate sample categorized receipts</small>
+            </button>
+            
             <button class="action-btn" onclick="clearTestData()">
                 <i class="fas fa-trash"></i>
                 <div>Clear Test Data</div>
@@ -680,33 +686,47 @@
                             <th>Date</th>
                             <th>Merchant</th>
                             <th>Amount</th>
-                            <th>Category</th>
-                            <th>Gmail Account</th>
+                            <th>Category & Business</th>
+                            <th>Confidence</th>
+                            <th>Account</th>
                             <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${receipts.map(receipt => `
                             <tr>
-                                <td>${new Date(receipt.date).toLocaleDateString()}</td>
+                                <td>${new Date(receipt.transaction_date || receipt.date).toLocaleDateString()}</td>
                                 <td>
                                     <strong>${receipt.merchant || 'Unknown'}</strong>
-                                    ${receipt.subject ? `<br><small class="text-muted">${receipt.subject}</small>` : ''}
+                                    ${receipt.business_purpose ? `<br><small class="text-muted">💼 ${receipt.business_purpose}</small>` : ''}
+                                    ${receipt.description && receipt.description !== receipt.merchant ? `<br><small class="text-info">${receipt.description}</small>` : ''}
                                 </td>
                                 <td>
-                                    <span class="fw-bold text-success">$${(receipt.amount || 0).toFixed(2)}</span>
+                                    <span class="fw-bold text-success">$${(receipt.price || receipt.amount || 0).toFixed(2)}</span>
+                                    ${receipt.tax_deductible ? '<br><small class="badge badge-sm bg-success">Tax Deductible</small>' : ''}
                                 </td>
                                 <td>
                                     <span class="badge bg-primary">${receipt.category || 'Uncategorized'}</span>
+                                    ${receipt.ai_subcategory ? `<br><small class="badge badge-sm bg-info">${receipt.ai_subcategory}</small>` : ''}
+                                    ${receipt.business_type ? `<br><small class="text-muted">🏢 ${receipt.business_type}</small>` : ''}
                                 </td>
                                 <td>
-                                    <small>${receipt.gmail_account || receipt.account}</small>
-                                </td>
-                                <td>
-                                    ${receipt.bank_matched ? 
-                                        '<span class="badge bg-success">Matched</span>' : 
-                                        '<span class="badge bg-warning">Unmatched</span>'
+                                    ${receipt.confidence_score ? 
+                                        `<span class="badge ${receipt.confidence_score > 0.8 ? 'bg-success' : receipt.confidence_score > 0.6 ? 'bg-warning' : 'bg-secondary'}">${(receipt.confidence_score * 100).toFixed(0)}%</span>` : 
+                                        '<span class="badge bg-light text-dark">N/A</span>'
                                     }
+                                    ${receipt.needs_review ? '<br><small class="text-warning">⚠️ Review</small>' : ''}
+                                </td>
+                                <td>
+                                    <small>${receipt.account_name || receipt.gmail_account || receipt.account}</small>
+                                    ${receipt.is_subscription ? '<br><small class="badge badge-sm bg-info">📱 Subscription</small>' : ''}
+                                </td>
+                                <td>
+                                    ${receipt.match_status === 'Matched' || receipt.bank_matched ? 
+                                        '<span class="badge bg-success">✅ Matched</span>' : 
+                                        '<span class="badge bg-warning">🔍 Unmatched</span>'
+                                    }
+                                    ${receipt.source_type === 'test_data' ? '<br><small class="badge badge-sm bg-secondary">Test Data</small>' : ''}
                                 </td>
                             </tr>
                         `).join('')}
@@ -868,6 +888,34 @@
                 alert('❌ Error exporting data: ' + error.message);
             } finally {
                 button.innerHTML = '<i class="fas fa-file-export"></i><div>Export Data</div><small>Export to Google Sheets</small>';
+            }
+        }
+
+        async function createTestReceipts() {
+            const button = event.target.closest('.action-btn');
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i><div>Creating...</div><small>Please wait...</small>';
+            
+            try {
+                const response = await fetch('/api/create-test-receipts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ Test receipts created successfully!');
+                    loadStats();
+                    loadReceipts();
+                } else {
+                    alert('❌ Error: ' + (result.error || result.message || 'Unknown error'));
+                }
+                
+            } catch (error) {
+                alert('❌ Error creating test receipts: ' + error.message);
+            } finally {
+                button.innerHTML = '<i class="fas fa-plus-circle"></i><div>Create Test Receipts</div><small>Generate sample categorized receipts</small>';
             }
         }
 

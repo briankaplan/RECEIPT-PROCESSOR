@@ -1194,47 +1194,229 @@ def create_app():
     
     @app.route('/api/clear-test-data', methods=['POST'])
     def api_clear_test_data():
-        """Clear all test/fake data to start fresh"""
+        """Clear all test data from the database"""
         try:
             if not mongo_client.connected:
                 return jsonify({"error": "Database not connected"}), 500
             
-            # Clear synthetic/fake receipts (those with email_id starting with "synthetic_")
-            synthetic_receipts = mongo_client.db.receipts.delete_many({
-                "email_id": {"$regex": "^synthetic_"}
-            })
+            # Clear test collections
+            collections_cleared = 0
             
-            # Clear test processing jobs
-            test_jobs = mongo_client.db.processing_jobs.delete_many({
-                "status": {"$in": ["completed", "failed"]}
-            })
+            # Clear receipts
+            result = mongo_client.db.receipts.delete_many({})
+            collections_cleared += result.deleted_count
             
-            # Clear account summaries
-            summaries = mongo_client.db.account_summaries.delete_many({})
+            # Clear bank transactions
+            result = mongo_client.db.teller_transactions.delete_many({})
+            collections_cleared += result.deleted_count
             
-            collections_cleared = [
-                f"synthetic_receipts: {synthetic_receipts.deleted_count}",
-                f"processing_jobs: {test_jobs.deleted_count}",
-                f"account_summaries: {summaries.deleted_count}"
-            ]
+            # Clear processing jobs
+            result = mongo_client.db.processing_jobs.delete_many({})
+            collections_cleared += result.deleted_count
             
-            logger.info(f"🧹 Cleared test data: {', '.join(collections_cleared)}")
+            # Clear match results
+            result = mongo_client.db.match_results.delete_many({})
+            collections_cleared += result.deleted_count
+            
+            logger.info(f"Cleared {collections_cleared} test documents")
             
             return jsonify({
                 "success": True,
-                "message": "Test data cleared successfully",
-                "collections_cleared": collections_cleared,
-                "synthetic_receipts_removed": synthetic_receipts.deleted_count,
-                "real_receipts_remaining": mongo_client.db.receipts.count_documents({})
+                "message": f"Cleared {collections_cleared} test documents",
+                "collections_cleared": collections_cleared
             })
             
         except Exception as e:
-            logger.error(f"Clear test data error: {e}")
+            logger.error(f"Error clearing test data: {e}")
+            return jsonify({"error": f"Failed to clear test data: {str(e)}"}), 500
+
+    @app.route('/api/create-test-receipts', methods=['POST'])
+    def api_create_test_receipts():
+        """Create sample categorized receipts to demonstrate the system"""
+        try:
+            if not mongo_client.connected:
+                return jsonify({"error": "Database not connected"}), 500
+            
+            from expense_categorizer import ExpenseCategorizer
+            from datetime import datetime, timedelta
+            
+            # Initialize categorizer
+            categorizer = ExpenseCategorizer()
+            
+            # Sample receipt data with realistic business expenses
+            sample_receipts = [
+                {
+                    "merchant": "Starbucks Coffee",
+                    "total_amount": 28.75,
+                    "date": (datetime.now() - timedelta(days=2)).strftime('%Y-%m-%d'),
+                    "items": [
+                        {"name": "Client Meeting - 3 Coffees", "price": 15.75},
+                        {"name": "Breakfast Pastries", "price": 13.00}
+                    ],
+                    "raw_text": "Starbucks Coffee Company\nClient Meeting Location\nBusiness Development\n3 Venti Coffees\nMeeting with potential Down Home investors",
+                    "business_purpose": "Client meeting for Down Home expansion",
+                    "account": "brian@downhome.com"
+                },
+                {
+                    "merchant": "Uber",
+                    "total_amount": 47.82,
+                    "date": (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d'),
+                    "items": [
+                        {"name": "Airport to Downtown", "price": 47.82}
+                    ],
+                    "raw_text": "Uber Trip\nNashville Airport to Music City Event Venue\nBusiness Travel",
+                    "business_purpose": "Travel to Music City Rodeo venue",
+                    "account": "brian@musiccityrodeo.com"
+                },
+                {
+                    "merchant": "Office Depot",
+                    "total_amount": 156.43,
+                    "date": (datetime.now() - timedelta(days=3)).strftime('%Y-%m-%d'),
+                    "items": [
+                        {"name": "HP Printer Ink Cartridges", "price": 89.99},
+                        {"name": "Copy Paper - 5 Reams", "price": 45.00},
+                        {"name": "File Folders", "price": 21.44}
+                    ],
+                    "raw_text": "Office Depot Business Supplies\nPrinting and Office Equipment\nBusiness Operating Expenses",
+                    "business_purpose": "Office supplies for business operations",
+                    "account": "kaplan.brian@gmail.com"
+                },
+                {
+                    "merchant": "Adobe Creative Cloud",
+                    "total_amount": 52.99,
+                    "date": (datetime.now() - timedelta(days=5)).strftime('%Y-%m-%d'),
+                    "items": [
+                        {"name": "Creative Cloud Subscription", "price": 52.99}
+                    ],
+                    "raw_text": "Adobe Creative Cloud Monthly Subscription\nVideo Production Software\nProfessional Tools",
+                    "business_purpose": "Video editing software for productions",
+                    "account": "brian@downhome.com"
+                },
+                {
+                    "merchant": "Shell Gas Station",
+                    "total_amount": 73.25,
+                    "date": (datetime.now() - timedelta(days=4)).strftime('%Y-%m-%d'),
+                    "items": [
+                        {"name": "Gasoline - 18.5 gallons", "price": 73.25}
+                    ],
+                    "raw_text": "Shell Gas Station\nFuel for business travel\nClient visit trip",
+                    "business_purpose": "Business travel fuel",
+                    "account": "kaplan.brian@gmail.com"
+                },
+                {
+                    "merchant": "Marriott Hotel",
+                    "total_amount": 189.00,
+                    "date": (datetime.now() - timedelta(days=6)).strftime('%Y-%m-%d'),
+                    "items": [
+                        {"name": "Hotel Room - 1 Night", "price": 149.00},
+                        {"name": "Business Center", "price": 15.00},
+                        {"name": "Parking", "price": 25.00}
+                    ],
+                    "raw_text": "Marriott Hotel Nashville\nBusiness Travel Accommodation\nMusic Industry Conference",
+                    "business_purpose": "Accommodation for music industry conference",
+                    "account": "brian@musiccityrodeo.com"
+                },
+                {
+                    "merchant": "Amazon Web Services",
+                    "total_amount": 127.84,
+                    "date": (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d'),
+                    "items": [
+                        {"name": "Cloud Storage", "price": 45.00},
+                        {"name": "Computing Services", "price": 67.84},
+                        {"name": "Data Transfer", "price": 15.00}
+                    ],
+                    "raw_text": "Amazon Web Services\nCloud hosting and storage\nBusiness infrastructure",
+                    "business_purpose": "Cloud infrastructure for business applications",
+                    "account": "kaplan.brian@gmail.com"
+                },
+                {
+                    "merchant": "Zoom Video Communications",
+                    "total_amount": 19.99,
+                    "date": (datetime.now() - timedelta(days=8)).strftime('%Y-%m-%d'),
+                    "items": [
+                        {"name": "Zoom Pro Subscription", "price": 19.99}
+                    ],
+                    "raw_text": "Zoom Pro Monthly Subscription\nVideo conferencing\nClient meetings and remote work",
+                    "business_purpose": "Video conferencing for client meetings",
+                    "account": "brian@downhome.com"
+                }
+            ]
+            
+            created_receipts = []
+            
+            for i, receipt_data in enumerate(sample_receipts):
+                try:
+                    # Use the expense categorizer for realistic categorization
+                    category_result = categorizer.categorize_expense(receipt_data)
+                    
+                    # Create document for database
+                    doc_id = f"test_receipt_{i+1}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                    
+                    document = {
+                        '_id': doc_id,
+                        'email_id': f"test_email_{i+1}",
+                        'account': receipt_data['account'],
+                        'processed_at': datetime.utcnow(),
+                        
+                        # Core fields
+                        'transaction_date': receipt_data['date'],
+                        'merchant': receipt_data['merchant'],
+                        'price': receipt_data['total_amount'],
+                        'description': f"{receipt_data['merchant']} - {receipt_data['business_purpose']}",
+                        
+                        # Categorization fields (this is what we want to showcase!)
+                        'category': category_result.category,
+                        'ai_subcategory': category_result.details,
+                        'business_purpose': receipt_data['business_purpose'],
+                        'tax_deductible': True,  # Business expenses are typically deductible
+                        'confidence_score': round(category_result.confidence, 2),
+                        'needs_review': category_result.needs_review,
+                        
+                        # Business analysis
+                        'business_type': categorizer.determine_business_type(receipt_data['raw_text'], receipt_data['account']),
+                        'merchant_type': 'restaurant' if 'starbucks' in receipt_data['merchant'].lower() else 'other',
+                        
+                        # Status fields
+                        'receipt_status': 'Found Receipt',
+                        'match_status': 'Not Matched',
+                        'processing_status': 'completed',
+                        'source_type': 'test_data',
+                        
+                        # Additional data
+                        'items': receipt_data['items'],
+                        'raw_text': receipt_data['raw_text'],
+                        'account_name': receipt_data['account'].split('@')[0],
+                        'is_subscription': any(sub in receipt_data['merchant'].lower() for sub in ['adobe', 'zoom', 'aws', 'subscription']),
+                        'gmail_link': f"https://mail.google.com/test_receipt_{i+1}",
+                        'receipt_data': receipt_data
+                    }
+                    
+                    # Insert into database
+                    mongo_client.db.receipts.insert_one(document)
+                    created_receipts.append({
+                        'merchant': receipt_data['merchant'],
+                        'amount': receipt_data['total_amount'],
+                        'category': category_result.category,
+                        'business_type': document['business_type'],
+                        'confidence': category_result.confidence
+                    })
+                    
+                except Exception as e:
+                    logger.error(f"Error creating test receipt {i+1}: {e}")
+                    continue
+            
             return jsonify({
-                "success": False,
-                "error": f"Failed to clear test data: {str(e)}"
-            }), 500
-    
+                "success": True,
+                "message": f"Created {len(created_receipts)} test receipts with AI categorization",
+                "receipts_created": len(created_receipts),
+                "sample_categories": list(set([r['category'] for r in created_receipts])),
+                "sample_receipts": created_receipts[:3]  # Show first 3 as examples
+            })
+            
+        except Exception as e:
+            logger.error(f"Error creating test receipts: {e}")
+            return jsonify({"error": f"Failed to create test receipts: {str(e)}"}), 500
+
     @app.route('/api/update-environment', methods=['POST'])
     def api_update_environment():
         """Update environment configuration"""
