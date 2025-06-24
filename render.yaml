@@ -72,9 +72,9 @@ services:
       - key: TELLER_SIGNING_KEY
         value: "cXLqnm451Bi1sMtKTPWOwdFz3gMtNYPn2hVkgXxy9gc="
       - key: TELLER_CERT_PATH
-        value: /etc/secrets/teller_certificate.b64
+        value: /etc/secrets/certificate.pem
       - key: TELLER_KEY_PATH
-        value: /etc/secrets/teller_private_key.b64
+        value: /etc/secrets/private_key.pem
       
       # AI Services
       - key: HUGGINGFACE_API_KEY
