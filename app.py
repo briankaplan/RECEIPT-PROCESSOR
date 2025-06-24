@@ -2478,6 +2478,75 @@ def create_app():
             logger.error(f"Memory cache error: {e}")
             return jsonify({"error": str(e)}), 500
 
+    @app.route('/api/simple-test-receipts', methods=['POST'])
+    def api_simple_test_receipts():
+        """Create simple test receipts without complex processing"""
+        try:
+            if not mongo_client.connected:
+                return jsonify({"error": "Database not connected"}), 500
+            
+            # Simple test receipts data
+            test_receipts = [
+                {
+                    "date": datetime(2025, 6, 20),
+                    "merchant": "Starbucks Coffee",
+                    "amount": 15.47,
+                    "category": "Business Meals",
+                    "description": "Client meeting coffee",
+                    "business_type": "Down Home",
+                    "gmail_account": "brian@downhome.com",
+                    "subject": "Your Starbucks Receipt",
+                    "sender": "receipts@starbucks.com",
+                    "status": "processed",
+                    "created_at": datetime.utcnow(),
+                    "ai_confidence": 0.95,
+                    "tax_deductible": True
+                },
+                {
+                    "date": datetime(2025, 6, 19),
+                    "merchant": "Uber",
+                    "amount": 28.50,
+                    "category": "Travel",
+                    "description": "Airport transportation",
+                    "business_type": "Music City Rodeo",
+                    "gmail_account": "brian@musiccityrodeo.com",
+                    "subject": "Your trip receipt",
+                    "sender": "receipts@uber.com",
+                    "status": "processed",
+                    "created_at": datetime.utcnow(),
+                    "ai_confidence": 0.92,
+                    "tax_deductible": True
+                },
+                {
+                    "date": datetime(2025, 6, 18),
+                    "merchant": "Office Depot",
+                    "amount": 156.78,
+                    "category": "Office Supplies",
+                    "description": "Office supplies and equipment",
+                    "business_type": "Down Home",
+                    "gmail_account": "kaplan.brian@gmail.com",
+                    "subject": "Office Depot Receipt",
+                    "sender": "noreply@officedepot.com",
+                    "status": "processed",
+                    "created_at": datetime.utcnow(),
+                    "ai_confidence": 0.98,
+                    "tax_deductible": True
+                }
+            ]
+            
+            # Insert directly using simple insert_many
+            result = mongo_client.db.receipts.insert_many(test_receipts)
+            
+            return jsonify({
+                "success": True,
+                "receipts_created": len(result.inserted_ids),
+                "message": f"Created {len(result.inserted_ids)} simple test receipts"
+            })
+            
+        except Exception as e:
+            logger.error(f"❌ Simple test receipts failed: {e}")
+            return jsonify({"error": f"Simple test failed: {str(e)}"}), 500
+
     return app
 
 # ============================================================================
