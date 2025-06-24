@@ -1563,6 +1563,87 @@ def create_app():
             logger.error(f"Bank sync error: {e}")
             return jsonify({"error": str(e), "sync_time": "instant", "reason": "exception"}), 500
 
+    @app.route('/api/debug-secrets', methods=['POST'])
+    def api_debug_secrets():
+        """Debug endpoint to check secret file accessibility"""
+        try:
+            debug_info = {
+                "timestamp": datetime.utcnow().isoformat(),
+                "secret_files_check": {},
+                "environment_paths": {},
+                "file_system_check": {}
+            }
+            
+            # Check environment variables for secret paths
+            secret_env_vars = [
+                'TELLER_CERT_PATH', 'TELLER_KEY_PATH',
+                'GMAIL_ACCOUNT_1_PICKLE_FILE', 'GMAIL_ACCOUNT_2_PICKLE_FILE', 'GMAIL_ACCOUNT_3_PICKLE_FILE',
+                'GOOGLE_SERVICE_ACCOUNT_PATH', 'GOOGLE_CREDENTIALS_PATH'
+            ]
+            
+            for var in secret_env_vars:
+                path = os.getenv(var)
+                debug_info["environment_paths"][var] = path
+                
+                if path:
+                    try:
+                        exists = os.path.exists(path)
+                        if exists:
+                            stat = os.stat(path)
+                            debug_info["secret_files_check"][var] = {
+                                "path": path,
+                                "exists": True,
+                                "size": stat.st_size,
+                                "readable": os.access(path, os.R_OK)
+                            }
+                            
+                            # Check if it's a PEM file
+                            if path.endswith('.pem'):
+                                try:
+                                    with open(path, 'r') as f:
+                                        content = f.read(100)  # First 100 chars
+                                        debug_info["secret_files_check"][var]["pem_header"] = content.startswith('-----BEGIN')
+                                except Exception as e:
+                                    debug_info["secret_files_check"][var]["read_error"] = str(e)
+                                    
+                        else:
+                            debug_info["secret_files_check"][var] = {
+                                "path": path,
+                                "exists": False
+                            }
+                    except Exception as e:
+                        debug_info["secret_files_check"][var] = {
+                            "path": path,
+                            "error": str(e)
+                        }
+            
+            # Check /etc/secrets/ directory
+            secrets_dir = "/etc/secrets"
+            try:
+                if os.path.exists(secrets_dir):
+                    secret_files = os.listdir(secrets_dir)
+                    debug_info["file_system_check"][secrets_dir] = {
+                        "exists": True,
+                        "files": secret_files,
+                        "count": len(secret_files)
+                    }
+                else:
+                    debug_info["file_system_check"][secrets_dir] = {"exists": False}
+            except Exception as e:
+                debug_info["file_system_check"][secrets_dir] = {"error": str(e)}
+            
+            return jsonify({
+                "success": True,
+                "debug_info": debug_info
+            })
+            
+        except Exception as e:
+            logger.error(f"Debug secrets error: {str(e)}")
+            return jsonify({
+                "success": False,
+                "error": str(e)
+            }), 500
+
     @app.route('/api/bank-transactions')
     def api_bank_transactions():
         """Get stored bank transactions for table view"""
