@@ -698,54 +698,110 @@ def create_app():
                     "error": "Failed to create Google Spreadsheet"
                 }), 500
             
-            # Get receipts data
+            # Get receipts data with COMPLETE field set for receipt matching
             receipts_data = []
             if mongo_client.connected:
                 receipts = list(mongo_client.db.receipts.find().sort("date", -1))
                 
-                # Headers for receipts
+                # Comprehensive headers matching system needs
                 receipts_data.append([
-                    'Date', 'Merchant', 'Amount', 'Category', 'Gmail Account', 
-                    'Bank Match', 'AI Confidence', 'Status', 'Description'
+                    'Unique_ID', 'Date', 'Merchant', 'Amount', 'Category', 'Description', 
+                    'Business_Type', 'Gmail_Account', 'Gmail_Subject', 'Gmail_Sender',
+                    'R2_Image_URL', 'R2_Object_Key', 'AI_Confidence', 'Match_Status',
+                    'Bank_Match_ID', 'Matching_Transaction', 'Processing_Job_ID',
+                    'Status', 'Created_At', 'OCR_Text', 'Receipt_Type'
                 ])
                 
-                # Add receipt rows
+                # Add receipt rows with complete data
                 for receipt in receipts:
+                    # Generate R2 URL if available
+                    r2_url = ""
+                    r2_key = ""
+                    if receipt.get('image_key') or receipt.get('r2_key'):
+                        r2_key = receipt.get('image_key', receipt.get('r2_key', ''))
+                        if r2_key and Config.R2_PUBLIC_URL:
+                            r2_url = f"{Config.R2_PUBLIC_URL}/{r2_key}"
+                    
+                    # Determine match status
+                    match_status = "Unmatched"
+                    if receipt.get('bank_matched') or receipt.get('bank_match_id'):
+                        match_status = "Matched"
+                    elif receipt.get('matching_transaction'):
+                        match_status = "Partially Matched"
+                    
                     receipts_data.append([
-                        receipt.get('date', ''),
+                        str(receipt.get('_id', '')),  # Unique MongoDB ID
+                        receipt.get('date', '').strftime('%Y-%m-%d') if hasattr(receipt.get('date'), 'strftime') else str(receipt.get('date', '')),
                         receipt.get('merchant', ''),
-                        str(receipt.get('amount', 0)),
+                        receipt.get('amount', 0),
                         receipt.get('category', ''),
+                        receipt.get('description', receipt.get('subject', '')),  # Use subject as description fallback
+                        receipt.get('business_type', receipt.get('merchant_type', 'Unknown')),
                         receipt.get('gmail_account', ''),
-                        'Yes' if receipt.get('bank_match_id') else 'No',
-                        f"{receipt.get('ai_confidence', 0)*100:.1f}%" if receipt.get('ai_confidence') else 'N/A',
+                        receipt.get('subject', ''),
+                        receipt.get('sender', ''),
+                        r2_url,
+                        r2_key,
+                        receipt.get('ai_confidence', 0),
+                        match_status,
+                        str(receipt.get('bank_match_id', '')),
+                        receipt.get('matching_transaction', ''),
+                        str(receipt.get('processing_job_id', '')),
                         receipt.get('status', 'processed'),
-                        receipt.get('description', '')
+                        receipt.get('created_at', '').strftime('%Y-%m-%d %H:%M:%S') if hasattr(receipt.get('created_at'), 'strftime') else str(receipt.get('created_at', '')),
+                        receipt.get('ocr_text', receipt.get('extracted_text', '')),
+                        receipt.get('receipt_type', 'Email Receipt')
                     ])
             
-            # Get bank transactions data
+            # Get bank transactions data with comprehensive fields for receipt matching
             transactions_data = []
             if mongo_client.connected:
                 transactions = list(mongo_client.db.bank_transactions.find().sort("date", -1))
                 
-                # Headers for transactions
+                # Comprehensive headers for bank transactions
                 transactions_data.append([
-                    'Date', 'Description', 'Amount', 'Type', 'Account', 
-                    'Receipt Match', 'Status', 'Bank Name', 'Category'
+                    'Transaction_ID', 'Date', 'Description', 'Amount', 'Type', 'Category',
+                    'Account_ID', 'Account_Name', 'Bank_Name', 'Counterparty_Name', 
+                    'Counterparty_Type', 'Receipt_Match_Status', 'Matched_Receipt_ID', 
+                    'Receipt_Match_Confidence', 'Status', 'Running_Balance', 'Details',
+                    'Teller_ID', 'Created_At', 'Match_Search_Terms'
                 ])
                 
-                # Add transaction rows
+                # Add transaction rows with complete data
                 for transaction in transactions:
+                    # Determine receipt match status
+                    receipt_match_status = "No Receipt"
+                    if transaction.get('receipt_matched') or transaction.get('receipt_match_id'):
+                        receipt_match_status = "Receipt Found"
+                    elif transaction.get('amount', 0) < 0:  # Expense transactions need receipts
+                        receipt_match_status = "Needs Receipt"
+                    
+                    # Extract counterparty info
+                    counterparty = transaction.get('counterparty', {})
+                    counterparty_name = counterparty.get('name', '') if counterparty else ''
+                    counterparty_type = counterparty.get('type', '') if counterparty else ''
+                    
                     transactions_data.append([
-                        transaction.get('date', ''),
+                        str(transaction.get('_id', '')),  # Unique MongoDB ID
+                        transaction.get('date', '').strftime('%Y-%m-%d') if hasattr(transaction.get('date'), 'strftime') else str(transaction.get('date', '')),
                         transaction.get('description', ''),
-                        str(transaction.get('amount', 0)),
-                        transaction.get('type', ''),
+                        transaction.get('amount', 0),
+                        'Expense' if transaction.get('amount', 0) < 0 else 'Income',
+                        transaction.get('category', ''),
                         transaction.get('account_id', ''),
-                        'Yes' if transaction.get('receipt_match_id') else 'No',
-                        transaction.get('status', ''),
                         transaction.get('account_name', ''),
-                        transaction.get('category', '')
+                        transaction.get('bank_name', ''),
+                        counterparty_name,
+                        counterparty_type,
+                        receipt_match_status,
+                        str(transaction.get('receipt_match_id', transaction.get('matched_receipt_id', ''))),
+                        transaction.get('match_confidence', ''),
+                        transaction.get('status', ''),
+                        transaction.get('running_balance', ''),
+                        transaction.get('details', ''),
+                        str(transaction.get('teller_id', transaction.get('id', ''))),
+                        transaction.get('created_at', '').strftime('%Y-%m-%d %H:%M:%S') if hasattr(transaction.get('created_at'), 'strftime') else str(transaction.get('created_at', '')),
+                        f"{transaction.get('description', '')} {counterparty_name}".strip()  # Search terms for receipt matching
                     ])
             
             # Update worksheets
@@ -959,6 +1015,11 @@ def create_app():
                         "status": "configured" if os.getenv('HUGGINGFACE_API_KEY') else "standby",
                         "connected": bool(os.getenv('HUGGINGFACE_API_KEY')),
                         "light": "green" if os.getenv('HUGGINGFACE_API_KEY') else "yellow"
+                    },
+                    "google_sheets": {
+                        "status": "connected" if sheets_client.connected else "not_configured",
+                        "connected": sheets_client.connected,
+                        "light": "green" if sheets_client.connected else "red"
                     },
                     "ocr": {
                         "status": "active" if os.getenv('HUGGINGFACE_API_KEY') else "standby",
