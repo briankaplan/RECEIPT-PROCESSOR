@@ -556,34 +556,35 @@ def create_app():
     
     @app.route('/api/process-receipts', methods=['POST'])
     def api_process_receipts():
-        """REAL receipt processing for year's worth of Gmail data"""
+        """REAL receipt processing using actual Gmail API and AI integration"""
         try:
             data = request.get_json() or {}
-            days = data.get('days', 365)  # Default to 1 year for comprehensive scan
-            max_receipts = data.get('max_receipts', 1000)  # Allow large volume processing
+            days = data.get('days', 365)
+            max_receipts = data.get('max_receipts', 1000)
             
             if not mongo_client.connected:
                 return jsonify({"error": "Database not connected - cannot store results"}), 500
-            
-            # Real processing results storage
+
+            # Processing job tracking
             processing_results = {
                 "started_at": datetime.utcnow(),
                 "days_requested": days,
                 "max_receipts": max_receipts,
-                "gmail_accounts_processed": 0,
-                "emails_scanned": 0,
-                "receipts_found": 0,
-                "receipts_processed": 0,
-                "ai_extractions": 0,
-                "bank_matches": 0,
-                "errors": [],
                 "status": "processing"
             }
             
-            # Store processing job in MongoDB
             job_id = str(mongo_client.db.processing_jobs.insert_one(processing_results).inserted_id)
             
-            # Process each Gmail account
+            # Import real Gmail and processing clients
+            from multi_gmail_client import MultiGmailClient
+            from receipt_processor import ReceiptProcessor
+            from huggingface_client import HuggingFaceClient
+            
+            # Initialize real clients
+            gmail_client = MultiGmailClient()
+            receipt_processor = ReceiptProcessor()
+            ai_client = HuggingFaceClient()
+            
             total_receipts_found = 0
             total_matched = 0
             
@@ -591,77 +592,133 @@ def create_app():
                 try:
                     logger.info(f"📧 Processing Gmail account: {email}")
                     
-                    # Simulate real Gmail processing (in real app, this would connect to Gmail API)
-                    account_results = {
-                        "account": email,
-                        "emails_scanned": 247,  # Realistic for 1 year
-                        "receipts_found": 23,
-                        "processed_successfully": 19,
-                        "ai_extractions": 19,
-                        "extraction_failures": 4,
-                        "processed_at": datetime.utcnow()
-                    }
+                    # Connect to real Gmail account
+                    if not gmail_client.connect_account(email):
+                        logger.error(f"❌ Failed to connect to Gmail account: {email}")
+                        continue
                     
-                    # Store individual receipts and match with REAL bank transactions
-                    for i in range(account_results["receipts_found"]):
-                        receipt_amount = round(12.99 + (i * 5.50), 2)
-                        receipt_date = datetime.utcnow() - timedelta(days=i*15)
-                        
-                        # Try to find matching bank transaction
-                        matching_transaction = None
-                        bank_matched = False
-                        
-                        # Search for bank transactions within 3 days and similar amount
-                        date_range_start = receipt_date - timedelta(days=3)
-                        date_range_end = receipt_date + timedelta(days=3)
-                        amount_tolerance = receipt_amount * 0.05  # 5% tolerance
-                        
-                        potential_matches = mongo_client.db.bank_transactions.find({
-                            "date": {"$gte": date_range_start, "$lte": date_range_end},
-                            "amount": {
-                                "$gte": receipt_amount - amount_tolerance,
-                                "$lte": receipt_amount + amount_tolerance
-                            }
-                        })
-                        
-                        for bank_txn in potential_matches:
-                            # Found a potential match!
-                            matching_transaction = bank_txn.get('transaction_id')
-                            bank_matched = True
-                            break
-                        
-                        receipt_record = {
-                            "email_id": f"synthetic_{i}_{email.replace('@', '_').replace('.', '_')}",
-                            "account": email,
-                            "gmail_account": email,
-                            "subject": f"Receipt from Business Store #{i+1}",
-                            "sender": f"noreply@businessstore{i+1}.com",
-                            "date": receipt_date,
-                            "amount": receipt_amount,
-                            "merchant": f"Business Store {i+1}",
-                            "category": "Business Expense",
-                            "ai_confidence": 0.85 + (i * 0.01),
-                            "bank_matched": bank_matched,
-                            "matching_transaction": matching_transaction,
-                            "status": "processed",
-                            "processing_job_id": job_id,
-                            "created_at": datetime.utcnow()
-                        }
-                        
-                        # Use upsert to avoid duplicate key errors
-                        mongo_client.db.receipts.replace_one(
-                            {"email_id": receipt_record["email_id"], "account": receipt_record["account"]},
-                            receipt_record,
-                            upsert=True
-                        )
+                    # Search for real receipt emails
+                    receipt_queries = [
+                        'subject:(receipt OR invoice OR order OR purchase OR confirmation)',
+                        'from:(noreply OR no-reply OR donotreply OR billing OR orders)',
+                        'has:attachment filename:(pdf OR receipt OR invoice)',
+                        '(receipt OR invoice OR order) AND (total OR amount OR payment)'
+                    ]
                     
-                    total_receipts_found += account_results["receipts_found"]
-                    total_matched += account_results["receipts_found"] // 3  # Realistic match rate
+                    account_receipts = 0
+                    emails_scanned = 0
                     
-                    # Store account summary
-                    mongo_client.db.account_summaries.insert_one(account_results)
+                    for query in receipt_queries:
+                        try:
+                            # Get real emails from Gmail API
+                            messages = gmail_client.search_messages(email, query, max_results=days//4, days_back=days)
+                            emails_scanned += len(messages)
+                            
+                            for message in messages:
+                                try:
+                                    # Get full message content
+                                    email_data = gmail_client.get_message_content(email, message['id'])
+                                    
+                                    if not email_data:
+                                        continue
+                                    
+                                    # Process attachments if present
+                                    receipt_data = None
+                                    if email_data.get('attachments'):
+                                        for attachment in email_data['attachments']:
+                                            if receipt_processor.is_receipt_file(attachment.get('filename', '')):
+                                                # Process attachment with AI
+                                                attachment_data = receipt_processor.extract_receipt_data_from_attachment(attachment)
+                                                if attachment_data and ai_client.is_connected():
+                                                    receipt_data = ai_client.process_receipt(attachment_data)
+                                                    break
+                                    
+                                    # If no attachment, process email body text
+                                    if not receipt_data and email_data.get('body'):
+                                        if ai_client.is_connected():
+                                            receipt_data = ai_client.extract_receipt_from_text(email_data['body'])
+                                    
+                                    # If we found receipt data, save it
+                                    if receipt_data and receipt_data.get('amount', 0) > 0:
+                                        # Try to find matching bank transaction
+                                        matching_transaction = None
+                                        bank_matched = False
+                                        
+                                        if receipt_data.get('date'):
+                                            receipt_date = receipt_data['date']
+                                            if isinstance(receipt_date, str):
+                                                try:
+                                                    receipt_date = datetime.fromisoformat(receipt_date.replace('Z', '+00:00'))
+                                                except:
+                                                    receipt_date = datetime.utcnow()
+                                            
+                                            date_range_start = receipt_date - timedelta(days=3)
+                                            date_range_end = receipt_date + timedelta(days=3)
+                                            amount_tolerance = receipt_data['amount'] * 0.05
+                                            
+                                            potential_matches = mongo_client.db.bank_transactions.find({
+                                                "date": {"$gte": date_range_start, "$lte": date_range_end},
+                                                "amount": {
+                                                    "$gte": -(receipt_data['amount'] + amount_tolerance),
+                                                    "$lte": -(receipt_data['amount'] - amount_tolerance)
+                                                }
+                                            })
+                                            
+                                            for bank_txn in potential_matches:
+                                                matching_transaction = str(bank_txn.get('_id'))
+                                                bank_matched = True
+                                                break
+                                        
+                                        # Create comprehensive receipt record
+                                        receipt_record = {
+                                            "email_id": message['id'],
+                                            "account": email,
+                                            "gmail_account": email,
+                                            "subject": email_data.get('subject', ''),
+                                            "sender": email_data.get('from', ''),
+                                            "date": receipt_data.get('date', email_data.get('date', datetime.utcnow())),
+                                            "amount": receipt_data.get('amount', 0),
+                                            "merchant": receipt_data.get('merchant', 'Unknown Merchant'),
+                                            "category": receipt_data.get('category', 'Uncategorized'),
+                                            "description": receipt_data.get('description', ''),
+                                            "ai_confidence": receipt_data.get('confidence', 0.0),
+                                            "bank_matched": bank_matched,
+                                            "matching_transaction": matching_transaction,
+                                            "status": "processed",
+                                            "processing_job_id": job_id,
+                                            "created_at": datetime.utcnow(),
+                                            "ocr_text": receipt_data.get('text', ''),
+                                            "items": receipt_data.get('items', []),
+                                            "receipt_type": "Email Receipt",
+                                            "raw_email_data": {
+                                                "message_id": email_data.get('message_id'),
+                                                "thread_id": email_data.get('thread_id'),
+                                                "labels": email_data.get('labels', [])
+                                            }
+                                        }
+                                        
+                                        # Use upsert to avoid duplicates
+                                        mongo_client.db.receipts.replace_one(
+                                            {"email_id": receipt_record["email_id"], "account": receipt_record["account"]},
+                                            receipt_record,
+                                            upsert=True
+                                        )
+                                        
+                                        account_receipts += 1
+                                        total_receipts_found += 1
+                                        
+                                        if bank_matched:
+                                            total_matched += 1
+                                            
+                                except Exception as e:
+                                    logger.error(f"Error processing message {message.get('id')}: {e}")
+                                    continue
+                                    
+                        except Exception as e:
+                            logger.error(f"Error with query '{query}' for {email}: {e}")
+                            continue
                     
-                    logger.info(f"✅ Processed {account_results['receipts_found']} receipts from {email}")
+                    logger.info(f"✅ Processed {account_receipts} receipts from {email} ({emails_scanned} emails scanned)")
                     
                 except Exception as e:
                     processing_results["errors"].append(f"Error processing {email}: {str(e)}")
@@ -676,10 +733,14 @@ def create_app():
                 "days_processed": days,
                 "accounts_processed": len(Config.GMAIL_ACCOUNTS),
                 "processing_job_id": job_id,
-                "match_rate": f"{(total_matched/max(total_receipts_found, 1)*100):.1f}%",
-                "total_amount": sum([12.99 + (i * 5.50) for i in range(total_receipts_found)]),
-                "categories_found": ["Business Expense", "Office Supplies", "Travel", "Meals"]
+                "match_rate": f"{(total_matched/max(total_receipts_found, 1)*100):.1f}%" if total_receipts_found > 0 else "0%"
             }
+            
+            # Calculate real totals
+            if total_receipts_found > 0:
+                receipts = list(mongo_client.db.receipts.find({"processing_job_id": job_id}))
+                final_results["total_amount"] = sum([r.get('amount', 0) for r in receipts])
+                final_results["categories_found"] = list(set([r.get('category', 'Uncategorized') for r in receipts]))
             
             # Update job status
             from bson import ObjectId
@@ -1287,6 +1348,265 @@ def create_app():
         except Exception as e:
             logger.error(f"Get receipt details error: {e}")
             return jsonify({"error": str(e)}), 500
+
+    @app.route('/api/camera-capture', methods=['POST'])
+    def api_camera_capture():
+        """Process camera captured receipt image"""
+        try:
+            data = request.get_json() or {}
+            image_data = data.get('image_data')
+            
+            if not image_data:
+                return jsonify({"success": False, "error": "No image data provided"}), 400
+            
+            # Initialize camera scanner and AI processor
+            from camera_scanner import CameraScanner
+            from huggingface_client import HuggingFaceClient
+            
+            camera_scanner = CameraScanner()
+            ai_client = HuggingFaceClient()
+            
+            # Process camera capture
+            file_info = camera_scanner.process_camera_capture(image_data)
+            if not file_info:
+                return jsonify({"success": False, "error": "Failed to process camera image"}), 500
+            
+            # Extract receipt data with AI
+            receipt_data = None
+            if ai_client.is_connected():
+                with open(file_info['filepath'], 'rb') as f:
+                    image_bytes = f.read()
+                receipt_data = ai_client.process_image(image_bytes)
+            
+            # Save to MongoDB if receipt data found
+            if receipt_data and mongo_client.connected:
+                receipt_record = {
+                    "email_id": f"camera_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}",
+                    "account": "camera_capture",
+                    "source_type": "camera_scanner",
+                    "subject": "Camera Captured Receipt",
+                    "sender": "camera_scanner",
+                    "date": datetime.utcnow(),
+                    "amount": receipt_data.get('total_amount', 0),
+                    "merchant": receipt_data.get('merchant', 'Camera Receipt'),
+                    "category": "Camera Scan",
+                    "ai_confidence": receipt_data.get('confidence', 0.8),
+                    "status": "processed",
+                    "created_at": datetime.utcnow(),
+                    "image_info": file_info,
+                    "ocr_text": receipt_data.get('raw_text', ''),
+                    "receipt_type": "Camera Capture"
+                }
+                
+                mongo_client.db.receipts.insert_one(receipt_record)
+            
+            # Clean up temporary file
+            import os
+            if os.path.exists(file_info['filepath']):
+                os.remove(file_info['filepath'])
+            
+            return jsonify({
+                "success": True,
+                "data": receipt_data,
+                "message": "Receipt processed successfully"
+            })
+            
+        except Exception as e:
+            logger.error(f"Camera capture error: {e}")
+            return jsonify({"success": False, "error": str(e)}), 500
+    
+    @app.route('/api/validate-image', methods=['POST'])
+    def api_validate_image():
+        """Validate image quality for receipt processing"""
+        try:
+            data = request.get_json() or {}
+            image_data = data.get('image_data')
+            
+            if not image_data:
+                return jsonify({"valid": False, "error": "No image data provided"}), 400
+            
+            # Basic validation - check if image can be processed
+            try:
+                import base64
+                from PIL import Image
+                import io
+                
+                # Remove data URL prefix if present
+                if image_data.startswith('data:image'):
+                    image_data = image_data.split(',')[1]
+                
+                # Decode and validate image
+                image_bytes = base64.b64decode(image_data)
+                image = Image.open(io.BytesIO(image_bytes))
+                
+                # Check image properties
+                width, height = image.size
+                aspect_ratio = height / width if width > 0 else 0
+                
+                feedback = []
+                valid = True
+                
+                if width < 300 or height < 400:
+                    feedback.append("Image resolution is low - try moving closer")
+                    valid = False
+                
+                if aspect_ratio < 1.0:
+                    feedback.append("Rotate phone to portrait mode for better results")
+                
+                if width > 2000 or height > 3000:
+                    feedback.append("Image is very high resolution - processing may be slower")
+                
+                if not feedback:
+                    feedback.append("Image looks good for processing!")
+                
+                return jsonify({
+                    "valid": valid,
+                    "feedback": feedback,
+                    "image_info": {
+                        "width": width,
+                        "height": height,
+                        "aspect_ratio": round(aspect_ratio, 2)
+                    }
+                })
+                
+            except Exception as e:
+                return jsonify({"valid": False, "error": "Invalid image data"}), 400
+            
+        except Exception as e:
+            logger.error(f"Image validation error: {e}")
+            return jsonify({"valid": False, "error": str(e)}), 500
+    
+    @app.route('/api/scan-google-photos', methods=['POST'])
+    def api_scan_google_photos():
+        """Scan Google Photos for receipt images"""
+        try:
+            data = request.get_json() or {}
+            days_back = data.get('days_back', 30)
+            
+            from google_photos_client import GooglePhotosClient
+            from receipt_processor import ReceiptProcessor
+            from huggingface_client import HuggingFaceClient
+            
+            photos_client = GooglePhotosClient()
+            receipt_processor = ReceiptProcessor()
+            ai_client = HuggingFaceClient()
+            
+            if not photos_client.is_connected():
+                return jsonify({
+                    "success": False,
+                    "error": "Google Photos not connected. Please check credentials."
+                }), 500
+            
+            # Search for receipt photos
+            receipt_photos = photos_client.search_receipt_photos(days_back=days_back)
+            
+            if not receipt_photos:
+                return jsonify({
+                    "success": True,
+                    "photos_found": 0,
+                    "receipts_processed": 0,
+                    "message": "No receipt photos found in Google Photos"
+                })
+            
+            # Process found photos
+            processed_receipts = photos_client.process_receipt_photos(receipt_photos, receipt_processor)
+            
+            # Save to MongoDB
+            saved_count = 0
+            if mongo_client.connected:
+                for receipt_data in processed_receipts:
+                    receipt_record = {
+                        "email_id": f"google_photos_{receipt_data['google_photos_id']}",
+                        "account": "google_photos",
+                        "source_type": "google_photos",
+                        "subject": f"Google Photos: {receipt_data['original_filename']}",
+                        "sender": "google_photos",
+                        "date": receipt_data.get('date', datetime.utcnow()),
+                        "amount": receipt_data.get('total_amount', 0),
+                        "merchant": receipt_data.get('merchant', 'Unknown'),
+                        "category": "Google Photos",
+                        "status": "processed",
+                        "created_at": datetime.utcnow(),
+                        "google_photos_data": receipt_data,
+                        "receipt_type": "Google Photos"
+                    }
+                    
+                    mongo_client.db.receipts.replace_one(
+                        {"email_id": receipt_record["email_id"]},
+                        receipt_record,
+                        upsert=True
+                    )
+                    saved_count += 1
+            
+            return jsonify({
+                "success": True,
+                "photos_found": len(receipt_photos),
+                "receipts_processed": len(processed_receipts),
+                "receipts_saved": saved_count,
+                "message": f"Processed {len(processed_receipts)} receipts from Google Photos"
+            })
+            
+        except Exception as e:
+            logger.error(f"Google Photos scan error: {e}")
+            return jsonify({"success": False, "error": str(e)}), 500
+    
+    @app.route('/api/batch-upload', methods=['POST'])
+    def api_batch_upload():
+        """Handle batch upload of receipt images"""
+        try:
+            if 'files' not in request.files:
+                return jsonify({"success": False, "error": "No files uploaded"}), 400
+            
+            files = request.files.getlist('files')
+            
+            from camera_scanner import CameraScanner
+            from receipt_processor import ReceiptProcessor
+            from huggingface_client import HuggingFaceClient
+            
+            camera_scanner = CameraScanner()
+            receipt_processor = ReceiptProcessor()
+            ai_client = HuggingFaceClient()
+            
+            # Process batch upload
+            processed_files = camera_scanner.process_batch_upload(files)
+            
+            # Extract receipt data from processed files
+            processed_receipts = camera_scanner.process_receipt_images(processed_files, receipt_processor)
+            
+            # Save to MongoDB
+            saved_count = 0
+            if mongo_client.connected:
+                for receipt_data in processed_receipts:
+                    receipt_record = {
+                        "email_id": f"batch_upload_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{saved_count}",
+                        "account": "batch_upload",
+                        "source_type": "batch_upload",
+                        "subject": f"Batch Upload: {receipt_data.get('original_filename', 'Unknown')}",
+                        "sender": "batch_upload",
+                        "date": datetime.utcnow(),
+                        "amount": receipt_data.get('total_amount', 0),
+                        "merchant": receipt_data.get('merchant', 'Uploaded Receipt'),
+                        "category": "Batch Upload",
+                        "status": "processed",
+                        "created_at": datetime.utcnow(),
+                        "upload_data": receipt_data,
+                        "receipt_type": "Batch Upload"
+                    }
+                    
+                    mongo_client.db.receipts.insert_one(receipt_record)
+                    saved_count += 1
+            
+            return jsonify({
+                "success": True,
+                "files_uploaded": len(processed_files),
+                "receipts_processed": len(processed_receipts),
+                "receipts_saved": saved_count,
+                "message": f"Successfully processed {len(processed_receipts)} receipt files"
+            })
+            
+        except Exception as e:
+            logger.error(f"Batch upload error: {e}")
+            return jsonify({"success": False, "error": str(e)}), 500
 
     return app
 

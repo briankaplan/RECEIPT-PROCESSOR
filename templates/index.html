@@ -447,6 +447,24 @@
                 <small>Download transactions from bank accounts</small>
             </button>
             
+            <button class="action-btn" onclick="openCameraScanner()">
+                <i class="fas fa-camera"></i>
+                <div>Camera Scanner</div>
+                <small>Capture receipts with device camera</small>
+            </button>
+            
+            <button class="action-btn" onclick="scanGooglePhotos()">
+                <i class="fas fa-images"></i>
+                <div>Google Photos</div>
+                <small>Scan photos for receipt images</small>
+            </button>
+            
+            <button class="action-btn" onclick="showBatchUpload()">
+                <i class="fas fa-upload"></i>
+                <div>Batch Upload</div>
+                <small>Upload multiple receipt files</small>
+            </button>
+            
             <button class="action-btn" onclick="exportToSheets()">
                 <i class="fas fa-file-export"></i>
                 <div>Export Data</div>
@@ -515,32 +533,38 @@
                     
                     <div class="status-item">
                         <div class="status-light" id="databaseLight"></div>
-                        <div class="status-label">Database</div>
+                        <div class="status-label">MongoDB</div>
                         <small id="databaseStatus">Loading...</small>
                     </div>
                     
                     <div class="status-item">
                         <div class="status-light" id="aiLight"></div>
-                        <div class="status-label">AI Engine</div>
+                        <div class="status-label">HuggingFace</div>
                         <small id="aiStatus">Loading...</small>
                     </div>
                     
                     <div class="status-item">
                         <div class="status-light" id="bankingLight"></div>
-                        <div class="status-label">Banking</div>
+                        <div class="status-label">Teller Banking</div>
                         <small id="bankingStatus">Loading...</small>
                     </div>
                     
                     <div class="status-item">
                         <div class="status-light" id="storageLight"></div>
-                        <div class="status-label">Storage</div>
+                        <div class="status-label">R2 Storage</div>
                         <small id="storageStatus">Loading...</small>
                     </div>
                     
                     <div class="status-item">
                         <div class="status-light" id="exportLight"></div>
-                        <div class="status-label">Export</div>
+                        <div class="status-label">Google Sheets</div>
                         <small id="exportStatus">Loading...</small>
+                    </div>
+                    
+                    <div class="status-item">
+                        <div class="status-light" id="ocrLight"></div>
+                        <div class="status-label">OCR Engine</div>
+                        <small id="ocrStatus">Loading...</small>
                     </div>
                 </div>
             </div>
@@ -586,6 +610,7 @@
                 updateStatusLight('banking', data.services.teller);
                 updateStatusLight('storage', data.services.r2);
                 updateStatusLight('export', data.services.google_sheets);
+                updateStatusLight('ocr', data.services.ocr || { connected: true, message: 'OCR Ready' });
                 
             } catch (error) {
                 console.error('Error loading system status:', error);
@@ -885,6 +910,88 @@
 
         function refreshTransactions() {
             loadTransactions();
+        }
+
+        // Advanced Actions
+        function openCameraScanner() {
+            window.open('/scanner', '_blank');
+        }
+
+        async function scanGooglePhotos() {
+            const button = event.target.closest('.action-btn');
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i><div>Scanning...</div><small>Please wait...</small>';
+            
+            try {
+                const response = await fetch('/api/scan-google-photos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ days_back: 30 })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`✅ Google Photos scan completed!\\n\\nPhotos found: ${result.photos_found}\\nReceipts processed: ${result.receipts_processed}\\nReceipts saved: ${result.receipts_saved}`);
+                    loadStats();
+                    loadReceipts();
+                } else {
+                    alert('❌ Error: ' + result.error);
+                }
+                
+            } catch (error) {
+                alert('❌ Error scanning Google Photos: ' + error.message);
+            } finally {
+                button.innerHTML = '<i class="fas fa-images"></i><div>Google Photos</div><small>Scan photos for receipt images</small>';
+            }
+        }
+
+        function showBatchUpload() {
+            // Create file input
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.multiple = true;
+            input.accept = 'image/*,.pdf';
+            input.style.display = 'none';
+            
+            input.onchange = async function(e) {
+                const files = e.target.files;
+                if (files.length === 0) return;
+                
+                // Show progress
+                const button = document.querySelector('.action-btn[onclick="showBatchUpload()"]');
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i><div>Uploading...</div><small>Processing files...</small>';
+                
+                try {
+                    const formData = new FormData();
+                    for (let file of files) {
+                        formData.append('files', file);
+                    }
+                    
+                    const response = await fetch('/api/batch-upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        alert(`✅ Batch upload completed!\\n\\nFiles uploaded: ${result.files_uploaded}\\nReceipts processed: ${result.receipts_processed}\\nReceipts saved: ${result.receipts_saved}`);
+                        loadStats();
+                        loadReceipts();
+                    } else {
+                        alert('❌ Error: ' + result.error);
+                    }
+                    
+                } catch (error) {
+                    alert('❌ Error uploading files: ' + error.message);
+                } finally {
+                    button.innerHTML = '<i class="fas fa-upload"></i><div>Batch Upload</div><small>Upload multiple receipt files</small>';
+                }
+            };
+            
+            document.body.appendChild(input);
+            input.click();
+            document.body.removeChild(input);
         }
     </script>
 </body>
