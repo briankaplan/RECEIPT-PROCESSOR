@@ -60,7 +60,7 @@ services:
       - key: TELLER_APPLICATION_ID
         value: app_pbvpiocruhfnvkhf1k000
       - key: TELLER_ENVIRONMENT
-        value: sandbox
+        value: development
       - key: TELLER_API_URL
         value: https://api.teller.io
       - key: TELLER_API_VERSION
