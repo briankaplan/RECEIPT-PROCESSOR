@@ -1,17 +1,112 @@
 #!/usr/bin/env python3
 """
-IMMEDIATE FIX for Render.com freezing issue
-This replaces your current app.py to fix the deployment problems
+Receipt Processor - Production Flask Application
+Real-time receipt scanning, AI processing, and bank transaction matching
 """
 
 import os
 import sys
-import logging
 import json
-import traceback
+import logging
+import secrets
+import requests
+import hmac
+import hashlib
+from urllib.parse import urlencode
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
-import secrets
+from werkzeug.middleware.proxy_fix import ProxyFix
+from flask import Flask, render_template, request, jsonify, redirect, url_for
+
+# MongoDB
+from pymongo import MongoClient
+
+# Google Sheets integration
+try:
+    import gspread
+    from google.oauth2.service_account import Credentials
+    GOOGLE_SHEETS_AVAILABLE = True
+except ImportError:
+    GOOGLE_SHEETS_AVAILABLE = False
+    logger = logging.getLogger(__name__)
+    logger.warning("Google Sheets dependencies not available")
+
+# OCR and image processing
+try:
+    import pytesseract
+    from PIL import Image
+    import PyPDF2
+    OCR_AVAILABLE = True
+except ImportError as e:
+    OCR_AVAILABLE = False
+    # Set up basic logging for this error
+    print(f"Warning: OCR modules not available: {e}")
+    print("Install with: pip install pytesseract Pillow PyPDF2")
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('logs/app.log') if os.path.exists('logs') else logging.NullHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
+# Safe imports for optional dependencies
+def safe_import(module_name, error_message=None):
+    """Safely import optional modules"""
+    try:
+        return __import__(module_name)
+    except ImportError as e:
+        if error_message:
+            logger.warning(f"{module_name}: {error_message}")
+        else:
+            logger.warning(f"Optional module {module_name} not available: {e}")
+        return None
+
+# Import optional OCR dependencies safely
+pytesseract = safe_import('pytesseract', 'OCR processing will be limited - install with: pip install pytesseract')
+PIL = safe_import('PIL', 'Image processing will be limited - install with: pip install Pillow')
+if not PIL:
+    try:
+        from PIL import Image
+    except ImportError:
+        logger.warning("Pillow not available for image processing")
+PyPDF2 = safe_import('PyPDF2', 'PDF processing will be limited - install with: pip install PyPDF2')
+
+def safe_parse_date(date_str, default=None):
+    """Safely parse various date formats"""
+    if not date_str:
+        return default or datetime.utcnow()
+    
+    try:
+        # Try different date formats
+        formats = [
+            '%Y-%m-%d',
+            '%Y-%m-%dT%H:%M:%S',
+            '%Y-%m-%dT%H:%M:%SZ',
+            '%Y-%m-%dT%H:%M:%S.%f',
+            '%Y-%m-%dT%H:%M:%S.%fZ'
+        ]
+        
+        for fmt in formats:
+            try:
+                return datetime.strptime(date_str, fmt)
+            except ValueError:
+                continue
+        
+        # Try fromisoformat as last resort
+        if hasattr(datetime, 'fromisoformat'):
+            return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+        
+        # If all else fails, return default
+        return default or datetime.utcnow()
+        
+    except Exception as e:
+        logger.warning(f"Failed to parse date '{date_str}': {e}")
+        return default or datetime.utcnow()
 
 # Core Flask imports
 from flask import Flask, request, jsonify, render_template, redirect, url_for
@@ -20,7 +115,6 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 # Database & HTTP
 import pymongo
 from pymongo import MongoClient
-import requests
 import hmac
 import hashlib
 
@@ -31,14 +125,6 @@ from google.oauth2.service_account import Credentials
 
 # Utilities
 from urllib.parse import urlencode
-
-# Configure basic logging for Render
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler(sys.stdout)]
-)
-logger = logging.getLogger(__name__)
 
 # ============================================================================
 # FIXED CONFIGURATION
@@ -86,6 +172,46 @@ class Config:
             'pickle_file': '/etc/secrets/brian_musiccityrodeo.pickle'
         }
     }
+
+# ============================================================================
+# UTILITY FUNCTIONS
+# ============================================================================
+
+def parse_teller_date(date_str):
+    """Safely parse Teller API date strings"""
+    if not date_str:
+        return datetime.utcnow()
+    
+    try:
+        # Try different date formats that Teller might use
+        formats = [
+            '%Y-%m-%d',
+            '%Y-%m-%dT%H:%M:%S',
+            '%Y-%m-%dT%H:%M:%SZ',
+            '%Y-%m-%dT%H:%M:%S.%f',
+            '%Y-%m-%dT%H:%M:%S.%fZ'
+        ]
+        
+        for fmt in formats:
+            try:
+                return datetime.strptime(date_str, fmt)
+            except ValueError:
+                continue
+        
+        # If none of the formats work, try fromisoformat
+        return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+        
+    except Exception as e:
+        logger.warning(f"Failed to parse date '{date_str}': {e}")
+        return datetime.utcnow()
+
+def safe_import_module(module_name, fallback_message="Module not available"):
+    """Safely import modules with fallback"""
+    try:
+        return __import__(module_name)
+    except ImportError as e:
+        logger.warning(f"{module_name} not available: {e}")
+        return None
 
 # ============================================================================
 # SAFE CLIENTS WITH ERROR HANDLING
@@ -247,24 +373,30 @@ class SafeSheetsClient:
     
     def create_spreadsheet(self, title: str, folder_id: str = None) -> Optional[str]:
         """Create a new Google Spreadsheet"""
+        if not self.connected or not self.client:
+            logger.error("Google Sheets client not connected - cannot create spreadsheet")
+            return None
+        
         try:
-            if not self.connected:
-                return None
-            
+            # Create spreadsheet
             spreadsheet = self.client.create(title)
+            spreadsheet_id = spreadsheet.id
             
-            # Move to specific folder if provided
-            if folder_id:
-                try:
-                    spreadsheet.share(None, perm_type='domain', role='reader', domain='gmail.com')
-                except:
-                    pass  # Ignore sharing errors
+            # Share with service account email to ensure access
+            try:
+                # Get service account email from credentials if available
+                spreadsheet.share('', perm_type='anyone', role='reader')
+                logger.info(f"✅ Created and shared spreadsheet: {title} (ID: {spreadsheet_id})")
+            except Exception as share_error:
+                logger.warning(f"Created spreadsheet but sharing failed: {share_error}")
             
-            logger.info(f"✅ Created Google Sheet: {title}")
-            return spreadsheet.id
+            return spreadsheet_id
             
         except Exception as e:
-            logger.error(f"Failed to create spreadsheet: {e}")
+            logger.error(f"Failed to create Google Spreadsheet '{title}': {e}")
+            logger.error(f"Google Sheets connection status: {self.connected}")
+            if "credentials" in str(e).lower():
+                logger.error("This appears to be a credentials issue. Check service account setup.")
             return None
     
     def update_sheet(self, spreadsheet_id: str, worksheet_name: str, data: List[List[str]]) -> bool:
@@ -570,7 +702,8 @@ def create_app():
                 "started_at": datetime.utcnow(),
                 "days_requested": days,
                 "max_receipts": max_receipts,
-                "status": "processing"
+                "status": "processing",
+                "errors": []
             }
             
             job_id = str(mongo_client.db.processing_jobs.insert_one(processing_results).inserted_id)
@@ -771,12 +904,33 @@ def create_app():
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
             spreadsheet_title = f"Receipt_Matcher_Export_{timestamp}"
             
-            # Create new spreadsheet
-            spreadsheet_id = sheets_client.create_spreadsheet(spreadsheet_title)
-            if not spreadsheet_id:
+            # Create new spreadsheet with enhanced error handling
+            try:
+                spreadsheet_id = sheets_client.create_spreadsheet(spreadsheet_title)
+                if not spreadsheet_id:
+                    return jsonify({
+                        "success": False,
+                        "error": "Failed to create Google Spreadsheet - check service account permissions"
+                    }), 500
+            except Exception as create_error:
+                error_details = str(create_error)
+                logger.error(f"Spreadsheet creation failed: {error_details}")
+                
+                # Provide specific error guidance
+                if "403" in error_details or "forbidden" in error_details.lower():
+                    error_msg = "Permission denied: Service account lacks Google Sheets/Drive permissions"
+                elif "401" in error_details or "unauthorized" in error_details.lower():
+                    error_msg = "Authentication failed: Invalid service account credentials"
+                elif "quota" in error_details.lower():
+                    error_msg = "API quota exceeded: Too many requests to Google Sheets"
+                else:
+                    error_msg = f"Google Sheets API error: {error_details}"
+                
                 return jsonify({
                     "success": False,
-                    "error": "Failed to create Google Spreadsheet"
+                    "error": error_msg,
+                    "technical_details": error_details[:200],
+                    "troubleshooting": "Check GOOGLE_CREDENTIALS_JSON environment variable and service account permissions"
                 }), 500
             
             # Get receipts data with COMPLETE field set for receipt matching
@@ -1147,18 +1301,22 @@ def create_app():
             total_transactions = 0
             sync_results = []
             
+            logger.info(f"🏦 Starting bank sync for {len(connected_accounts)} accounts")
+            
             for account in connected_accounts:
                 try:
                     access_token = account.get('access_token')
-                    account_id = account.get('account_id', 'unknown')
+                    user_id = account.get('user_id', 'unknown')
                     
                     if not access_token:
+                        sync_results.append({
+                            'user_id': user_id,
+                            'status': 'error',
+                            'error': 'Missing access token'
+                        })
                         continue
                     
-                    logger.info(f"🏦 Syncing transactions for account: {account_id}")
-                    
-                    # Fetch transactions from Teller API
-                    from_date = (datetime.utcnow() - timedelta(days=days_back)).strftime('%Y-%m-%d')
+                    logger.info(f"🏦 Syncing for Teller user: {user_id}")
                     
                     # Real Teller API call
                     headers = {
@@ -1174,83 +1332,108 @@ def create_app():
                     )
                     
                     if account_response.status_code == 200:
-                        account_info = account_response.json()
+                        user_accounts = account_response.json()
+                        logger.info(f"✅ Found {len(user_accounts)} accounts for user {user_id}")
                         
-                        # Get transactions
-                        transactions_response = requests.get(
-                            f"{Config.TELLER_API_URL}/accounts/{account_id}/transactions",
-                            headers=headers,
-                            params={'from_date': from_date, 'count': 1000},
-                            timeout=30
-                        )
-                        
-                        if transactions_response.status_code == 200:
-                            transactions = transactions_response.json()
+                        # Process each account discovered
+                        for account_info in user_accounts:
+                            account_id = account_info.get('id')
                             
-                            # Store transactions in MongoDB
-                            account_transactions = 0
-                            for txn in transactions:
-                                # Create transaction record
-                                transaction_record = {
-                                    'account_id': account_id,
-                                    'transaction_id': txn.get('id'),
-                                    'amount': float(txn.get('amount', 0)),
-                                    'date': datetime.fromisoformat(txn.get('date', '')),
-                                    'description': txn.get('description', ''),
-                                    'counterparty': txn.get('counterparty', {}),
-                                    'type': txn.get('type', ''),
-                                    'status': txn.get('status', ''),
-                                    'bank_name': account_info.get('institution', {}).get('name', 'Unknown'),
-                                    'account_name': account_info.get('name', 'Unknown Account'),
-                                    'synced_at': datetime.utcnow(),
-                                    'raw_data': txn  # Store complete response for debugging
-                                }
+                            # Get transactions for THIS specific account
+                            from_date = (datetime.utcnow() - timedelta(days=days_back)).strftime('%Y-%m-%d')
+                            
+                            transactions_response = requests.get(
+                                f"{Config.TELLER_API_URL}/accounts/{account_id}/transactions",
+                                headers=headers,
+                                params={'from_date': from_date, 'count': 1000},
+                                timeout=30
+                            )
+                            
+                            if transactions_response.status_code == 200:
+                                transactions = transactions_response.json()
                                 
-                                # Upsert to avoid duplicates
-                                mongo_client.db.bank_transactions.update_one(
-                                    {'transaction_id': txn.get('id')},
-                                    {'$set': transaction_record},
-                                    upsert=True
-                                )
-                                account_transactions += 1
+                                # Store transactions in MongoDB
+                                account_transactions = 0
+                                for txn in transactions:
+                                    # Enhanced transaction record
+                                    transaction_record = {
+                                        'account_id': account_id,
+                                        'user_id': user_id,
+                                        'transaction_id': txn.get('id'),
+                                        'amount': float(txn.get('amount', 0)),
+                                        'date': parse_teller_date(txn.get('date')),
+                                        'description': txn.get('description', ''),
+                                        'counterparty': txn.get('counterparty', {}),
+                                        'type': txn.get('type', ''),
+                                        'status': txn.get('status', ''),
+                                        'bank_name': account_info.get('institution', {}).get('name', 'Unknown'),
+                                        'account_name': account_info.get('name', 'Unknown Account'),
+                                        'account_type': account_info.get('type', 'checking'),
+                                        'synced_at': datetime.utcnow(),
+                                        'teller_user_id': user_id,
+                                        'raw_data': txn
+                                    }
+                                    
+                                    # Upsert to avoid duplicates
+                                    mongo_client.db.bank_transactions.update_one(
+                                        {'transaction_id': txn.get('id')},
+                                        {'$set': transaction_record},
+                                        upsert=True
+                                    )
+                                    account_transactions += 1
+                                
+                                total_transactions += account_transactions
+                                sync_results.append({
+                                    'account_id': account_id,
+                                    'user_id': user_id,
+                                    'account_name': account_info.get('name'),
+                                    'bank_name': account_info.get('institution', {}).get('name'),
+                                    'account_type': account_info.get('type'),
+                                    'transactions_synced': account_transactions,
+                                    'date_range': f"{from_date} to {datetime.utcnow().strftime('%Y-%m-%d')}",
+                                    'status': 'success'
+                                })
+                                
+                                logger.info(f"✅ Synced {account_transactions} transactions for {account_id} ({account_info.get('name')})")
                             
-                            total_transactions += account_transactions
-                            sync_results.append({
-                                'account_id': account_id,
-                                'account_name': account_info.get('name'),
-                                'bank_name': account_info.get('institution', {}).get('name'),
-                                'transactions_synced': account_transactions,
-                                'date_range': f"{from_date} to {datetime.utcnow().strftime('%Y-%m-%d')}",
-                                'status': 'success'
-                            })
-                            
-                            logger.info(f"✅ Synced {account_transactions} transactions for {account_id}")
-                        
-                        else:
-                            error_msg = f"Failed to fetch transactions: {transactions_response.status_code}"
-                            sync_results.append({
-                                'account_id': account_id,
-                                'status': 'error',
-                                'error': error_msg
-                            })
-                            logger.error(f"❌ {error_msg}")
+                            else:
+                                error_msg = f"Failed to fetch transactions for {account_id}: {transactions_response.status_code} - {transactions_response.text[:200]}"
+                                sync_results.append({
+                                    'account_id': account_id,
+                                    'user_id': user_id,
+                                    'status': 'error',
+                                    'error': error_msg,
+                                    'http_status': transactions_response.status_code
+                                })
+                                logger.error(f"❌ {error_msg}")
+                    
+                    elif account_response.status_code == 401:
+                        error_msg = f"Invalid or expired access token for user {user_id}"
+                        sync_results.append({
+                            'user_id': user_id,
+                            'status': 'error',
+                            'error': error_msg,
+                            'action_required': 'reconnect_teller'
+                        })
+                        logger.error(f"❌ {error_msg}")
                     
                     else:
-                        error_msg = f"Failed to fetch account info: {account_response.status_code}"
+                        error_msg = f"Failed to fetch accounts for {user_id}: {account_response.status_code} - {account_response.text[:200]}"
                         sync_results.append({
-                            'account_id': account_id,
-                            'status': 'error', 
-                            'error': error_msg
+                            'user_id': user_id,
+                            'status': 'error',
+                            'error': error_msg,
+                            'http_status': account_response.status_code
                         })
                         logger.error(f"❌ {error_msg}")
                 
                 except Exception as e:
                     sync_results.append({
-                        'account_id': account.get('account_id', 'unknown'),
+                        'user_id': account.get('user_id', 'unknown'),
                         'status': 'error',
                         'error': str(e)
                     })
-                    logger.error(f"❌ Error syncing {account.get('account_id')}: {e}")
+                    logger.error(f"❌ Error syncing user {account.get('user_id')}: {e}")
             
             # Store sync job record
             sync_job = {
@@ -1277,7 +1460,7 @@ def create_app():
             
         except Exception as e:
             logger.error(f"Bank sync error: {e}")
-            return jsonify({"error": str(e)}), 500
+            return jsonify({"error": str(e), "sync_time": "instant", "reason": "exception"}), 500
 
     @app.route('/api/bank-transactions')
     def api_bank_transactions():
