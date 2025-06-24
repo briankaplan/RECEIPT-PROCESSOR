@@ -865,36 +865,41 @@ def create_app():
             if not mongo_client.connected:
                 return jsonify({"error": "Database not connected"}), 500
             
-            # Clear test collections
-            collections_cleared = []
+            # Clear synthetic/fake receipts (those with email_id starting with "synthetic_")
+            synthetic_receipts = mongo_client.db.receipts.delete_many({
+                "email_id": {"$regex": "^synthetic_"}
+            })
             
-            # Clear test webhooks
-            result = mongo_client.db.teller_webhooks.delete_many({})
-            if result.deleted_count > 0:
-                collections_cleared.append(f"teller_webhooks ({result.deleted_count})")
+            # Clear test processing jobs
+            test_jobs = mongo_client.db.processing_jobs.delete_many({
+                "status": {"$in": ["completed", "failed"]}
+            })
             
-            # Clear test tokens
-            result = mongo_client.db.teller_tokens.delete_many({})
-            if result.deleted_count > 0:
-                collections_cleared.append(f"teller_tokens ({result.deleted_count})")
+            # Clear account summaries
+            summaries = mongo_client.db.account_summaries.delete_many({})
             
-            # Clear test receipts (optional - be careful!)
-            if request.get_json().get('clear_receipts', False):
-                result = mongo_client.db.receipts.delete_many({})
-                if result.deleted_count > 0:
-                    collections_cleared.append(f"receipts ({result.deleted_count})")
+            collections_cleared = [
+                f"synthetic_receipts: {synthetic_receipts.deleted_count}",
+                f"processing_jobs: {test_jobs.deleted_count}",
+                f"account_summaries: {summaries.deleted_count}"
+            ]
             
-            logger.info(f"✅ Cleared test data: {collections_cleared}")
+            logger.info(f"🧹 Cleared test data: {', '.join(collections_cleared)}")
             
             return jsonify({
                 "success": True,
-                "message": f"Cleared test data from: {', '.join(collections_cleared)}",
-                "collections_cleared": collections_cleared
+                "message": "Test data cleared successfully",
+                "collections_cleared": collections_cleared,
+                "synthetic_receipts_removed": synthetic_receipts.deleted_count,
+                "real_receipts_remaining": mongo_client.db.receipts.count_documents({})
             })
             
         except Exception as e:
             logger.error(f"Clear test data error: {e}")
-            return jsonify({"error": str(e)}), 500
+            return jsonify({
+                "success": False,
+                "error": f"Failed to clear test data: {str(e)}"
+            }), 500
     
     @app.route('/api/update-environment', methods=['POST'])
     def api_update_environment():
