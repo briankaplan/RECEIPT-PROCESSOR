@@ -416,7 +416,8 @@ def create_app():
     def dashboard():
         """Main dashboard"""
         try:
-            return render_template('index.html')
+            import time
+            return render_template('index.html', timestamp=int(time.time()))
         except Exception as e:
             logger.error(f"Dashboard error: {e}")
             return f"Dashboard error: {e}", 500
@@ -450,6 +451,16 @@ def create_app():
         except Exception as e:
             logger.error(f"Scanner error: {e}")
             return f"Scanner error: {e}", 500
+    
+    @app.route('/test')
+    def test_ui():
+        """Test page for UI enhancements"""
+        try:
+            import time
+            return render_template('test.html', timestamp=int(time.time()))
+        except Exception as e:
+            logger.error(f"Test page error: {e}")
+            return f"Test page error: {e}", 500
     
     @app.route('/teller/webhook', methods=['POST'])
     def teller_webhook():
