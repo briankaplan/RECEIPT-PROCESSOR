@@ -2547,6 +2547,279 @@ def create_app():
             logger.error(f"❌ Simple test receipts failed: {e}")
             return jsonify({"error": f"Simple test failed: {str(e)}"}), 500
 
+    @app.route('/api/webhook-stats', methods=['GET'])
+    def api_webhook_stats():
+        """Get webhook statistics and recent activity"""
+        try:
+            if not mongo_client.connected:
+                return jsonify({"error": "Database not connected"}), 500
+            
+            # Count webhooks by type
+            webhook_stats = {}
+            for webhook_type in ['transaction.created', 'transaction.updated', 'account.updated']:
+                count = mongo_client.db.teller_webhooks.count_documents({
+                    'type': webhook_type
+                })
+                webhook_stats[webhook_type] = count
+            
+            # Recent webhook activity (last 7 days)
+            recent_webhooks = list(mongo_client.db.teller_webhooks.find({
+                'received_at': {'$gte': datetime.utcnow() - timedelta(days=7)}
+            }).sort('received_at', -1).limit(10))
+            
+            # Check for any transaction data in webhooks
+            transaction_webhooks = []
+            for webhook in recent_webhooks:
+                if webhook.get('type', '').startswith('transaction'):
+                    transaction_data = webhook.get('data', {})
+                    transaction_webhooks.append({
+                        'type': webhook.get('type'),
+                        'received_at': webhook.get('received_at').isoformat() if webhook.get('received_at') else None,
+                        'amount': transaction_data.get('amount'),
+                        'description': transaction_data.get('description'),
+                        'merchant': transaction_data.get('merchant', {}).get('name') if transaction_data.get('merchant') else None,
+                        'account_id': transaction_data.get('account_id')
+                    })
+            
+            return jsonify({
+                'success': True,
+                'webhook_stats': webhook_stats,
+                'total_webhooks': sum(webhook_stats.values()),
+                'recent_activity': len(recent_webhooks),
+                'transaction_webhooks': transaction_webhooks,
+                'recent_transaction_count': len(transaction_webhooks),
+                'webhook_url': 'https://receipt-processor-vvjo.onrender.com/teller/webhook',
+                'webhook_active': True,
+                'last_7_days': len(recent_webhooks)
+            })
+            
+        except Exception as e:
+            logger.error(f"Webhook stats error: {e}")
+            return jsonify({"error": str(e)}), 500
+
+    @app.route('/api/process-webhook-transactions', methods=['POST'])
+    def api_process_webhook_transactions():
+        """Process webhook transactions and convert them to bank transactions"""
+        try:
+            if not mongo_client.connected:
+                return jsonify({"error": "Database not connected"}), 500
+            
+            data = request.get_json() or {}
+            days_back = data.get('days_back', 30)
+            
+            # Get recent webhook transactions
+            webhook_data = list(mongo_client.db.teller_webhooks.find({
+                "type": {"$in": ["transaction.created", "transaction.updated", "transaction.posted"]},
+                "received_at": {"$gte": datetime.utcnow() - timedelta(days=days_back)}
+            }).sort("received_at", -1))
+            
+            processed_transactions = []
+            receipt_matches = 0
+            
+            for webhook in webhook_data:
+                try:
+                    transaction_data = webhook.get('data', {})
+                    
+                    # Skip if no transaction data
+                    if not transaction_data.get('id') or not transaction_data.get('amount'):
+                        continue
+                    
+                    # Extract transaction details from webhook
+                    transaction = {
+                        'transaction_id': transaction_data.get('id'),
+                        'amount': float(transaction_data.get('amount', 0)),
+                        'date': datetime.fromisoformat(transaction_data.get('date', '').replace('Z', '+00:00')),
+                        'description': transaction_data.get('description', ''),
+                        'merchant_name': transaction_data.get('merchant', {}).get('name', '') if transaction_data.get('merchant') else '',
+                        'counterparty': transaction_data.get('counterparty', {}),
+                        'account_id': transaction_data.get('account_id'),
+                        'status': transaction_data.get('status', 'pending'),
+                        'type': transaction_data.get('type', ''),
+                        'category': transaction_data.get('category', ''),
+                        'source': 'webhook',
+                        'webhook_received_at': webhook.get('received_at'),
+                        'synced_at': datetime.utcnow(),
+                        'processed_for_receipts': False,
+                        'bank_name': 'Connected Bank',
+                        'account_name': f"Account {transaction_data.get('account_id', 'Unknown')[-4:]}"
+                    }
+                    
+                    # Check if transaction already exists
+                    existing = mongo_client.db.bank_transactions.find_one({
+                        'transaction_id': transaction['transaction_id']
+                    })
+                    
+                    if not existing:
+                        # Insert new transaction
+                        result = mongo_client.db.bank_transactions.insert_one(transaction)
+                        transaction['_id'] = str(result.inserted_id)
+                        processed_transactions.append(transaction)
+                        
+                        logger.info(f"✅ Processed webhook transaction: {transaction['transaction_id']} - ${transaction['amount']}")
+                    
+                except Exception as e:
+                    logger.error(f"Error processing webhook transaction: {e}")
+                    continue
+            
+            return jsonify({
+                'success': True,
+                'processed_transactions': len(processed_transactions),
+                'receipt_matches': receipt_matches,
+                'total_webhooks_processed': len(webhook_data),
+                'days_back': days_back,
+                'message': f'Processed {len(processed_transactions)} new transactions from webhooks',
+                'real_time_data': True,
+                'transactions': processed_transactions[:5]
+            })
+            
+        except Exception as e:
+            logger.error(f"Webhook transaction processing error: {e}")
+            return jsonify({"error": str(e)}), 500
+
+    @app.route('/api/enhanced-bank-transactions')
+    def api_enhanced_bank_transactions():
+        """Enhanced bank transactions API with filtering and real-time data"""
+        try:
+            if not mongo_client.connected:
+                return jsonify({"error": "Database not connected"}), 500
+            
+            # Get parameters
+            limit = int(request.args.get('limit', 50))
+            skip = int(request.args.get('skip', 0))
+            filter_type = request.args.get('filter', 'all')
+            
+            # Build query based on filter
+            query = {}
+            if filter_type == 'matched':
+                query['receipt_matched'] = True
+            elif filter_type == 'unmatched':
+                query['receipt_matched'] = {'$ne': True}
+            elif filter_type == 'expenses':
+                query['amount'] = {'$lt': 0}
+            elif filter_type == 'income':
+                query['amount'] = {'$gt': 0}
+            elif filter_type == 'webhook':
+                query['source'] = 'webhook'
+            
+            # Get transactions
+            transactions = list(mongo_client.db.bank_transactions.find(
+                query,
+                {"raw_data": 0}  # Exclude raw data for performance
+            ).sort("date", -1).limit(limit).skip(skip))
+            
+            # Enhanced processing
+            enhanced_transactions = []
+            for txn in transactions:
+                # Convert datetime objects
+                if 'date' in txn and hasattr(txn['date'], 'isoformat'):
+                    txn['date'] = txn['date'].isoformat()
+                if 'synced_at' in txn and hasattr(txn['synced_at'], 'isoformat'):
+                    txn['synced_at'] = txn['synced_at'].isoformat()
+                if 'webhook_received_at' in txn and hasattr(txn['webhook_received_at'], 'isoformat'):
+                    txn['webhook_received_at'] = txn['webhook_received_at'].isoformat()
+                
+                # Enhanced fields
+                enhanced_txn = {
+                    **txn,
+                    '_id': str(txn.get('_id', '')),
+                    'formatted_amount': f"${abs(txn.get('amount', 0)):,.2f}",
+                    'amount_type': 'expense' if txn.get('amount', 0) < 0 else 'income',
+                    'merchant_display': (txn.get('merchant_name') or 
+                                       txn.get('counterparty', {}).get('name') or 
+                                       txn.get('description', '')[:50] or 'Unknown'),
+                    'data_source': 'Real-time Webhook' if txn.get('source') == 'webhook' else 'Historical Sync',
+                    'match_status': 'Receipt Found ✅' if txn.get('receipt_matched') else 'No Receipt ⏳',
+                    'is_recent': (datetime.now() - datetime.fromisoformat(txn['date'].replace('Z', '+00:00'))).days <= 7 if txn.get('date') else False
+                }
+                enhanced_transactions.append(enhanced_txn)
+            
+            # Get statistics
+            total_count = mongo_client.db.bank_transactions.count_documents(query)
+            all_transactions = list(mongo_client.db.bank_transactions.find({}, {
+                'amount': 1, 'receipt_matched': 1, 'source': 1
+            }))
+            
+            matched_count = sum(1 for t in all_transactions if t.get('receipt_matched'))
+            webhook_count = sum(1 for t in all_transactions if t.get('source') == 'webhook')
+            total_expenses = sum(abs(t['amount']) for t in all_transactions if t.get('amount', 0) < 0)
+            
+            return jsonify({
+                "success": True,
+                "transactions": enhanced_transactions,
+                "pagination": {
+                    "total_count": total_count,
+                    "showing": len(enhanced_transactions),
+                    "has_more": total_count > skip + limit
+                },
+                "statistics": {
+                    "total_transactions": len(all_transactions),
+                    "matched_transactions": matched_count,
+                    "match_percentage": (matched_count / len(all_transactions) * 100) if all_transactions else 0,
+                    "real_time_transactions": webhook_count,
+                    "total_expenses": total_expenses
+                }
+            })
+            
+        except Exception as e:
+            logger.error(f"Enhanced bank transactions API error: {e}")
+            return jsonify({"error": str(e)}), 500
+
+    # Update the existing simple-test-receipts function to match the new API
+    @app.route('/api/simple-test-receipts', methods=['POST'])
+    def api_simple_test_receipts_enhanced():
+        """Create simple test receipts for demonstration"""
+        try:
+            if not mongo_client.connected:
+                return jsonify({"error": "Database not connected"}), 500
+            
+            test_receipts = [
+                {
+                    'merchant_name': 'Starbucks',
+                    'total_amount': 15.67,
+                    'date': datetime.now() - timedelta(days=1),
+                    'category': 'Food & Beverage',
+                    'source_type': 'test_data',
+                    'description': 'Coffee and pastry',
+                    'processed_at': datetime.utcnow()
+                },
+                {
+                    'merchant_name': 'Shell Gas Station',
+                    'total_amount': 45.32,
+                    'date': datetime.now() - timedelta(days=2),
+                    'category': 'Transportation',
+                    'source_type': 'test_data',
+                    'description': 'Fuel purchase',
+                    'processed_at': datetime.utcnow()
+                },
+                {
+                    'merchant_name': 'Target',
+                    'total_amount': 89.45,
+                    'date': datetime.now() - timedelta(days=3),
+                    'category': 'Shopping',
+                    'source_type': 'test_data',
+                    'description': 'Household items',
+                    'processed_at': datetime.utcnow()
+                }
+            ]
+            
+            # Insert test receipts
+            inserted_receipts = []
+            for receipt in test_receipts:
+                result = mongo_client.db.receipts.insert_one(receipt)
+                receipt['_id'] = str(result.inserted_id)
+                inserted_receipts.append(receipt)
+            
+            return jsonify({
+                "success": True,
+                "message": f"Created {len(inserted_receipts)} test receipts",
+                "receipts_created": len(inserted_receipts),
+                "receipts": inserted_receipts
+            })
+            
+        except Exception as e:
+            logger.error(f"Test receipts creation error: {e}")
+            return jsonify({"error": str(e)}), 500
+
     return app
 
 # ============================================================================
