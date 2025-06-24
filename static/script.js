@@ -252,6 +252,8 @@ window.actions = {
             if (data.success) {
                 notifications.show('success', `Synced ${data.count || 0} transactions!`);
                 this.refreshData();
+            } else {
+                notifications.show('danger', `Sync failed: ${data.error || data.message || 'Unknown error'}`);
             }
         } catch (error) {
             notifications.show('danger', 'Failed to sync: ' + error.message);
@@ -271,6 +273,8 @@ window.actions = {
             if (data.success) {
                 notifications.show('success', `Processed ${data.receipts_found || 0} receipts!`);
                 this.refreshData();
+            } else {
+                notifications.show('danger', `Processing failed: ${data.error || data.message || 'Unknown error'}`);
             }
         } catch (error) {
             notifications.show('danger', 'Failed to process: ' + error.message);
@@ -290,6 +294,8 @@ window.actions = {
                         onClick: `window.open('${data.sheet_url}', '_blank')`
                     }] : []
                 });
+            } else {
+                notifications.show('danger', `Export failed: ${data.error || data.message || 'Unknown error'}`);
             }
         } catch (error) {
             notifications.show('danger', 'Export failed: ' + error.message);
@@ -305,6 +311,8 @@ window.actions = {
             if (data.success) {
                 notifications.show('success', `Cleared ${data.removed || 0} test entries!`);
                 this.refreshData();
+            } else {
+                notifications.show('danger', `Clear failed: ${data.error || data.message || 'Unknown error'}`);
             }
         } catch (error) {
             notifications.show('danger', 'Failed to clear: ' + error.message);
