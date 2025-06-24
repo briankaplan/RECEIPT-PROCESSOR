@@ -795,14 +795,17 @@ def create_app():
     def api_process_receipts():
         """REAL receipt processing using actual Gmail API and AI integration"""
         try:
+            # Import ObjectId early to avoid scope issues
+            from bson import ObjectId
+            
             data = request.get_json() or {}
-            days = data.get('days', 365)
-            max_receipts = data.get('max_receipts', 1000)
+            days = data.get('days_back', 30)
+            max_receipts = data.get('max_receipts', 100)
             
             if not mongo_client.connected:
-                return jsonify({"error": "Database not connected - cannot store results"}), 500
-
-            # Processing job tracking
+                return jsonify({"error": "Database not connected"}), 500
+            
+            # Initialize processing job record
             processing_results = {
                 "started_at": datetime.utcnow(),
                 "days_requested": days,
@@ -922,10 +925,9 @@ def create_app():
                 }
             })
             
-            # Import ObjectId locally to avoid scope issues
-            from bson import ObjectId
+            # Use string ID directly since job_id is already a string
             mongo_client.db.processing_jobs.update_one(
-                {"_id": job_id},  # Use string ID directly since job_id is already a string
+                {"_id": job_id},
                 {"$set": processing_results}
             )
             
