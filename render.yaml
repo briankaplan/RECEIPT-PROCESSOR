@@ -102,7 +102,7 @@ services:
       - key: GMAIL_ACCOUNT_1_ENABLED
         value: "true"
       - key: GMAIL_ACCOUNT_1_PICKLE_FILE
-        value: /etc/secrets/kaplan_brian_gmail.pickle
+        value: /etc/secrets/kaplan_brian_gmail.b64
       - key: GMAIL_ACCOUNT_1_PORT
         value: "8080"
       
@@ -114,7 +114,7 @@ services:
       - key: GMAIL_ACCOUNT_2_ENABLED
         value: "true"
       - key: GMAIL_ACCOUNT_2_PICKLE_FILE
-        value: /etc/secrets/brian_downhome.pickle
+        value: /etc/secrets/brian_downhome.b64
       - key: GMAIL_ACCOUNT_2_PORT
         value: "8081"
       
@@ -126,7 +126,7 @@ services:
       - key: GMAIL_ACCOUNT_3_ENABLED
         value: "true"
       - key: GMAIL_ACCOUNT_3_PICKLE_FILE
-        value: /etc/secrets/brian_musiccityrodeo.pickle
+        value: /etc/secrets/brian_musiccityrodeo.b64
       - key: GMAIL_ACCOUNT_3_PORT
         value: "8082"
       

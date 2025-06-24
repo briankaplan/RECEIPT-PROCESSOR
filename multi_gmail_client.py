@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
+import base64
 
 logger = logging.getLogger(__name__)
 
@@ -41,12 +42,48 @@ class MultiGmailClient:
     def init_services(self):
         for account in self.accounts.values():
             creds = None
-            if os.path.exists(account['pickle_file']):
-                with open(account['pickle_file'], 'rb') as token:
-                    creds = pickle.load(token)
+            pickle_file = account['pickle_file']
+            
+            if os.path.exists(pickle_file):
+                try:
+                    # Try loading as regular pickle first
+                    with open(pickle_file, 'rb') as token:
+                        creds = pickle.load(token)
+                    logger.info(f"✅ Loaded regular pickle file: {pickle_file}")
+                except Exception as pickle_error:
+                    # If regular pickle fails, try base64-encoded pickle
+                    try:
+                        logger.info(f"🔄 Regular pickle failed, trying base64 format: {pickle_file}")
+                        with open(pickle_file, 'r') as token:
+                            base64_data = token.read().strip()
+                            decoded_data = base64.b64decode(base64_data)
+                            creds = pickle.loads(decoded_data)
+                        logger.info(f"✅ Loaded base64-encoded pickle file: {pickle_file}")
+                    except Exception as b64_error:
+                        logger.error(f"❌ Failed to load pickle file {pickle_file}")
+                        logger.error(f"   Regular pickle error: {pickle_error}")
+                        logger.error(f"   Base64 pickle error: {b64_error}")
+                        continue
+            else:
+                logger.warning(f"⚠️ Pickle file not found: {pickle_file}")
+                continue
+                
             if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-            account['service'] = build('gmail', 'v1', credentials=creds)
+                try:
+                    creds.refresh(Request())
+                    logger.info(f"🔄 Refreshed expired credentials for {account['email']}")
+                except Exception as refresh_error:
+                    logger.error(f"❌ Failed to refresh credentials for {account['email']}: {refresh_error}")
+                    continue
+                    
+            if creds and creds.valid:
+                try:
+                    account['service'] = build('gmail', 'v1', credentials=creds)
+                    logger.info(f"✅ Gmail service built for {account['email']}")
+                except Exception as service_error:
+                    logger.error(f"❌ Failed to build Gmail service for {account['email']}: {service_error}")
+            else:
+                logger.error(f"❌ Invalid credentials for {account['email']}")
 
     def search_receipt_ids(self, service, user_id='me', days=365) -> List[str]:
         """OPTIMIZED: Search for receipt messages with better filtering"""
@@ -212,11 +249,27 @@ class MultiGmailClient:
             creds = None
             pickle_file = account['pickle_file']
             
-            # Load existing credentials
+            # Load existing credentials with base64 support
             if os.path.exists(pickle_file):
-                with open(pickle_file, 'rb') as token:
-                    creds = pickle.load(token)
-                logger.info(f"📁 Loaded credentials for {email} from {pickle_file}")
+                try:
+                    # Try loading as regular pickle first
+                    with open(pickle_file, 'rb') as token:
+                        creds = pickle.load(token)
+                    logger.info(f"📁 Loaded regular pickle credentials for {email} from {pickle_file}")
+                except Exception as pickle_error:
+                    # If regular pickle fails, try base64-encoded pickle
+                    try:
+                        logger.info(f"🔄 Trying base64 format for {email}")
+                        with open(pickle_file, 'r') as token:
+                            base64_data = token.read().strip()
+                            decoded_data = base64.b64decode(base64_data)
+                            creds = pickle.loads(decoded_data)
+                        logger.info(f"📁 Loaded base64-encoded pickle credentials for {email}")
+                    except Exception as b64_error:
+                        logger.error(f"❌ Failed to load credentials for {email}")
+                        logger.error(f"   Regular pickle error: {pickle_error}")
+                        logger.error(f"   Base64 pickle error: {b64_error}")
+                        return False
             else:
                 logger.error(f"❌ No credentials file found: {pickle_file}")
                 return False
@@ -311,7 +364,6 @@ class MultiGmailClient:
             if payload.get('mimeType') == 'text/plain':
                 body_data = payload.get('body', {}).get('data', '')
                 if body_data:
-                    import base64
                     try:
                         text = base64.urlsafe_b64decode(body_data).decode('utf-8')
                         result['body'] += text + '\n'
