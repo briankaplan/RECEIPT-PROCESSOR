@@ -1,0 +1,2787 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receipt Processor Pro - Enhanced UI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Enhanced CSS Variables for better theming */
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            --warning-gradient: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+            --danger-gradient: linear-gradient(135deg, #fd79a8 0%, #fdcb6e 100%);
+            --info-gradient: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            --dark-gradient: linear-gradient(135deg, #2d3436 0%, #636e72 100%);
+            --glassmorphism: rgba(255, 255, 255, 0.1);
+            --shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.1);
+            --shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.15);
+            --border-radius: 16px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 1rem;
+            --spacing-md: 1.5rem;
+            --spacing-lg: 2rem;
+            --spacing-xl: 3rem;
+        }
+
+        /* Enhanced body styling */
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        /* Improved glass morphism effect */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-soft);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .glass-card:hover::before {
+            left: 100%;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        /* Enhanced stat cards with better spacing and typography */
+        .stat-card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: var(--spacing-lg);
+            position: relative;
+            overflow: hidden;
+            border: none;
+            box-shadow: var(--shadow-soft);
+            transition: var(--transition);
+            min-height: 140px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            z-index: 1;
+        }
+
+        .stat-card.primary::before { background: var(--primary-gradient); }
+        .stat-card.success::before { background: var(--success-gradient); }
+        .stat-card.warning::before { background: var(--warning-gradient); }
+        .stat-card.info::before { background: var(--info-gradient); }
+
+        .stat-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            position: relative;
+            z-index: 2;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .stat-card.primary .stat-icon { background: var(--primary-gradient); }
+        .stat-card.success .stat-icon { background: var(--success-gradient); }
+        .stat-card.warning .stat-icon { background: var(--warning-gradient); }
+        .stat-card.info .stat-icon { background: var(--info-gradient); }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: var(--spacing-sm) 0;
+            position: relative;
+            z-index: 2;
+            line-height: 1;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            font-weight: 600;
+            margin-bottom: var(--spacing-xs);
+            position: relative;
+            z-index: 2;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-change {
+            font-size: 0.875rem;
+            font-weight: 600;
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        /* Enhanced header with better visual hierarchy */
+        .page-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: var(--spacing-xl) 0;
+            margin-bottom: var(--spacing-lg);
+            border-radius: 0 0 30px 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 100" fill="rgba(255,255,255,0.1)"><polygon points="0,0 1000,0 1000,100 0,80"/></svg>');
+            background-size: cover;
+        }
+
+        .page-title {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: var(--spacing-sm);
+            position: relative;
+            z-index: 1;
+            background: linear-gradient(45deg, #fff, #e3f2fd);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        /* Improved action buttons with micro-interactions */
+        .action-btn {
+            background: var(--primary-gradient);
+            border: none;
+            color: white;
+            padding: 0.875rem 1.75rem;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .action-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .action-btn:hover::before {
+            left: 100%;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        .action-btn:active {
+            transform: translateY(-1px) scale(1.02);
+        }
+
+        .action-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .action-btn:disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Enhanced status indicators with animations */
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            position: relative;
+            margin-right: 8px;
+        }
+
+        .status-dot.online {
+            background: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
+            animation: pulse-online 2s infinite;
+        }
+
+        .status-dot.offline {
+            background: #ef4444;
+            animation: pulse-offline 1s infinite;
+        }
+
+        .status-dot.processing {
+            background: #f59e0b;
+            animation: pulse-processing 0.8s infinite;
+        }
+
+        @keyframes pulse-online {
+            0%, 100% { 
+                box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
+                transform: scale(1);
+            }
+            50% { 
+                box-shadow: 0 0 0 8px rgba(16, 185, 129, 0.1);
+                transform: scale(1.1);
+            }
+        }
+
+        @keyframes pulse-offline {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes pulse-processing {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+        }
+
+        /* Improved connection badge */
+        .connection-badge {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+            padding: 0.75rem 1.25rem;
+            border-radius: 25px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: var(--transition);
+            backdrop-filter: blur(20px);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .connection-badge.connected {
+            background: rgba(16, 185, 129, 0.9);
+            color: white;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .connection-badge.disconnected {
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        /* Enhanced processing overlay */
+        .processing-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .processing-modal {
+            background: white;
+            padding: var(--spacing-xl);
+            border-radius: 20px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .processing-modal::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--primary-gradient);
+        }
+
+        .processing-progress {
+            height: 8px;
+            border-radius: 10px;
+            background: #f1f5f9;
+            overflow: hidden;
+            margin: var(--spacing-md) 0;
+            position: relative;
+        }
+
+        .processing-progress-bar {
+            height: 100%;
+            background: var(--primary-gradient);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .processing-progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* Enhanced log entries */
+        .log-container {
+            max-height: 400px;
+            overflow-y: auto;
+            padding: var(--spacing-sm);
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .log-entry {
+            padding: var(--spacing-sm) var(--spacing-md);
+            margin-bottom: var(--spacing-xs);
+            border-radius: 8px;
+            border-left: 4px solid;
+            font-size: 0.875rem;
+            animation: slideInRight 0.3s ease;
+            position: relative;
+            background: white;
+            display: flex;
+            align-items: flex-start;
+            gap: var(--spacing-xs);
+        }
+
+        .log-entry.success {
+            border-left-color: #10b981;
+            background: linear-gradient(90deg, #ecfdf5, #ffffff);
+        }
+
+        .log-entry.error {
+            border-left-color: #ef4444;
+            background: linear-gradient(90deg, #fef2f2, #ffffff);
+        }
+
+        .log-entry.warning {
+            border-left-color: #f59e0b;
+            background: linear-gradient(90deg, #fffbeb, #ffffff);
+        }
+
+        .log-entry.info {
+            border-left-color: #3b82f6;
+            background: linear-gradient(90deg, #eff6ff, #ffffff);
+        }
+
+        .log-timestamp {
+            font-size: 0.75rem;
+            color: #6b7280;
+            white-space: nowrap;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+
+        .log-message {
+            flex: 1;
+            line-height: 1.4;
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Improved status grid */
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .status-item {
+            background: white;
+            padding: var(--spacing-md);
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: var(--shadow-soft);
+            transition: var(--transition);
+            border: 1px solid #f1f5f9;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .status-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .status-item:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .status-item-icon {
+            font-size: 1.5rem;
+            margin-bottom: var(--spacing-xs);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .status-item-label {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-bottom: 0.25rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-item-value {
+            font-weight: 700;
+            color: #1e293b;
+            font-size: 1.125rem;
+        }
+
+        /* Enhanced floating action buttons */
+        .quick-scanner {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            background: var(--success-gradient);
+            color: white;
+            border: none;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            font-size: 1.4rem;
+            transition: var(--transition);
+            z-index: 1000;
+            box-shadow: var(--shadow-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .quick-scanner:hover {
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 12px 35px rgba(16, 185, 129, 0.4);
+        }
+
+        .quick-scanner:active {
+            transform: scale(1.05) rotate(2deg);
+        }
+
+        .theme-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            transition: var(--transition);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1) rotate(-10deg);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Enhanced dark theme */
+        [data-bs-theme="dark"] {
+            --glassmorphism: rgba(0, 0, 0, 0.3);
+        }
+
+        [data-bs-theme="dark"] body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        [data-bs-theme="dark"] .stat-card,
+        [data-bs-theme="dark"] .status-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        [data-bs-theme="dark"] .log-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        [data-bs-theme="dark"] .log-entry {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+        }
+
+        /* Enhanced mobile responsiveness */
+        @media (max-width: 768px) {
+            .page-title {
+                font-size: 2rem;
+            }
+            
+            .stat-value {
+                font-size: 2rem;
+            }
+            
+            .status-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: var(--spacing-xs);
+            }
+
+            .stat-card {
+                padding: var(--spacing-md);
+                min-height: 120px;
+            }
+
+            .action-btn {
+                padding: 0.75rem 1.25rem;
+                font-size: 0.8rem;
+            }
+
+            .connection-badge {
+                top: 10px;
+                right: 10px;
+                padding: 0.5rem 1rem;
+                font-size: 0.8rem;
+            }
+
+            .processing-modal {
+                padding: var(--spacing-lg);
+                margin: var(--spacing-sm);
+            }
+        }
+
+        /* Loading states and skeleton screens */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% {
+                background-position: 200% 0;
+            }
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        /* Enhanced tooltips */
+        .tooltip-custom {
+            position: relative;
+            cursor: help;
+        }
+
+        .tooltip-custom::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            z-index: 1000;
+        }
+
+        .tooltip-custom:hover::after {
+            opacity: 1;
+        }
+
+        /* Improved focus states for accessibility */
+        .action-btn:focus,
+        .theme-toggle:focus,
+        .quick-scanner:focus {
+            outline: 2px solid #667eea;
+            outline-offset: 2px;
+        }
+
+        /* Enhanced print styles */
+        @media print {
+            .quick-scanner,
+            .theme-toggle,
+            .connection-badge,
+            .processing-overlay {
+                display: none !important;
+            }
+            
+            body {
+                background: white !important;
+            }
+            
+            .stat-card,
+            .status-item {
+                box-shadow: none !important;
+                border: 1px solid #ddd !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Enhanced Connection Status -->
+    <div id="connectionBadge" class="connection-badge disconnected">
+        <div class="status-dot offline"></div>
+        <span id="connectionText">Connecting...</span>
+    </div>
+
+    <!-- Quick Scanner with enhanced tooltip -->
+    <button class="quick-scanner tooltip-custom" data-tooltip="Scan Receipt (Ctrl+S)" onclick="openScanner()" 
+            title="Open receipt scanner (Ctrl+S)" data-bs-toggle="tooltip">
+        <i class="fas fa-camera"></i>
+    </button>
+
+    <!-- Enhanced Theme Toggle -->
+    <button class="theme-toggle tooltip-custom" data-tooltip="Toggle Theme" onclick="toggleTheme()">
+        <i class="fas fa-moon" id="themeIcon"></i>
+    </button>
+
+    <!-- Enhanced Processing Overlay -->
+    <div id="processingOverlay" class="processing-overlay">
+        <div class="processing-modal">
+            <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
+            <h4 id="processingTitle" class="mb-3">Processing Receipts</h4>
+            <div class="processing-progress">
+                <div id="processingProgressBar" class="processing-progress-bar" style="width: 0%"></div>
+            </div>
+            <p id="processingStep" class="text-muted mb-2">Initializing...</p>
+            <small id="processingDetails" class="text-muted"></small>
+        </div>
+    </div>
+
+    <!-- Enhanced Header -->
+    <div class="page-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="page-title">
+                        <i class="fas fa-receipt me-3"></i>
+                        Receipt Processor Pro
+                    </h1>
+                    <p class="page-subtitle">AI-Powered Receipt Processing & Bank Reconciliation</p>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <div class="d-flex flex-column align-items-md-end">
+                        <small class="opacity-75 mb-1">Last Updated</small>
+                        <h6 id="lastUpdate" class="mb-3">Just now</h6>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <a href="/settings" class="action-btn">
+                                <i class="fas fa-cog"></i>
+                                <span>Settings</span>
+                            </a>
+                            <button class="action-btn" onclick="actions.refreshData()" data-action="refreshData">
+                                <i class="fas fa-sync-alt"></i>
+                                <span>Refresh</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Enhanced System Status -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title mb-4">
+                            <i class="fas fa-server me-2 text-primary"></i>
+                            System Status
+                        </h5>
+                        <div class="status-grid">
+                            <div class="status-item">
+                                <div class="status-item-icon">
+                                    <span id="gmailStatus" class="status-dot offline"></span>
+                                    <i class="fas fa-envelope text-primary"></i>
+                                </div>
+                                <div class="status-item-label">Gmail</div>
+                                <div id="gmailValue" class="status-item-value">0/0</div>
+                            </div>
+                            <div class="status-item">
+                                <div class="status-item-icon">
+                                    <span id="mongoStatus" class="status-dot offline"></span>
+                                    <i class="fas fa-database text-success"></i>
+                                </div>
+                                <div class="status-item-label">Database</div>
+                                <div id="mongoValue" class="status-item-value">Offline</div>
+                            </div>
+                            <div class="status-item">
+                                <div class="status-item-icon">
+                                    <span id="aiStatus" class="status-dot offline"></span>
+                                    <i class="fas fa-brain text-info"></i>
+                                </div>
+                                <div class="status-item-label">AI Engine</div>
+                                <div id="aiValue" class="status-item-value">Inactive</div>
+                            </div>
+                            <div class="status-item">
+                                <div class="status-item-icon">
+                                    <span id="bankStatus" class="status-dot offline"></span>
+                                    <i class="fas fa-university text-warning"></i>
+                                </div>
+                                <div class="status-item-label">Banking</div>
+                                <div id="bankValue" class="status-item-value">0 Banks</div>
+                            </div>
+                            <div class="status-item">
+                                <div class="status-item-icon">
+                                    <span id="storageStatus" class="status-dot offline"></span>
+                                    <i class="fas fa-cloud text-secondary"></i>
+                                </div>
+                                <div class="status-item-label">Storage</div>
+                                <div id="storageValue" class="status-item-value">Local</div>
+                            </div>
+                            <div class="status-item">
+                                <div class="status-item-icon">
+                                    <span id="exportStatus" class="status-dot online"></span>
+                                    <i class="fas fa-file-export text-success"></i>
+                                </div>
+                                <div class="status-item-label">Export</div>
+                                <div id="exportValue" class="status-item-value">Google Sheets</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enhanced Statistics Cards -->
+        <div class="row g-4 mb-4">
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card primary">
+                    <div class="d-flex align-items-center justify-content-between h-100">
+                        <div class="flex-grow-1">
+                            <div class="stat-label">Emails Processed</div>
+                            <div id="processedCount" class="stat-value">0</div>
+                            <div class="stat-change text-success">
+                                <i class="fas fa-arrow-up"></i>
+                                <span>From <span id="totalAccounts">0</span> accounts</span>
+                            </div>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-envelope-open"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card success">
+                    <div class="d-flex align-items-center justify-content-between h-100">
+                        <div class="flex-grow-1">
+                            <div class="stat-label">Receipts Found</div>
+                            <div id="receiptsCount" class="stat-value">0</div>
+                            <div class="stat-change text-success">
+                                <i class="fas fa-robot"></i>
+                                <span>AI Analyzed</span>
+                            </div>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-receipt"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card info">
+                    <div class="d-flex align-items-center justify-content-between h-100">
+                        <div class="flex-grow-1">
+                            <div class="stat-label">Bank Accounts</div>
+                            <div id="bankAccounts" class="stat-value">0</div>
+                            <div id="bankStatusText" class="stat-change">
+                                <i class="fas fa-link"></i>
+                                <span>Ready to connect</span>
+                            </div>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-university"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card warning">
+                    <div class="d-flex align-items-center justify-content-between h-100">
+                        <div class="flex-grow-1">
+                            <div class="stat-label">Matched Receipts</div>
+                            <div id="matchedReceipts" class="stat-value">0</div>
+                            <div class="stat-change text-success">
+                                <i class="fas fa-dollar-sign"></i>
+                                <span>$<span id="totalAmount">0.00</span> total</span>
+                            </div>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-check-double"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enhanced Action Center & Real-time Log -->
+        <div class="row g-4 mb-4">
+            <!-- Enhanced Actions -->
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title mb-4">
+                            <i class="fas fa-bolt me-2 text-warning"></i>
+                            Quick Actions
+                        </h5>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="glass-card p-4 text-center h-100">
+                                    <div class="mb-3">
+                                        <i class="fas fa-link fa-3x text-primary mb-3"></i>
+                                    </div>
+                                    <h6 class="mb-2 fw-bold">Connect Banks</h6>
+                                    <p class="text-muted small mb-3">Link your bank accounts via Teller API for real-time transaction data</p>
+                                    <button type="button" class="action-btn w-100" onclick="actions.connectBanks()" data-action="connectBanks" 
+                                            title="Connect your bank accounts via Teller API (Ctrl+B)" data-bs-toggle="tooltip">
+                                        <i class="fas fa-plus"></i>
+                                        <span id="bankActionText">Connect Banks</span>
+                                        <small class="d-block mt-1 opacity-75">Ctrl+B</small>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="glass-card p-4 text-center h-100">
+                                    <div class="mb-3">
+                                        <i class="fas fa-play-circle fa-3x text-success mb-3"></i>
+                                    </div>
+                                    <h6 class="mb-2 fw-bold">Process Receipts</h6>
+                                    <p class="text-muted small mb-3">Scan emails and match with bank transactions using AI</p>
+                                    <button id="processBtn" class="action-btn w-100" onclick="actions.processReceipts()" data-action="processReceipts"
+                                            title="Process receipts from emails using AI (Ctrl+P)" data-bs-toggle="tooltip">
+                                        <i class="fas fa-cogs"></i>
+                                        <span>Start Processing</span>
+                                        <small class="d-block mt-1 opacity-75">Ctrl+P</small>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="glass-card p-4 text-center h-100">
+                                    <div class="mb-3">
+                                        <i class="fas fa-download fa-3x text-info mb-3"></i>
+                                    </div>
+                                    <h6 class="mb-2 fw-bold">Export Data</h6>
+                                    <p class="text-muted small mb-3">Download CSV reports or sync to accounting systems</p>
+                                    <button type="button" class="btn btn-outline-success" onclick="actions.exportToSheets()" data-action="exportToSheets"
+                                            title="Export all data to Google Sheets (Ctrl+E)" data-bs-toggle="tooltip">
+                                        <i class="fas fa-file-export me-1"></i>
+                                        Export to Google Sheets
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="glass-card p-4 text-center h-100">
+                                    <div class="mb-3">
+                                        <i class="fas fa-sync fa-3x text-info mb-3"></i>
+                                    </div>
+                                    <h6 class="mb-2 fw-bold">Sync Bank Data</h6>
+                                    <p class="text-muted small mb-3">Download 1 year of Chase transactions to database</p>
+                                    <button class="action-btn w-100" onclick="actions.syncBankData()" data-action="syncBankData">
+                                        <i class="fas fa-university"></i>
+                                        <span>Sync Bank Transactions</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="glass-card p-4 text-center h-100">
+                                    <div class="mb-3">
+                                        <i class="fas fa-broom fa-3x text-warning mb-3"></i>
+                                    </div>
+                                    <h6 class="mb-2 fw-bold">Clear Test Data</h6>
+                                    <p class="text-muted small mb-3">Remove test/fake data to see only real connections</p>
+                                    <button class="action-btn w-100" onclick="actions.clearTestData()" data-action="clearTestData">
+                                        <i class="fas fa-trash-alt"></i>
+                                        <span>Clear Test Data</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Enhanced AI Features & Monitor -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <h5 class="card-title mb-4">
+                            <i class="fas fa-robot me-2 text-info"></i>
+                            AI Monitor
+                        </h5>
+                        <div class="d-flex flex-column gap-3">
+                            <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded">
+                                <div class="d-flex align-items-center gap-3">
+                                    <span class="status-dot online"></span>
+                                    <div>
+                                        <div class="fw-semibold">Smart Categories</div>
+                                        <small class="text-muted">49 NetSuite expense types</small>
+                                    </div>
+                                </div>
+                                <small class="badge bg-success">Active</small>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded">
+                                <div class="d-flex align-items-center gap-3">
+                                    <span class="status-dot online"></span>
+                                    <div>
+                                        <div class="fw-semibold">Intelligent Matching</div>
+                                        <small class="text-muted">Receipt-transaction linking</small>
+                                    </div>
+                                </div>
+                                <small class="badge bg-success">Ready</small>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded">
+                                <div class="d-flex align-items-center gap-3">
+                                    <span class="status-dot processing"></span>
+                                    <div>
+                                        <div class="fw-semibold">OCR Processing</div>
+                                        <small class="text-muted">Text extraction from images</small>
+                                    </div>
+                                </div>
+                                <small class="badge bg-warning">Standby</small>
+                            </div>
+                            <hr class="my-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="fw-semibold">System Load</div>
+                                    <small class="text-muted">Processing capacity</small>
+                                </div>
+                                <small id="cpu-usage" class="text-success fw-bold">12%</small>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="fw-semibold">Active Sessions</div>
+                                    <small class="text-muted">Connected users</small>
+                                </div>
+                                <small id="active-connections" class="text-success fw-bold">1</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enhanced Receipts Table -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-table me-2 text-success"></i>
+                                Processed Receipts & Bank Matches
+                            </h5>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-outline-success btn-sm" onclick="actions.refreshData()" data-action="refreshData">
+                                    <i class="fas fa-sync me-1"></i>
+                                    Refresh
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm" onclick="actions.exportToSheets()" data-action="exportToSheets">
+                                    <i class="fas fa-file-export me-1"></i>
+                                    Export to Google Sheets
+                                </button>
+                            </div>
+                        </div>
+                        <div id="receipts-table-container" class="table-responsive">
+                            <div class="text-center py-5 text-muted">
+                                <i class="fas fa-receipt fa-3x mb-3 opacity-50"></i>
+                                <h6>Receipt & Transaction Matching</h6>
+                                <p class="mb-0">Process receipts to see matched transactions here</p>
+                                <small>Year's worth of Gmail emails will be matched with Chase banking data</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COMPREHENSIVE EXPENSE MANAGEMENT TABLE -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-money-bill-wave me-2 text-danger"></i>
+                                Business Expense Management
+                            </h5>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-outline-info btn-sm" onclick="refreshExpenseTable()" data-action="refreshExpenses">
+                                    <i class="fas fa-sync me-1"></i>
+                                    Refresh
+                                </button>
+                                <button class="btn btn-outline-warning btn-sm" onclick="actions.exportToSheets()" data-action="exportToSheets">
+                                    <i class="fas fa-file-export me-1"></i>
+                                    Export Expenses
+                                </button>
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-filter"></i> Categories
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#" onclick="filterExpenses('all')">All Expenses</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item" href="#" onclick="filterExpenses('office_supplies')">📎 Office Supplies</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="filterExpenses('travel')">✈️ Travel & Transportation</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="filterExpenses('meals')">🍽️ Meals & Entertainment</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="filterExpenses('software')">💻 Software & Technology</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="filterExpenses('marketing')">📢 Marketing & Advertising</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="filterExpenses('professional')">👔 Professional Services</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="filterExpenses('utilities')">⚡ Utilities & Communication</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="filterExpenses('uncategorized')">❓ Uncategorized</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Expense Stats Summary -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-2">
+                                <div class="border rounded p-3 text-center bg-danger bg-opacity-10">
+                                    <h6 class="text-danger mb-1" id="total-expenses">$0.00</h6>
+                                    <small class="text-muted">Total Expenses</small>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="border rounded p-3 text-center bg-success bg-opacity-10">
+                                    <h6 class="text-success mb-1" id="matched-expenses">0</h6>
+                                    <small class="text-muted">✅ With Receipts</small>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="border rounded p-3 text-center bg-warning bg-opacity-10">
+                                    <h6 class="text-warning mb-1" id="unmatched-expenses">0</h6>
+                                    <small class="text-muted">⚠️ Missing Receipts</small>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="border rounded p-3 text-center bg-info bg-opacity-10">
+                                    <h6 class="text-info mb-1" id="categorized-expenses">0</h6>
+                                    <small class="text-muted">🏷️ Categorized</small>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="border rounded p-3 text-center bg-primary bg-opacity-10">
+                                    <h6 class="text-primary mb-1" id="tax-deductible">$0.00</h6>
+                                    <small class="text-muted">💰 Tax Deductible</small>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="border rounded p-3 text-center bg-secondary bg-opacity-10">
+                                    <h6 class="text-secondary mb-1" id="current-month">$0.00</h6>
+                                    <small class="text-muted">📅 This Month</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="expense-table-container" class="table-responsive">
+                            <div class="text-center py-5 text-muted">
+                                <i class="fas fa-money-bill-wave fa-3x mb-3 opacity-50"></i>
+                                <h6>Business Expense Tracking</h6>
+                                <p class="mb-3">Process receipts and sync bank data to see comprehensive expense management</p>
+                                <div class="d-flex gap-2 justify-content-center">
+                                    <button class="btn btn-primary" onclick="actions.processReceipts()">
+                                        <i class="fas fa-cogs"></i> Process Receipts
+                                    </button>
+                                    <button class="btn btn-outline-primary" onclick="actions.syncBankData()">
+                                        <i class="fas fa-university"></i> Sync Bank Data
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Expense Pagination Controls -->
+                        <nav id="expense-pagination" style="display: none;">
+                            <ul class="pagination justify-content-center">
+                                <li class="page-item" id="expense-prev-page">
+                                    <a class="page-link" href="#" onclick="loadExpenseTable(currentExpensePage - 1)">Previous</a>
+                                </li>
+                                <li class="page-item active">
+                                    <span class="page-link" id="expense-current-page-info">Page 1</span>
+                                </li>
+                                <li class="page-item" id="expense-next-page">
+                                    <a class="page-link" href="#" onclick="loadExpenseTable(currentExpensePage + 1)">Next</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COMPREHENSIVE BANK TRANSACTIONS TABLE -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-university me-2 text-primary"></i>
+                                Bank Transactions (Chase Data)
+                            </h5>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-outline-info btn-sm" onclick="actions.refreshData()" data-action="refreshData">
+                                    <i class="fas fa-sync me-1"></i>
+                                    Refresh
+                                </button>
+                                <button class="btn btn-outline-success btn-sm" onclick="actions.exportToSheets()" data-action="exportToSheets">
+                                    <i class="fas fa-file-export me-1"></i>
+                                    Export All
+                                </button>
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-filter"></i> Filter
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#" onclick="filterTransactions('all')">All Transactions</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="filterTransactions('matched')">✅ Matched Only</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="filterTransactions('unmatched')">⏳ Unmatched Only</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item" href="#" onclick="filterTransactions('expenses')">💸 Expenses</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="filterTransactions('income')">💰 Income</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Transaction Stats Summary -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-3">
+                                <div class="border rounded p-3 text-center">
+                                    <h6 class="text-primary mb-1" id="total-transactions">0</h6>
+                                    <small class="text-muted">Total Transactions</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="border rounded p-3 text-center">
+                                    <h6 class="text-success mb-1" id="matched-transactions">0</h6>
+                                    <small class="text-muted">✅ Matched</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="border rounded p-3 text-center">
+                                    <h6 class="text-warning mb-1" id="unmatched-transactions">0</h6>
+                                    <small class="text-muted">⏳ Unmatched</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="border rounded p-3 text-center">
+                                    <h6 class="text-info mb-1" id="match-percentage">0%</h6>
+                                    <small class="text-muted">Match Rate</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="bank-transactions-container" class="table-responsive">
+                            <div class="text-center py-5 text-muted">
+                                <i class="fas fa-university fa-3x mb-3 opacity-50"></i>
+                                <h6>Bank Transaction Management</h6>
+                                <p class="mb-3">Sync bank data to see all Chase transactions with receipt matching</p>
+                                <button class="btn btn-primary" onclick="syncBankTransactions()">
+                                    <i class="fas fa-sync"></i> Sync Bank Transactions
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Pagination Controls -->
+                        <nav id="bank-pagination" style="display: none;">
+                            <ul class="pagination justify-content-center">
+                                <li class="page-item" id="prev-page">
+                                    <a class="page-link" href="#" onclick="loadBankTransactions(currentBankPage - 1)">Previous</a>
+                                </li>
+                                <li class="page-item active">
+                                    <span class="page-link" id="current-page-info">Page 1</span>
+                                </li>
+                                <li class="page-item" id="next-page">
+                                    <a class="page-link" href="#" onclick="loadBankTransactions(currentBankPage + 1)">Next</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enhanced Processing Log -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-list-alt me-2 text-primary"></i>
+                                Real-time Processing Log
+                            </h5>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-outline-primary btn-sm" onclick="exportLog()">
+                                    <i class="fas fa-file-export me-1"></i>
+                                    Export
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm" onclick="clearLog()">
+                                    <i class="fas fa-trash me-1"></i>
+                                    Clear
+                                </button>
+                            </div>
+                        </div>
+                        <div id="processing-log" class="log-container">
+                            <div class="text-center py-5 text-muted">
+                                <i class="fas fa-stream fa-3x mb-3 opacity-50"></i>
+                                <h6>Real-time Activity Monitor</h6>
+                                <p class="mb-0">Processing activity will appear here in real-time</p>
+                                <small>Start processing receipts or scan new ones to see live updates</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced JavaScript -->
+    <script>
+        // Enhanced state management
+        let appState = {
+            connected: false,
+            processing: false,
+            stats: {},
+            logEntries: [],
+            theme: localStorage.getItem('theme') || 'light'
+        };
+
+        // Enhanced connection management
+        function initializeConnection() {
+            updateConnectionStatus(true);
+            addLogEntry('🔗 Dashboard initialized successfully', 'success');
+            
+            // Load REAL data from API instead of fake demo data
+            updateStatusFromAPI();
+        }
+
+        // Enhanced connection status
+        function updateConnectionStatus(connected) {
+            const badge = document.getElementById('connectionBadge');
+            const text = document.getElementById('connectionText');
+            const dot = badge.querySelector('.status-dot');
+            
+            appState.connected = connected;
+            
+            if (connected) {
+                badge.className = 'connection-badge connected';
+                text.innerHTML = '<span>Connected</span>';
+                dot.className = 'status-dot online';
+            } else {
+                badge.className = 'connection-badge disconnected';
+                text.innerHTML = '<span>Disconnected</span>';
+                dot.className = 'status-dot offline';
+            }
+        }
+
+        // Enhanced dashboard updates with smooth animations
+        function updateDashboard(data) {
+            // Update statistics with animations
+            animateValue('processedCount', data.processed_count || 0);
+            animateValue('receiptsCount', data.receipts_count || 0);
+            animateValue('bankAccounts', data.bank_accounts || 0);
+            animateValue('matchedReceipts', data.matched_receipts || 0);
+            animateValue('totalAmount', (data.total_amount || 0).toFixed(2));
+            document.getElementById('totalAccounts').textContent = data.total_accounts || 0;
+
+            // Update status indicators with enhanced feedback
+            updateStatusIndicator('gmailStatus', 'gmailValue', data.authenticated_accounts > 0, `${data.authenticated_accounts}/${data.total_accounts}`);
+            updateStatusIndicator('mongoStatus', 'mongoValue', data.mongo_connected, data.mongo_connected ? 'Connected' : 'Offline');
+            updateStatusIndicator('aiStatus', 'aiValue', data.ai_connected, data.ai_connected ? 'Active' : 'Inactive');
+            updateStatusIndicator('bankStatus', 'bankValue', data.teller_connected, `${data.bank_accounts} Connected`);
+            updateStatusIndicator('storageStatus', 'storageValue', data.r2_connected, data.r2_connected ? 'Cloud' : 'Local');
+            updateStatusIndicator('exportStatus', 'exportValue', data.sheets_connected, true, 'Google Sheets');
+
+            // Update action buttons
+            document.getElementById('bankActionText').textContent = data.teller_connected ? 'Manage Banks' : 'Connect Banks';
+            document.getElementById('bankStatusText').innerHTML = `
+                <i class="fas fa-link"></i>
+                <span>${data.teller_connected ? 'Connected via Teller' : 'Ready to connect'}</span>
+            `;
+
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleString();
+            
+            // Store stats
+            appState.stats = data;
+        }
+
+        // Enhanced status indicator with better visual feedback
+        function updateStatusIndicator(statusId, valueId, isOnline, value) {
+            const statusEl = document.getElementById(statusId);
+            const valueEl = document.getElementById(valueId);
+            
+            if (statusEl && valueEl) {
+                statusEl.className = `status-dot ${isOnline ? 'online' : 'offline'}`;
+                valueEl.textContent = value;
+                
+                // Add pulse effect for changes
+                valueEl.style.transform = 'scale(1.1)';
+                setTimeout(() => {
+                    valueEl.style.transform = 'scale(1)';
+                }, 200);
+            }
+        }
+
+        // Enhanced value animation with easing
+        function animateValue(elementId, targetValue) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            
+            const currentValue = parseFloat(element.textContent) || 0;
+            const increment = (targetValue - currentValue) / 30; // More steps for smoother animation
+            let current = currentValue;
+
+            const animation = setInterval(() => {
+                current += increment;
+                if ((increment > 0 && current >= targetValue) || (increment < 0 && current <= targetValue)) {
+                    element.textContent = targetValue;
+                    clearInterval(animation);
+                } else {
+                    element.textContent = Math.round(current * 100) / 100;
+                }
+            }, 33); // ~30fps for smooth animation
+        }
+
+        // Enhanced log entry with better formatting
+        function addLogEntry(message, level = 'info') {
+            const logContainer = document.getElementById('processing-log');
+            if (!logContainer) return;
+
+            // Remove placeholder if exists
+            if (logContainer.children.length === 1 && logContainer.children[0].classList.contains('text-center')) {
+                logContainer.innerHTML = '';
+            }
+
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${level}`;
+            
+            const timestamp = new Date().toLocaleTimeString('en-US', { 
+                hour12: false, 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit' 
+            });
+            
+            logEntry.innerHTML = `
+                <div class="log-timestamp">${timestamp}</div>
+                <div class="log-message">${message}</div>
+            `;
+
+            logContainer.insertBefore(logEntry, logContainer.firstChild);
+
+            // Keep only last 100 entries for performance
+            while (logContainer.children.length > 100) {
+                logContainer.removeChild(logContainer.lastChild);
+            }
+
+            // Auto-scroll to top with smooth behavior
+            logContainer.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            // Store in app state
+            appState.logEntries.unshift({ timestamp, message, level });
+            if (appState.logEntries.length > 100) {
+                appState.logEntries.pop();
+            }
+        }
+
+        // Enhanced processing functions
+        async function processReceipts() {
+            try {
+                addLogEntry('🚀 Starting intelligent receipt processing...', 'info');
+                showProcessingOverlay({ progress: 0, current_step: 'Initializing AI systems...' });
+                
+                // Simulate processing steps
+                const steps = [
+                    { progress: 20, step: 'Connecting to Gmail accounts...' },
+                    { progress: 40, step: 'Scanning for receipt attachments...' },
+                    { progress: 60, step: 'Processing with AI OCR...' },
+                    { progress: 80, step: 'Matching with bank transactions...' },
+                    { progress: 100, step: 'Finalizing results...' }
+                ];
+                
+                for (let i = 0; i < steps.length; i++) {
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    showProcessingOverlay(steps[i]);
+                    addLogEntry(`📋 ${steps[i].step}`, 'info');
+                }
+                
+                const response = await fetch('/api/process-receipts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ days: 365, max_receipts: 1000 }) // 1 YEAR of data!
+                });
+                
+                if (!response.ok) throw new Error('Processing failed');
+                
+                const result = await response.json();
+                addLogEntry('✅ Receipt processing completed successfully', 'success');
+                addLogEntry(`📊 Found ${result.receipts_found} receipts, matched ${result.matched} transactions`, 'success');
+                addLogEntry(`💰 Total amount processed: $${result.total_amount}`, 'info');
+                addLogEntry(`🎯 Match rate: ${result.match_rate}`, 'info');
+                
+                // Refresh the receipts table with new data
+                loadReceiptsTable();
+                
+                // Update dashboard with REAL data from MongoDB
+                updateStatusFromAPI();
+                
+            } catch (error) {
+                addLogEntry(`❌ Processing failed: ${error.message}`, 'error');
+            } finally {
+                hideProcessingOverlay();
+            }
+        }
+
+        function exportData() {
+            addLogEntry('📊 Exporting data to Google Sheets...', 'info');
+            
+            fetch('/api/export-sheets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    addLogEntry(`✅ Data exported successfully to Google Sheets`, 'success');
+                    addLogEntry(`📄 Receipts: ${result.receipts_count} rows`, 'info');
+                    addLogEntry(`🏦 Bank Transactions: ${result.transactions_count} rows`, 'info');
+                    addLogEntry(`🔗 Spreadsheet URL: ${result.spreadsheet_url}`, 'info');
+                    
+                    // Open the Google Sheets URL in a new tab
+                    window.open(result.spreadsheet_url, '_blank');
+                    
+                    // Show success notification
+                    showNotification('Google Sheets Export', `Data exported successfully! Created ${result.worksheets.length} worksheets.`, 'success');
+                } else {
+                    addLogEntry(`❌ Export failed: ${result.error}`, 'error');
+                    showNotification('Export Failed', result.error, 'error');
+                }
+            })
+            .catch(error => {
+                addLogEntry(`❌ Export error: ${error.message}`, 'error');
+                showNotification('Export Error', 'Failed to export data to Google Sheets', 'error');
+            });
+        }
+
+        function exportLog() {
+            const logData = appState.logEntries.map(entry => 
+                `${entry.timestamp}\t${entry.level.toUpperCase()}\t${entry.message}`
+            ).join('\n');
+            
+            const blob = new Blob([logData], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `processing-log-${new Date().toISOString().split('T')[0]}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            addLogEntry('📁 Processing log exported successfully', 'info');
+        }
+
+        function clearTestData() {
+            if (!confirm('⚠️ This will clear all test data including fake transactions and connections. Are you sure?')) {
+                return;
+            }
+            
+            addLogEntry('🧹 Clearing test data to show only real connections...', 'info');
+            
+            fetch('/api/clear-test-data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clear_receipts: false }) // Don't clear receipts by default
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    addLogEntry('✅ ' + result.message, 'success');
+                    addLogEntry('🔄 Refreshing dashboard to show clean data...', 'info');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+                } else {
+                    addLogEntry('❌ Failed to clear test data: ' + (result.error || 'Unknown error'), 'error');
+                }
+            })
+            .catch(error => {
+                addLogEntry('❌ Error clearing test data: ' + error.message, 'error');
+            });
+        }
+
+        // Enhanced processing overlay
+        function showProcessingOverlay(data) {
+            const overlay = document.getElementById('processingOverlay');
+            const progressBar = document.getElementById('processingProgressBar');
+            const step = document.getElementById('processingStep');
+            
+            progressBar.style.width = `${data.progress || 0}%`;
+            step.textContent = data.step || data.current_step || 'Processing...';
+            
+            overlay.style.display = 'flex';
+            document.getElementById('processBtn').disabled = true;
+            appState.processing = true;
+        }
+
+        function hideProcessingOverlay() {
+            document.getElementById('processingOverlay').style.display = 'none';
+            document.getElementById('processBtn').disabled = false;
+            appState.processing = false;
+        }
+
+        // Enhanced theme management
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-bs-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            const icon = document.getElementById('themeIcon');
+            
+            html.setAttribute('data-bs-theme', newTheme);
+            icon.className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+            
+            localStorage.setItem('theme', newTheme);
+            appState.theme = newTheme;
+            
+            addLogEntry(`🎨 Switched to ${newTheme} theme`, 'info');
+        }
+
+        function initializeTheme() {
+            const html = document.documentElement;
+            const icon = document.getElementById('themeIcon');
+            
+            html.setAttribute('data-bs-theme', appState.theme);
+            icon.className = appState.theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+        }
+
+        // Enhanced utility functions
+        function openScanner() {
+            const scannerWindow = window.open('/scanner', 'scanner', 'width=400,height=700,toolbar=no,menubar=no,scrollbars=no,location=no');
+            
+            if (scannerWindow) {
+                scannerWindow.focus();
+                addLogEntry('📱 Camera scanner opened', 'info');
+            } else {
+                window.location.href = '/scanner';
+            }
+        }
+
+        function clearLog() {
+            const logContainer = document.getElementById('processing-log');
+            logContainer.innerHTML = `
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-stream fa-3x mb-3 opacity-50"></i>
+                    <h6>Processing log cleared</h6>
+                    <p class="mb-0">New activity will appear here</p>
+                </div>
+            `;
+            appState.logEntries = [];
+            addLogEntry('🗑️ Processing log cleared', 'info');
+        }
+
+        function requestStatusUpdate() {
+            updateStatusFromAPI();
+            addLogEntry('🔄 Refreshing system status...', 'info');
+        }
+
+        function updateStatusFromAPI() {
+            // Use REAL status endpoint with proper service lights
+            fetch('/api/status/real')
+                .then(response => {
+                    if (!response.ok) throw new Error('Status update failed');
+                    return response.json();
+                })
+                .then(data => {
+                    const services = data.services || {};
+                    const counts = data.counts || {};
+                    
+                    // Update REAL service lights based on API response
+                    updateServiceLights(services);
+                    
+                    // Update dashboard with REAL data from MongoDB
+                    updateDashboard({
+                        authenticated_accounts: services.gmail?.accounts_configured || 0,
+                        total_accounts: 3, // Config has 3 Gmail accounts
+                        mongo_connected: services.mongodb?.connected,
+                        ai_connected: services.huggingface?.connected,
+                        teller_connected: services.teller?.connected,
+                        r2_connected: services.r2?.connected,
+                        sheets_connected: false, // Not configured
+                        bank_accounts: 0, // No banks connected yet
+                        processed_count: counts.total_receipts || 0,
+                        receipts_count: counts.processed_receipts || 0,
+                        matched_receipts: counts.matched_transactions || 0,
+                        total_amount: counts.total_amount || 0.0
+                    });
+                    
+                    addLogEntry('✅ System status updated successfully', 'success');
+                })
+                .catch(error => {
+                    addLogEntry(`❌ Status update failed: ${error.message}`, 'error');
+                    updateConnectionStatus(false);
+                });
+        }
+        
+        function updateServiceLights(services) {
+            // Update each service light based on real status
+            Object.keys(services).forEach(serviceName => {
+                const service = services[serviceName];
+                const lightElement = document.querySelector(`[data-service="${serviceName}"]`);
+                
+                if (lightElement) {
+                    lightElement.className = `status-light ${service.light}`;
+                    
+                    // Update status text
+                    const statusText = lightElement.nextElementSibling;
+                    if (statusText) {
+                        statusText.textContent = service.status;
+                    }
+                }
+            });
+        }
+
+        // Enhanced keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            
+            if (e.ctrlKey || e.metaKey) {
+                switch (e.key) {
+                    case 'r':
+                        e.preventDefault();
+                        requestStatusUpdate();
+                        break;
+                    case 's':
+                        e.preventDefault();
+                        openScanner();
+                        break;
+                    case 'p':
+                        e.preventDefault();
+                        if (!appState.processing) processReceipts();
+                        break;
+                    case 'e':
+                        e.preventDefault();
+                        exportData();
+                        break;
+                    case 'l':
+                        e.preventDefault();
+                        clearLog();
+                        break;
+                    case 't':
+                        e.preventDefault();
+                        toggleTheme();
+                        break;
+                }
+            }
+        });
+
+        // Enhanced initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeTheme();
+            initializeConnection();
+            updateStatusFromAPI();
+            loadReceiptsTable(); // Load existing receipts on startup
+            loadBankTransactions(1); // Load existing bank transactions on startup
+            
+            // Auto-refresh every 30 seconds
+            setInterval(updateStatusFromAPI, 30000);
+            
+            // Welcome messages
+            addLogEntry('🎉 Receipt Processor Pro initialized successfully', 'success');
+            addLogEntry('💡 Keyboard shortcuts: Ctrl+S (scanner), Ctrl+P (process), Ctrl+E (export)', 'info');
+            addLogEntry('🔗 Multi-account Gmail integration active', 'info');
+            addLogEntry('🏦 Bank transactions table ready - sync Chase data to populate', 'info');
+        });
+
+        // Enhanced page visibility handling
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                updateStatusFromAPI();
+                addLogEntry('👀 Dashboard focus restored - refreshing data', 'info');
+            }
+        });
+
+        // Enhanced online/offline handling
+        window.addEventListener('online', () => {
+            updateConnectionStatus(true);
+            addLogEntry('🌐 Internet connection restored', 'success');
+        });
+
+        window.addEventListener('offline', () => {
+            updateConnectionStatus(false);
+            addLogEntry('📡 Internet connection lost - operating in offline mode', 'warning');
+        });
+        
+        // RECEIPTS TABLE FUNCTIONS
+        function refreshReceiptsTable() {
+            addLogEntry('🔄 Refreshing receipts table...', 'info');
+            loadReceiptsTable();
+        }
+        
+        function loadReceiptsTable() {
+            fetch('/api/receipts?limit=50')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.receipts && data.receipts.length > 0) {
+                        displayReceiptsTable(data.receipts, data.total_count);
+                        addLogEntry(`✅ Loaded ${data.receipts.length} receipts from database`, 'success');
+                    } else {
+                        showEmptyReceiptsTable();
+                    }
+                })
+                .catch(error => {
+                    addLogEntry(`❌ Failed to load receipts: ${error.message}`, 'error');
+                    showEmptyReceiptsTable();
+                });
+        }
+        
+        function displayReceiptsTable(receipts, totalCount) {
+            const container = document.getElementById('receipts-table-container');
+            
+            const tableHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <small class="text-muted">Showing ${receipts.length} of ${totalCount} total receipts</small>
+                    <div class="d-flex gap-2">
+                        <span class="badge bg-success">${receipts.filter(r => r.bank_matched).length} Matched</span>
+                        <span class="badge bg-warning">${receipts.filter(r => !r.bank_matched).length} Unmatched</span>
+                    </div>
+                </div>
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Date</th>
+                            <th>Merchant</th>
+                            <th>Amount</th>
+                            <th>Category</th>
+                            <th>Business Type</th>
+                            <th>Gmail Account</th>
+                            <th>R2 Image</th>
+                            <th>Match Status</th>
+                            <th>AI Confidence</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${receipts.map(receipt => {
+                            // Generate R2 URL if available
+                            const r2Url = receipt.image_key || receipt.r2_key ? 
+                                `${window.location.protocol}//${window.location.host}/r2/${receipt.image_key || receipt.r2_key}` : '';
+                            
+                            // Determine match status
+                            let matchStatus = 'Unmatched';
+                            let matchBadgeClass = 'bg-warning';
+                            if (receipt.bank_matched || receipt.bank_match_id) {
+                                matchStatus = 'Matched';
+                                matchBadgeClass = 'bg-success';
+                            } else if (receipt.matching_transaction) {
+                                matchStatus = 'Partial';
+                                matchBadgeClass = 'bg-info';
+                            }
+                            
+                            return `
+                            <tr class="${receipt.bank_matched ? 'table-success' : 'table-warning'}">
+                                <td>
+                                    <small class="font-monospace text-muted">
+                                        ${receipt._id ? receipt._id.slice(-6) : 'N/A'}
+                                    </small>
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        ${new Date(receipt.date).toLocaleDateString()}
+                                    </small>
+                                </td>
+                                <td>
+                                    <strong>${receipt.merchant || 'Unknown'}</strong><br>
+                                    <small class="text-muted">${receipt.subject || receipt.description || ''}</small>
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-success">$${receipt.amount || 0}</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">${receipt.category || 'Uncategorized'}</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">${receipt.business_type || receipt.merchant_type || 'Unknown'}</span>
+                                </td>
+                                <td>
+                                    <small class="text-muted">${receipt.gmail_account || 'N/A'}</small><br>
+                                    <small class="text-muted">${receipt.sender || ''}</small>
+                                </td>
+                                <td>
+                                    ${r2Url ? 
+                                        `<a href="${r2Url}" target="_blank" class="btn btn-sm btn-outline-info">
+                                            <i class="fas fa-image"></i> View
+                                        </a>` : 
+                                        '<span class="text-muted">No Image</span>'
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge ${matchBadgeClass}">
+                                        <i class="fas ${matchStatus === 'Matched' ? 'fa-check' : matchStatus === 'Partial' ? 'fa-clock' : 'fa-search'}"></i>
+                                        ${matchStatus}
+                                    </span>
+                                    ${receipt.matching_transaction ? 
+                                        `<br><small class="text-muted">${receipt.matching_transaction}</small>` : ''
+                                    }
+                                </td>
+                                <td>
+                                    <div class="progress mb-1" style="height: 6px;">
+                                        <div class="progress-bar ${receipt.ai_confidence > 0.8 ? 'bg-success' : receipt.ai_confidence > 0.6 ? 'bg-warning' : 'bg-danger'}" 
+                                             style="width: ${(receipt.ai_confidence * 100) || 0}%"></div>
+                                    </div>
+                                    <small class="text-muted">${Math.round((receipt.ai_confidence || 0) * 100)}%</small>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary btn-sm" onclick="viewReceiptDetails('${receipt._id}')" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        ${receipt.ocr_text || receipt.extracted_text ? 
+                                            `<button class="btn btn-outline-info btn-sm" onclick="viewOCRText('${receipt._id}')" title="View OCR">
+                                                <i class="fas fa-file-text"></i>
+                                            </button>` : ''
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            container.innerHTML = tableHTML;
+        }
+        
+        function showEmptyReceiptsTable() {
+            const container = document.getElementById('receipts-table-container');
+            container.innerHTML = `
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-receipt fa-3x mb-3 opacity-50"></i>
+                    <h6>No Receipts Processed Yet</h6>
+                    <p class="mb-3">Click "Start Processing" to scan your Gmail accounts for receipts</p>
+                    <button class="btn btn-primary" onclick="processReceipts()">
+                        <i class="fas fa-play"></i> Start Processing Receipts
+                    </button>
+                </div>
+            `;
+        }
+        
+        function exportReceiptsCSV() {
+            addLogEntry('📊 Exporting receipts to CSV...', 'info');
+            
+            fetch('/api/receipts?limit=1000') // Export more for CSV
+                .then(response => response.json())
+                .then(data => {
+                    if (data.receipts && data.receipts.length > 0) {
+                        const csv = generateReceiptsCSV(data.receipts);
+                        downloadCSV(csv, 'receipts-export.csv');
+                        addLogEntry(`✅ Exported ${data.receipts.length} receipts to CSV`, 'success');
+                    } else {
+                        addLogEntry('⚠️ No receipts to export', 'warning');
+                    }
+                })
+                .catch(error => {
+                    addLogEntry(`❌ CSV export failed: ${error.message}`, 'error');
+                });
+        }
+        
+        function generateReceiptsCSV(receipts) {
+            const headers = ['Date', 'Merchant', 'Amount', 'Category', 'Gmail Account', 'Bank Matched', 'Matching Transaction', 'AI Confidence', 'Status'];
+            const rows = receipts.map(receipt => [
+                new Date(receipt.date).toLocaleDateString(),
+                receipt.merchant,
+                receipt.amount,
+                receipt.category,
+                receipt.gmail_account,
+                receipt.bank_matched ? 'Yes' : 'No',
+                receipt.matching_transaction || 'N/A',
+                Math.round(receipt.ai_confidence * 100) + '%',
+                receipt.status
+            ]);
+            
+            return [headers, ...rows].map(row => 
+                row.map(cell => `"${cell}"`).join(',')
+            ).join('\n');
+        }
+        
+        function downloadCSV(csv, filename) {
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+        
+        // BANK TRANSACTIONS TABLE - COMPREHENSIVE FUNCTIONALITY
+        let currentBankPage = 1;
+        let currentBankFilter = 'all';
+        const bankTransactionsPerPage = 25;
+        
+        function refreshBankTransactions() {
+            addLogEntry('🔄 Refreshing bank transactions...', 'info');
+            loadBankTransactions(1);
+        }
+        
+        function loadBankTransactions(page = 1) {
+            currentBankPage = page;
+            const skip = (page - 1) * bankTransactionsPerPage;
+            
+            let url = `/api/bank-transactions?limit=${bankTransactionsPerPage}&skip=${skip}`;
+            
+            // Add filtering
+            if (currentBankFilter !== 'all') {
+                url += `&filter=${currentBankFilter}`;
+            }
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.transactions && data.transactions.length > 0) {
+                        displayBankTransactionsTable(data.transactions, data.total_count, data.showing, data.has_more);
+                        updateBankTransactionStats(data);
+                        showBankPagination(data.total_count);
+                        addLogEntry(`✅ Loaded ${data.transactions.length} bank transactions (page ${page})`, 'success');
+                    } else {
+                        showEmptyBankTransactionsTable();
+                        hideBankPagination();
+                    }
+                })
+                .catch(error => {
+                    addLogEntry(`❌ Failed to load bank transactions: ${error.message}`, 'error');
+                    showEmptyBankTransactionsTable();
+                });
+        }
+        
+        function displayBankTransactionsTable(transactions, totalCount, showing, hasMore) {
+            const container = document.getElementById('bank-transactions-container');
+            
+            // Check for matched receipts
+            const matchedCount = transactions.filter(t => t.receipt_matched).length;
+            const unmatchedCount = transactions.length - matchedCount;
+            
+            const tableHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <small class="text-muted">
+                        Showing ${showing} of ${totalCount} transactions 
+                        (${matchedCount} matched, ${unmatchedCount} unmatched)
+                    </small>
+                    <div class="d-flex gap-2">
+                        <span class="badge bg-success">${matchedCount} Matched</span>
+                        <span class="badge bg-warning">${unmatchedCount} Need Receipts</span>
+                    </div>
+                </div>
+                <table class="table table-hover table-sm">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Amount</th>
+                            <th>Type</th>
+                            <th>Account</th>
+                            <th>Receipt Match</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${transactions.map(txn => {
+                            const isExpense = txn.amount < 0;
+                            const amount = Math.abs(txn.amount);
+                            const amountClass = isExpense ? 'text-danger' : 'text-success';
+                            const amountPrefix = isExpense ? '-$' : '+$';
+                            
+                            return `
+                            <tr class="${txn.receipt_matched ? 'table-success' : (isExpense ? 'table-warning' : '')}">
+                                <td>
+                                    <small class="text-muted">
+                                        ${new Date(txn.date).toLocaleDateString()}
+                                    </small>
+                                </td>
+                                <td>
+                                    <strong class="d-block">${txn.description || 'N/A'}</strong>
+                                    ${txn.counterparty?.name ? `<small class="text-muted">${txn.counterparty.name}</small>` : ''}
+                                </td>
+                                <td>
+                                    <span class="fw-bold ${amountClass}">${amountPrefix}${amount.toFixed(2)}</span>
+                                </td>
+                                <td>
+                                    <span class="badge ${isExpense ? 'bg-warning' : 'bg-info'}">
+                                        ${isExpense ? '💸 Expense' : '💰 Income'}
+                                    </span>
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        ${txn.bank_name}<br>
+                                        ${txn.account_name}
+                                    </small>
+                                </td>
+                                <td>
+                                    ${txn.receipt_matched 
+                                        ? `<span class="badge bg-success"><i class="fas fa-check"></i> Receipt Found</span>
+                                           <br><small class="text-muted">ID: ${txn.matched_receipt_id}</small>` 
+                                        : isExpense 
+                                            ? '<span class="badge bg-warning"><i class="fas fa-search"></i> Needs Receipt</span>'
+                                            : '<span class="badge bg-secondary"><i class="fas fa-minus"></i> N/A</span>'
+                                    }
+                                </td>
+                                <td>
+                                    ${txn.category 
+                                        ? `<span class="badge bg-primary">${txn.category}</span>`
+                                        : isExpense 
+                                            ? '<span class="badge bg-light text-dark">Uncategorized</span>'
+                                            : '<span class="badge bg-secondary">Income</span>'
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge ${txn.status === 'posted' ? 'bg-success' : 'bg-warning'}">
+                                        ${txn.status || 'pending'}
+                                    </span>
+                                </td>
+                            </tr>
+                        `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            container.innerHTML = tableHTML;
+        }
+        
+        function updateBankTransactionStats(data) {
+            const transactions = data.transactions || [];
+            const matchedCount = transactions.filter(t => t.receipt_matched).length;
+            const unmatchedCount = transactions.length - matchedCount;
+            const matchPercentage = transactions.length > 0 ? Math.round((matchedCount / transactions.length) * 100) : 0;
+            
+            document.getElementById('total-transactions').textContent = data.total_count || 0;
+            document.getElementById('matched-transactions').textContent = matchedCount;
+            document.getElementById('unmatched-transactions').textContent = unmatchedCount;
+            document.getElementById('match-percentage').textContent = `${matchPercentage}%`;
+        }
+        
+        function showEmptyBankTransactionsTable() {
+            const container = document.getElementById('bank-transactions-container');
+            container.innerHTML = `
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-university fa-3x mb-3 opacity-50"></i>
+                    <h6>No Bank Transactions Found</h6>
+                    <p class="mb-3">Sync your bank accounts to download transaction history</p>
+                    <button class="btn btn-primary" onclick="syncBankTransactions()">
+                        <i class="fas fa-sync"></i> Sync Bank Transactions
+                    </button>
+                </div>
+            `;
+            
+            // Reset stats
+            document.getElementById('total-transactions').textContent = '0';
+            document.getElementById('matched-transactions').textContent = '0';
+            document.getElementById('unmatched-transactions').textContent = '0';
+            document.getElementById('match-percentage').textContent = '0%';
+        }
+        
+        function showBankPagination(totalCount) {
+            const pagination = document.getElementById('bank-pagination');
+            const totalPages = Math.ceil(totalCount / bankTransactionsPerPage);
+            
+            if (totalPages > 1) {
+                pagination.style.display = 'block';
+                
+                // Update pagination controls
+                document.getElementById('current-page-info').textContent = `Page ${currentBankPage} of ${totalPages}`;
+                
+                const prevPage = document.getElementById('prev-page');
+                const nextPage = document.getElementById('next-page');
+                
+                if (currentBankPage <= 1) {
+                    prevPage.classList.add('disabled');
+                } else {
+                    prevPage.classList.remove('disabled');
+                }
+                
+                if (currentBankPage >= totalPages) {
+                    nextPage.classList.add('disabled');
+                } else {
+                    nextPage.classList.remove('disabled');
+                }
+            } else {
+                pagination.style.display = 'none';
+            }
+        }
+        
+        function hideBankPagination() {
+            document.getElementById('bank-pagination').style.display = 'none';
+        }
+        
+        function filterTransactions(filterType) {
+            currentBankFilter = filterType;
+            addLogEntry(`🔍 Filtering transactions: ${filterType}`, 'info');
+            loadBankTransactions(1); // Reset to first page
+        }
+        
+        function exportBankTransactionsCSV() {
+            addLogEntry('📊 Exporting all bank transactions to CSV...', 'info');
+            
+            fetch('/api/bank-transactions?limit=10000') // Export large amount
+                .then(response => response.json())
+                .then(data => {
+                    if (data.transactions && data.transactions.length > 0) {
+                        const csv = generateBankTransactionsCSV(data.transactions);
+                        downloadCSV(csv, 'bank-transactions-export.csv');
+                        addLogEntry(`✅ Exported ${data.transactions.length} bank transactions to CSV`, 'success');
+                    } else {
+                        addLogEntry('⚠️ No bank transactions to export', 'warning');
+                    }
+                })
+                .catch(error => {
+                    addLogEntry(`❌ Bank CSV export failed: ${error.message}`, 'error');
+                });
+        }
+        
+        function generateBankTransactionsCSV(transactions) {
+            const headers = [
+                'Date', 'Description', 'Amount', 'Type', 'Bank', 'Account', 
+                'Receipt Matched', 'Category', 'Status', 'Transaction ID', 'Counterparty'
+            ];
+            
+            const rows = transactions.map(txn => [
+                new Date(txn.date).toLocaleDateString(),
+                txn.description || '',
+                txn.amount,
+                txn.amount < 0 ? 'Expense' : 'Income',
+                txn.bank_name || '',
+                txn.account_name || '',
+                txn.receipt_matched ? 'Yes' : 'No',
+                txn.category || 'Uncategorized',
+                txn.status || 'pending',
+                txn.transaction_id || '',
+                txn.counterparty?.name || ''
+            ]);
+            
+            return [headers, ...rows].map(row => 
+                row.map(cell => `"${cell}"`).join(',')
+            ).join('\n');
+        }
+        
+        // BANK SYNCHRONIZATION FUNCTIONS
+        async function syncBankTransactions() {
+            try {
+                addLogEntry('🏦 Starting bank transaction sync...', 'info');
+                showProcessingOverlay({ progress: 0, current_step: 'Connecting to bank accounts...' });
+                
+                const response = await fetch('/api/sync-bank-transactions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ days_back: 365 }) // 1 full year
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Sync failed');
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    addLogEntry(`✅ Bank sync completed successfully!`, 'success');
+                    addLogEntry(`📊 Downloaded ${result.total_transactions_synced} transactions from ${result.accounts_processed} accounts`, 'success');
+                    addLogEntry(`📅 Date range: ${result.date_range}`, 'info');
+                    
+                    // Show sync results
+                    if (result.sync_results) {
+                        result.sync_results.forEach(account => {
+                            if (account.status === 'success') {
+                                addLogEntry(`🏛️ ${account.bank_name} - ${account.account_name}: ${account.transactions_synced} transactions`, 'success');
+                            } else {
+                                addLogEntry(`❌ ${account.account_id}: ${account.error}`, 'error');
+                            }
+                        });
+                    }
+                    
+                    // Refresh status and tables
+                    updateStatusFromAPI();
+                    loadReceiptsTable();
+                    loadBankTransactions(1); // Load the new bank transactions
+                    
+                    // Now you can process receipts against real bank data
+                    addLogEntry('💡 You can now process receipts - they will be matched against real bank transactions!', 'info');
+                    
+                } else {
+                    addLogEntry(`❌ Bank sync failed: ${result.error || 'Unknown error'}`, 'error');
+                }
+                
+            } catch (error) {
+                addLogEntry(`❌ Bank sync error: ${error.message}`, 'error');
+                
+                if (error.message.includes('No bank accounts connected')) {
+                    addLogEntry('💡 Please connect your bank accounts first via "Connect Banks" button', 'info');
+                }
+            } finally {
+                hideProcessingOverlay();
+            }
+        }
+
+        // Receipt detail viewing functions
+        function viewReceiptDetails(receiptId) {
+            if (!receiptId) {
+                addLogEntry('❌ No receipt ID provided', 'error');
+                return;
+            }
+            
+            fetch(`/api/receipts/${receiptId}`)
+                .then(response => response.json())
+                .then(receipt => {
+                    if (receipt) {
+                        showReceiptModal(receipt);
+                    } else {
+                        addLogEntry('❌ Receipt not found', 'error');
+                    }
+                })
+                .catch(error => {
+                    addLogEntry(`❌ Failed to load receipt details: ${error.message}`, 'error');
+                });
+        }
+        
+        function viewOCRText(receiptId) {
+            if (!receiptId) {
+                addLogEntry('❌ No receipt ID provided', 'error');
+                return;
+            }
+            
+            fetch(`/api/receipts/${receiptId}`)
+                .then(response => response.json())
+                .then(receipt => {
+                    if (receipt && (receipt.ocr_text || receipt.extracted_text)) {
+                        showOCRModal(receipt);
+                    } else {
+                        addLogEntry('❌ No OCR text available for this receipt', 'error');
+                    }
+                })
+                .catch(error => {
+                    addLogEntry(`❌ Failed to load OCR text: ${error.message}`, 'error');
+                });
+        }
+        
+        function showReceiptModal(receipt) {
+            const r2Url = receipt.image_key || receipt.r2_key ? 
+                `${window.location.protocol}//${window.location.host}/r2/${receipt.image_key || receipt.r2_key}` : '';
+            
+            const modalHtml = `
+                <div class="modal fade" id="receiptModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Receipt Details</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>Basic Information</h6>
+                                        <table class="table table-sm">
+                                            <tr><td><strong>ID:</strong></td><td>${receipt._id || 'N/A'}</td></tr>
+                                            <tr><td><strong>Date:</strong></td><td>${new Date(receipt.date).toLocaleDateString()}</td></tr>
+                                            <tr><td><strong>Merchant:</strong></td><td>${receipt.merchant || 'Unknown'}</td></tr>
+                                            <tr><td><strong>Amount:</strong></td><td>$${receipt.amount || 0}</td></tr>
+                                            <tr><td><strong>Category:</strong></td><td>${receipt.category || 'Uncategorized'}</td></tr>
+                                            <tr><td><strong>Business Type:</strong></td><td>${receipt.business_type || receipt.merchant_type || 'Unknown'}</td></tr>
+                                        </table>
+                                        
+                                        <h6>Gmail Information</h6>
+                                        <table class="table table-sm">
+                                            <tr><td><strong>Account:</strong></td><td>${receipt.gmail_account || 'N/A'}</td></tr>
+                                            <tr><td><strong>Subject:</strong></td><td>${receipt.subject || 'N/A'}</td></tr>
+                                            <tr><td><strong>Sender:</strong></td><td>${receipt.sender || 'N/A'}</td></tr>
+                                        </table>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Matching Information</h6>
+                                        <table class="table table-sm">
+                                            <tr><td><strong>Bank Matched:</strong></td><td>${receipt.bank_matched ? 'Yes' : 'No'}</td></tr>
+                                            <tr><td><strong>Match ID:</strong></td><td>${receipt.bank_match_id || 'None'}</td></tr>
+                                            <tr><td><strong>Transaction:</strong></td><td>${receipt.matching_transaction || 'None'}</td></tr>
+                                            <tr><td><strong>AI Confidence:</strong></td><td>${Math.round((receipt.ai_confidence || 0) * 100)}%</td></tr>
+                                        </table>
+                                        
+                                        <h6>Processing Information</h6>
+                                        <table class="table table-sm">
+                                            <tr><td><strong>Status:</strong></td><td>${receipt.status || 'Unknown'}</td></tr>
+                                            <tr><td><strong>Job ID:</strong></td><td>${receipt.processing_job_id || 'N/A'}</td></tr>
+                                            <tr><td><strong>Created:</strong></td><td>${receipt.created_at ? new Date(receipt.created_at).toLocaleString() : 'N/A'}</td></tr>
+                                        </table>
+                                    </div>
+                                </div>
+                                
+                                ${r2Url ? `
+                                    <div class="row mt-3">
+                                        <div class="col-12">
+                                            <h6>Receipt Image</h6>
+                                            <div class="text-center">
+                                                <img src="${r2Url}" class="img-fluid" style="max-height: 300px;" alt="Receipt Image">
+                                                <br><br>
+                                                <a href="${r2Url}" target="_blank" class="btn btn-primary">
+                                                    <i class="fas fa-external-link-alt"></i> Open Full Size
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ` : '<p class="text-muted">No image available</p>'}
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            const existingModal = document.getElementById('receiptModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Add modal to page
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('receiptModal'));
+            modal.show();
+        }
+        
+        function showOCRModal(receipt) {
+            const ocrText = receipt.ocr_text || receipt.extracted_text || 'No OCR text available';
+            
+            const modalHtml = `
+                <div class="modal fade" id="ocrModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">OCR Text - ${receipt.merchant || 'Receipt'}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <strong>Receipt ID:</strong> ${receipt._id || 'N/A'}<br>
+                                    <strong>Date:</strong> ${new Date(receipt.date).toLocaleDateString()}<br>
+                                    <strong>Amount:</strong> $${receipt.amount || 0}
+                                </div>
+                                <h6>Extracted Text:</h6>
+                                <div class="border p-3 bg-light">
+                                    <pre style="white-space: pre-wrap; font-family: monospace;">${ocrText}</pre>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-primary" onclick="copyOCRText('${receipt._id}')">
+                                    <i class="fas fa-copy"></i> Copy Text
+                                </button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            const existingModal = document.getElementById('ocrModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Add modal to page
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('ocrModal'));
+            modal.show();
+        }
+        
+        function copyOCRText(receiptId) {
+            const ocrTextElement = document.querySelector('#ocrModal pre');
+            if (ocrTextElement) {
+                navigator.clipboard.writeText(ocrTextElement.textContent).then(() => {
+                    addLogEntry('✅ OCR text copied to clipboard', 'success');
+                }).catch(err => {
+                    addLogEntry('❌ Failed to copy OCR text', 'error');
+                });
+            }
+        }
+
+        // EXPENSE TABLE FUNCTIONS
+        let currentExpensePage = 1;
+        let currentExpenseFilter = 'all';
+        const expensesPerPage = 25;
+        
+        function refreshExpenseTable() {
+            addLogEntry('🔄 Refreshing expense table...', 'info');
+            loadExpenseTable(1);
+        }
+        
+        function loadExpenseTable(page = 1) {
+            currentExpensePage = page;
+            const skip = (page - 1) * expensesPerPage;
+            
+            // Combine receipts and bank transactions to create comprehensive expense view
+            Promise.all([
+                fetch(`/api/receipts?limit=1000`).then(r => r.json()),
+                fetch(`/api/bank-transactions?limit=1000&filter=expenses`).then(r => r.json())
+            ])
+            .then(([receiptsData, bankData]) => {
+                const expenses = combineExpenseData(receiptsData.receipts || [], bankData.transactions || []);
+                const filteredExpenses = filterExpensesByCategory(expenses, currentExpenseFilter);
+                const paginatedExpenses = filteredExpenses.slice(skip, skip + expensesPerPage);
+                
+                if (paginatedExpenses.length > 0) {
+                    displayExpenseTable(paginatedExpenses, filteredExpenses.length);
+                    updateExpenseStats(filteredExpenses);
+                    showExpensePagination(filteredExpenses.length);
+                    addLogEntry(`✅ Loaded ${paginatedExpenses.length} expenses (page ${page})`, 'success');
+                } else {
+                    showEmptyExpenseTable();
+                    hideExpensePagination();
+                }
+            })
+            .catch(error => {
+                addLogEntry(`❌ Failed to load expense data: ${error.message}`, 'error');
+                showEmptyExpenseTable();
+            });
+        }
+        
+        function combineExpenseData(receipts, bankTransactions) {
+            const expenses = [];
+            
+            // Add receipt-based expenses
+            receipts.forEach(receipt => {
+                expenses.push({
+                    id: receipt._id,
+                    date: new Date(receipt.date),
+                    type: 'receipt',
+                    description: receipt.merchant || 'Unknown Merchant',
+                    amount: Math.abs(receipt.amount || 0),
+                    category: receipt.category || 'Uncategorized',
+                    business_type: receipt.business_type || 'Unknown',
+                    has_receipt: true,
+                    bank_matched: receipt.bank_matched || false,
+                    tax_deductible: true, // Assume receipts are business expenses
+                    gmail_account: receipt.gmail_account,
+                    confidence: receipt.ai_confidence || 0,
+                    receipt_url: receipt.image_key ? `/r2/${receipt.image_key}` : null
+                });
+            });
+            
+            // Add bank transaction expenses (negative amounts)
+            bankTransactions.filter(txn => txn.amount < 0).forEach(txn => {
+                // Only add if not already matched with a receipt
+                if (!txn.receipt_matched) {
+                    expenses.push({
+                        id: txn.transaction_id || txn._id,
+                        date: new Date(txn.date),
+                        type: 'bank_transaction',
+                        description: txn.description || 'Bank Transaction',
+                        amount: Math.abs(txn.amount),
+                        category: txn.category || 'Uncategorized',
+                        business_type: categorizeBusinessType(txn.description),
+                        has_receipt: false,
+                        bank_matched: true,
+                        tax_deductible: isPotentialBusinessExpense(txn.description),
+                        bank_name: txn.bank_name,
+                        account_name: txn.account_name,
+                        counterparty: txn.counterparty?.name,
+                        receipt_url: null
+                    });
+                }
+            });
+            
+            // Sort by date (newest first)
+            return expenses.sort((a, b) => b.date - a.date);
+        }
+        
+        function categorizeBusinessType(description) {
+            const desc = (description || '').toLowerCase();
+            if (desc.includes('office') || desc.includes('supply')) return 'Office Supplies';
+            if (desc.includes('travel') || desc.includes('uber') || desc.includes('lyft')) return 'Travel & Transportation';
+            if (desc.includes('restaurant') || desc.includes('meal')) return 'Meals & Entertainment';
+            if (desc.includes('software') || desc.includes('saas') || desc.includes('tech')) return 'Software & Technology';
+            if (desc.includes('marketing') || desc.includes('ads') || desc.includes('advertising')) return 'Marketing & Advertising';
+            if (desc.includes('legal') || desc.includes('consulting')) return 'Professional Services';
+            if (desc.includes('phone') || desc.includes('internet') || desc.includes('utility')) return 'Utilities & Communication';
+            return 'Uncategorized';
+        }
+        
+        function isPotentialBusinessExpense(description) {
+            const businessKeywords = ['office', 'supply', 'software', 'saas', 'consulting', 'legal', 'marketing', 'advertising', 'professional'];
+            const desc = (description || '').toLowerCase();
+            return businessKeywords.some(keyword => desc.includes(keyword));
+        }
+        
+        function filterExpensesByCategory(expenses, category) {
+            if (category === 'all') return expenses;
+            return expenses.filter(expense => {
+                const expenseCategory = expense.business_type.toLowerCase().replace(/[^a-z]/g, '_');
+                return expenseCategory === category;
+            });
+        }
+        
+        function displayExpenseTable(expenses, totalCount) {
+            const container = document.getElementById('expense-table-container');
+            
+            const tableHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <small class="text-muted">
+                        Showing ${expenses.length} of ${totalCount} expenses
+                    </small>
+                    <div class="d-flex gap-2">
+                        <span class="badge bg-success">${expenses.filter(e => e.has_receipt).length} With Receipts</span>
+                        <span class="badge bg-warning">${expenses.filter(e => !e.has_receipt).length} Missing Receipts</span>
+                        <span class="badge bg-info">${expenses.filter(e => e.tax_deductible).length} Tax Deductible</span>
+                    </div>
+                </div>
+                <table class="table table-hover table-sm">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Amount</th>
+                            <th>Category</th>
+                            <th>Business Type</th>
+                            <th>Receipt</th>
+                            <th>Tax Status</th>
+                            <th>Source</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${expenses.map(expense => {
+                            const receiptBadge = expense.has_receipt 
+                                ? '<span class="badge bg-success"><i class="fas fa-receipt"></i> Yes</span>'
+                                : '<span class="badge bg-warning"><i class="fas fa-exclamation-triangle"></i> Missing</span>';
+                            
+                            const taxBadge = expense.tax_deductible
+                                ? '<span class="badge bg-info"><i class="fas fa-dollar-sign"></i> Deductible</span>'
+                                : '<span class="badge bg-secondary">Personal</span>';
+                            
+                            const sourceBadge = expense.type === 'receipt'
+                                ? '<span class="badge bg-primary"><i class="fas fa-envelope"></i> Gmail</span>'
+                                : '<span class="badge bg-info"><i class="fas fa-university"></i> Bank</span>';
+                            
+                            return `
+                            <tr class="${expense.has_receipt ? 'table-success' : 'table-warning'} ${!expense.tax_deductible ? 'opacity-75' : ''}">
+                                <td>
+                                    <small class="text-muted">
+                                        ${expense.date.toLocaleDateString()}
+                                    </small>
+                                </td>
+                                <td>
+                                    <strong class="d-block">${expense.description}</strong>
+                                    ${expense.counterparty ? `<small class="text-muted">${expense.counterparty}</small>` : ''}
+                                    ${expense.gmail_account ? `<small class="text-muted d-block">${expense.gmail_account}</small>` : ''}
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-danger">$${expense.amount.toFixed(2)}</span>
+                                    ${expense.confidence ? `<br><small class="text-muted">${Math.round(expense.confidence * 100)}% AI</small>` : ''}
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">${expense.category}</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">${expense.business_type}</span>
+                                </td>
+                                <td>${receiptBadge}</td>
+                                <td>${taxBadge}</td>
+                                <td>${sourceBadge}</td>
+                                <td>
+                                    <div class="btn-group-vertical btn-group-sm">
+                                        ${expense.receipt_url ? `<button class="btn btn-outline-primary btn-sm" onclick="window.open('${expense.receipt_url}', '_blank')" title="View Receipt"><i class="fas fa-eye"></i></button>` : ''}
+                                        <button class="btn btn-outline-secondary btn-sm" onclick="editExpense('${expense.id}')" title="Edit Category"><i class="fas fa-edit"></i></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            container.innerHTML = tableHTML;
+        }
+        
+        function updateExpenseStats(expenses) {
+            const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+            const withReceipts = expenses.filter(e => e.has_receipt).length;
+            const missingReceipts = expenses.filter(e => !e.has_receipt).length;
+            const categorized = expenses.filter(e => e.category !== 'Uncategorized').length;
+            const taxDeductible = expenses.filter(e => e.tax_deductible).reduce((sum, e) => sum + e.amount, 0);
+            
+            // Current month expenses
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+            const thisMonth = expenses.filter(e => 
+                e.date.getMonth() === currentMonth && e.date.getFullYear() === currentYear
+            ).reduce((sum, e) => sum + e.amount, 0);
+            
+            document.getElementById('total-expenses').textContent = `$${totalExpenses.toFixed(2)}`;
+            document.getElementById('matched-expenses').textContent = withReceipts;
+            document.getElementById('unmatched-expenses').textContent = missingReceipts;
+            document.getElementById('categorized-expenses').textContent = categorized;
+            document.getElementById('tax-deductible').textContent = `$${taxDeductible.toFixed(2)}`;
+            document.getElementById('current-month').textContent = `$${thisMonth.toFixed(2)}`;
+        }
+        
+        function showEmptyExpenseTable() {
+            const container = document.getElementById('expense-table-container');
+            container.innerHTML = `
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-money-bill-wave fa-3x mb-3 opacity-50"></i>
+                    <h6>No Expenses Found</h6>
+                    <p class="mb-3">Process receipts and sync bank data to see expense tracking</p>
+                    <div class="d-flex gap-2 justify-content-center">
+                        <button class="btn btn-primary" onclick="actions.processReceipts()">
+                            <i class="fas fa-cogs"></i> Process Receipts
+                        </button>
+                        <button class="btn btn-outline-primary" onclick="actions.syncBankData()">
+                            <i class="fas fa-university"></i> Sync Bank Data
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function filterExpenses(category) {
+            currentExpenseFilter = category;
+            addLogEntry(`🔍 Filtering expenses by: ${category}`, 'info');
+            loadExpenseTable(1); // Reset to first page
+        }
+        
+        function showExpensePagination(totalCount) {
+            const pagination = document.getElementById('expense-pagination');
+            const totalPages = Math.ceil(totalCount / expensesPerPage);
+            
+            if (totalPages > 1) {
+                pagination.style.display = 'block';
+                document.getElementById('expense-current-page-info').textContent = `Page ${currentExpensePage} of ${totalPages}`;
+                
+                // Update prev/next buttons
+                const prevBtn = document.getElementById('expense-prev-page');
+                const nextBtn = document.getElementById('expense-next-page');
+                
+                prevBtn.classList.toggle('disabled', currentExpensePage === 1);
+                nextBtn.classList.toggle('disabled', currentExpensePage === totalPages);
+            } else {
+                pagination.style.display = 'none';
+            }
+        }
+        
+        function hideExpensePagination() {
+            document.getElementById('expense-pagination').style.display = 'none';
+        }
+        
+        function editExpense(expenseId) {
+            // TODO: Add expense editing modal
+            addLogEntry(`📝 Edit expense: ${expenseId}`, 'info');
+        }
+    </script>
+</body>
+</html>
