@@ -200,6 +200,135 @@ class MultiGmailClient:
             logger.error(f"❌ Failed to process account {account_email}: {e}")
             return []
     
+    def connect_account(self, email: str) -> bool:
+        """Connect to a specific Gmail account"""
+        if email not in self.accounts:
+            logger.error(f"❌ Unknown Gmail account: {email}")
+            return False
+        
+        account = self.accounts[email]
+        
+        try:
+            creds = None
+            pickle_file = account['pickle_file']
+            
+            # Load existing credentials
+            if os.path.exists(pickle_file):
+                with open(pickle_file, 'rb') as token:
+                    creds = pickle.load(token)
+                logger.info(f"📁 Loaded credentials for {email} from {pickle_file}")
+            else:
+                logger.error(f"❌ No credentials file found: {pickle_file}")
+                return False
+            
+            # Refresh if expired
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+                logger.info(f"🔄 Refreshed credentials for {email}")
+            
+            # Build service
+            if creds and creds.valid:
+                account['service'] = build('gmail', 'v1', credentials=creds)
+                logger.info(f"✅ Connected to Gmail account: {email}")
+                return True
+            else:
+                logger.error(f"❌ Invalid credentials for {email}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"❌ Failed to connect to {email}: {e}")
+            return False
+    
+    def search_messages(self, email: str, query: str, max_results: int = 100, days_back: int = 365) -> List[Dict]:
+        """Search for messages in a specific Gmail account"""
+        if email not in self.accounts or not self.accounts[email].get('service'):
+            logger.error(f"❌ Gmail account not connected: {email}")
+            return []
+        
+        service = self.accounts[email]['service']
+        
+        try:
+            from datetime import datetime, timedelta
+            after_date = (datetime.now() - timedelta(days=days_back)).strftime('%Y/%m/%d')
+            full_query = f"{query} after:{after_date}"
+            
+            response = service.users().messages().list(
+                userId='me',
+                q=full_query,
+                maxResults=max_results
+            ).execute()
+            
+            messages = response.get('messages', [])
+            logger.info(f"📧 Found {len(messages)} messages for query: {query}")
+            return messages
+            
+        except Exception as e:
+            logger.error(f"❌ Gmail search failed for {email}: {e}")
+            return []
+    
+    def get_message_content(self, email: str, message_id: str) -> Optional[Dict]:
+        """Get full message content including attachments"""
+        if email not in self.accounts or not self.accounts[email].get('service'):
+            logger.error(f"❌ Gmail account not connected: {email}")
+            return None
+        
+        service = self.accounts[email]['service']
+        
+        try:
+            message = service.users().messages().get(
+                userId='me',
+                id=message_id,
+                format='full'
+            ).execute()
+            
+            # Extract headers
+            headers = message.get('payload', {}).get('headers', [])
+            result = {
+                'id': message_id,
+                'subject': next((h['value'] for h in headers if h['name'] == 'Subject'), ''),
+                'from': next((h['value'] for h in headers if h['name'] == 'From'), ''),
+                'date': next((h['value'] for h in headers if h['name'] == 'Date'), ''),
+                'body': '',
+                'attachments': []
+            }
+            
+            # Extract body and attachments
+            self._extract_content_from_payload(message.get('payload', {}), result)
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to get message content {message_id}: {e}")
+            return None
+    
+    def _extract_content_from_payload(self, payload: Dict, result: Dict):
+        """Recursively extract content from message payload"""
+        if payload.get('parts'):
+            for part in payload['parts']:
+                self._extract_content_from_payload(part, result)
+        else:
+            # Extract body text
+            if payload.get('mimeType') == 'text/plain':
+                body_data = payload.get('body', {}).get('data', '')
+                if body_data:
+                    import base64
+                    try:
+                        text = base64.urlsafe_b64decode(body_data).decode('utf-8')
+                        result['body'] += text + '\n'
+                    except:
+                        pass
+            
+            # Extract attachments
+            filename = payload.get('filename', '')
+            attachment_id = payload.get('body', {}).get('attachmentId')
+            if filename and attachment_id:
+                result['attachments'].append({
+                    'filename': filename,
+                    'attachment_id': attachment_id,
+                    'mime_type': payload.get('mimeType', ''),
+                    'size': payload.get('body', {}).get('size', 0)
+                })
+
     def get_available_accounts(self) -> List[Dict]:
         """Get list of available Gmail accounts"""
         self.init_services()

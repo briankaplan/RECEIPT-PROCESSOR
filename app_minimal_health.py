@@ -22,24 +22,21 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret')
 
 @app.route('/health')
-def health_check():
-    """Health check endpoint - GUARANTEED to work"""
+def health():
     return jsonify({
-        "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
-        "version": "1.0.0",
-        "environment": os.getenv('FLASK_ENV', 'production'),
-        "message": "Health endpoint working!"
+        'status': 'healthy',
+        'message': 'Minimal service is running',
+        'environment': os.getenv('FLASK_ENV', 'unknown'),
+        'port': os.getenv('PORT', 'unknown')
     })
 
 @app.route('/')
 def index():
-    """Minimal homepage"""
-    return """
-    <h1>🏦 Receipt Processor</h1>
-    <p>Health-first deployment test</p>
-    <a href="/health">Health Check</a>
-    """
+    return jsonify({
+        'message': 'Minimal Receipt Processor Health Check',
+        'status': 'running',
+        'endpoints': ['/health']
+    })
 
 @app.route('/teller/webhook', methods=['POST'])
 def teller_webhook():
@@ -48,7 +45,7 @@ def teller_webhook():
     return jsonify({"success": True, "message": "Webhook received"})
 
 if __name__ == '__main__':
-    port = int(os.getenv('PORT', 5000))
+    port = int(os.getenv('PORT', 10000))
     logger.info(f"🚀 Starting minimal health-first app on port {port}")
     
     app.run(
