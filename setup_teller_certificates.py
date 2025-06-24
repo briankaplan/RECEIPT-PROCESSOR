@@ -21,8 +21,8 @@ def main():
     print(f"   TELLER_KEY_PATH: {os.getenv('TELLER_KEY_PATH', 'Not set')}")
     
     # Check for certificate files
-    cert_path = os.getenv('TELLER_CERT_PATH', './credentials/teller_certificate.pem')
-    key_path = os.getenv('TELLER_KEY_PATH', './credentials/teller_private_key.pem')
+    cert_path = os.getenv('TELLER_CERT_PATH', './credentials/teller_certificate.b64')
+    key_path = os.getenv('TELLER_KEY_PATH', './credentials/teller_private_key.b64')
     
     print(f"\n📁 Certificate Files:")
     print(f"   Certificate: {cert_path} {'✅' if os.path.exists(cert_path) else '❌'}")

@@ -70,8 +70,8 @@ TELLER_API_VERSION=2020-10-12
 TELLER_WEBHOOK_URL=http://localhost:5000/teller/webhook
 TELLER_SIGNING_SECRET=q7xdfvnwf6nbajjghgzbnzaut4tm4sck
 TELLER_SIGNING_KEY=cXLqnm451Bi1sMtKTPWOwdFz3gMtNYPn2hVkgXxy9gc=
-TELLER_CERT_PATH=./credentials/teller_certificate.pem
-TELLER_KEY_PATH=./credentials/teller_private_key.pem
+TELLER_CERT_PATH=./credentials/teller_certificate.b64
+TELLER_KEY_PATH=./credentials/teller_private_key.b64
 
 # Gmail Configuration
 GMAIL_ACCOUNT_1_EMAIL=kaplan.brian@gmail.com
