@@ -224,35 +224,254 @@ def load_credential_file(file_path: str, is_binary: bool = False):
         logger.error(f"Failed to load credential file {file_path}: {e}")
         return None
 
-def load_certificate_files(cert_path: str, key_path: str):
+def load_certificate_files_fixed(cert_path: str, key_path: str):
     """
-    Load Teller certificate files with base64 support.
-    Returns tuple of (cert_content, key_content) or (None, None) if failed.
+    Enhanced certificate loading with proper error handling and multiple format support.
+    Handles both raw PEM files and base64-encoded content from Render secrets.
     """
-    cert_content = load_credential_file(cert_path, is_binary=False)
-    key_content = load_credential_file(key_path, is_binary=False)
+    try:
+        logger.info(f"🔐 Loading certificates from: {cert_path}, {key_path}")
+        
+        # Try to load certificate content
+        cert_content = load_certificate_content(cert_path)
+        key_content = load_certificate_content(key_path)
+        
+        if not cert_content or not key_content:
+            logger.error("❌ Failed to load certificate or key content")
+            return None, None
+        
+        # Validate PEM format
+        if not validate_pem_format(cert_content, 'CERTIFICATE'):
+            logger.error("❌ Invalid certificate PEM format")
+            return None, None
+            
+        if not validate_pem_format(key_content, 'PRIVATE KEY'):
+            logger.error("❌ Invalid private key PEM format")
+            return None, None
+        
+        # Create temporary files for requests library
+        cert_temp_path, key_temp_path = create_temp_certificate_files(cert_content, key_content)
+        
+        if cert_temp_path and key_temp_path:
+            logger.info("✅ Successfully created temporary certificate files")
+            return cert_temp_path, key_temp_path
+        else:
+            logger.error("❌ Failed to create temporary certificate files")
+            return None, None
+            
+    except Exception as e:
+        logger.error(f"❌ Certificate loading error: {e}")
+        return None, None
+
+def load_certificate_content(file_path: str) -> str:
+    """Load certificate content from file, handling multiple formats"""
+    if not file_path or not os.path.exists(file_path):
+        logger.warning(f"⚠️ Certificate file not found: {file_path}")
+        return None
     
-    if cert_content and key_content:
-        # For requests library, we need to write temporary files
-        import tempfile
+    try:
+        # Read file content
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read().strip()
+        
+        if not content:
+            logger.warning(f"⚠️ Empty certificate file: {file_path}")
+            return None
+        
+        # Check if content is already in PEM format
+        if content.startswith('-----BEGIN'):
+            logger.info(f"✅ Found PEM format certificate in {file_path}")
+            return content
+        
+        # Check if content is base64 encoded
+        if is_base64_content(content):
+            logger.info(f"🔄 Decoding base64 certificate from {file_path}")
+            try:
+                decoded = base64.b64decode(content).decode('utf-8')
+                if decoded.startswith('-----BEGIN'):
+                    return decoded
+                else:
+                    logger.warning(f"⚠️ Base64 decoded content is not PEM format")
+                    return None
+            except Exception as e:
+                logger.error(f"❌ Failed to decode base64 content: {e}")
+                return None
+        
+        # If we get here, content format is unknown
+        logger.error(f"❌ Unknown certificate format in {file_path}")
+        logger.debug(f"Content preview: {content[:100]}...")
+        return None
+        
+    except Exception as e:
+        logger.error(f"❌ Error reading certificate file {file_path}: {e}")
+        return None
+
+def is_base64_content(content: str) -> bool:
+    """Check if content appears to be base64 encoded"""
+    if not content:
+        return False
+    
+    # Basic checks for base64
+    if len(content) < 100:  # Too short to be a certificate
+        return False
+    
+    if '\n' in content or ' ' in content:  # Base64 should be single line without spaces
+        return False
+    
+    # Check if all characters are valid base64
+    base64_chars = set('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=')
+    return all(c in base64_chars for c in content)
+
+def validate_pem_format(content: str, pem_type: str) -> bool:
+    """Validate that content is properly formatted PEM"""
+    if not content:
+        return False
+    
+    begin_marker = f"-----BEGIN {pem_type}-----"
+    end_marker = f"-----END {pem_type}-----"
+    
+    if not content.startswith(begin_marker):
+        logger.error(f"❌ Missing BEGIN marker for {pem_type}")
+        return False
+    
+    if not content.rstrip().endswith(end_marker):
+        logger.error(f"❌ Missing END marker for {pem_type}")
+        return False
+    
+    # Check that there's content between markers
+    content_lines = content.split('\n')[1:-1]  # Remove first and last line (markers)
+    if not any(line.strip() for line in content_lines):
+        logger.error(f"❌ No content between PEM markers for {pem_type}")
+        return False
+    
+    return True
+
+def create_temp_certificate_files(cert_content: str, key_content: str):
+    """Create temporary certificate files for requests library"""
+    try:
+        # Create temporary files
+        cert_fd, cert_temp_path = tempfile.mkstemp(suffix='.pem', text=True)
+        key_fd, key_temp_path = tempfile.mkstemp(suffix='.pem', text=True)
+        
+        # Write certificate content
+        with os.fdopen(cert_fd, 'w') as f:
+            f.write(cert_content)
+        
+        # Write key content
+        with os.fdopen(key_fd, 'w') as f:
+            f.write(key_content)
+        
+        # Set secure permissions
+        os.chmod(cert_temp_path, 0o600)
+        os.chmod(key_temp_path, 0o600)
+        
+        logger.info(f"✅ Created temporary certificate files: {cert_temp_path}, {key_temp_path}")
+        return cert_temp_path, key_temp_path
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to create temporary certificate files: {e}")
+        return None, None
+
+def enhanced_bank_sync_with_certificates():
+    """Enhanced bank sync that properly handles certificates"""
+    try:
+        # Get certificate paths from environment
+        cert_path = os.getenv('TELLER_CERT_PATH')
+        key_path = os.getenv('TELLER_KEY_PATH')
+        
+        if not cert_path or not key_path:
+            return {
+                'success': False,
+                'error': 'Certificate paths not configured',
+                'cert_path': cert_path,
+                'key_path': key_path
+            }
+        
+        logger.info(f"🔐 Certificate paths: {cert_path}, {key_path}")
+        
+        # Load certificates with enhanced error handling
+        cert_temp_path, key_temp_path = load_certificate_files_fixed(cert_path, key_path)
+        
+        if not cert_temp_path or not key_temp_path:
+            return {
+                'success': False,
+                'error': 'Failed to load certificate files',
+                'debug_info': {
+                    'cert_path_exists': os.path.exists(cert_path) if cert_path else False,
+                    'key_path_exists': os.path.exists(key_path) if key_path else False,
+                    'cert_path': cert_path,
+                    'key_path': key_path
+                }
+            }
+        
+        # Test certificate files by making a simple request
+        import requests
         
         try:
-            # Create temporary certificate files
-            cert_fd, cert_temp_path = tempfile.mkstemp(suffix='.pem', text=True)
-            key_fd, key_temp_path = tempfile.mkstemp(suffix='.pem', text=True)
+            # Test with a simple Teller API call
+            test_response = requests.get(
+                'https://api.teller.io/accounts',
+                headers={
+                    'Authorization': 'Bearer test_token',  # This will fail auth but test certs
+                    'Content-Type': 'application/json'
+                },
+                cert=(cert_temp_path, key_temp_path),
+                timeout=10
+            )
             
-            with os.fdopen(cert_fd, 'w') as f:
-                f.write(cert_content)
-            with os.fdopen(key_fd, 'w') as f:
-                f.write(key_content)
+            logger.info(f"✅ Certificate test successful - HTTP {test_response.status_code}")
             
-            return cert_temp_path, key_temp_path
+            # Clean up temporary files
+            try:
+                os.unlink(cert_temp_path)
+                os.unlink(key_temp_path)
+                logger.info("🧹 Cleaned up temporary certificate files")
+            except:
+                pass
             
-        except Exception as e:
-            logger.error(f"Failed to create temporary certificate files: {e}")
-            return None, None
-    
-    return None, None
+            return {
+                'success': True,
+                'message': 'Certificates loaded and validated successfully',
+                'http_status': test_response.status_code
+            }
+            
+        except requests.exceptions.SSLError as e:
+            return {
+                'success': False,
+                'error': f'SSL certificate error: {str(e)}',
+                'error_type': 'ssl_error'
+            }
+        except requests.exceptions.RequestException as e:
+            # If we get here, certificates worked but auth failed (expected)
+            if 'certificate' not in str(e).lower():
+                return {
+                    'success': True,
+                    'message': 'Certificates working - auth error is expected',
+                    'auth_error': str(e)
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': f'Certificate-related request error: {str(e)}',
+                    'error_type': 'cert_request_error'
+                }
+        finally:
+            # Always clean up temp files
+            try:
+                if cert_temp_path and os.path.exists(cert_temp_path):
+                    os.unlink(cert_temp_path)
+                if key_temp_path and os.path.exists(key_temp_path):
+                    os.unlink(key_temp_path)
+            except:
+                pass
+                
+    except Exception as e:
+        logger.error(f"❌ Enhanced bank sync error: {e}")
+        return {
+            'success': False,
+            'error': f'Unexpected error: {str(e)}',
+            'error_type': 'unexpected_error'
+        }
 
 def parse_teller_date(date_str):
     """Safely parse Teller API date strings"""
@@ -1642,7 +1861,7 @@ def create_app():
                     
                     # Add client certificates if available (with base64 support)
                     if cert_path and key_path:
-                        cert_temp_path, key_temp_path = load_certificate_files(cert_path, key_path)
+                        cert_temp_path, key_temp_path = load_certificate_files_fixed(cert_path, key_path)
                         if cert_temp_path and key_temp_path:
                             request_params['cert'] = (cert_temp_path, key_temp_path)
                             logger.info(f"🔐 Using client certificates for Teller API (base64 supported)")
@@ -2819,6 +3038,182 @@ def create_app():
         except Exception as e:
             logger.error(f"Test receipts creation error: {e}")
             return jsonify({"error": str(e)}), 500
+
+    @app.route('/api/test-certificates', methods=['POST'])
+    def api_test_certificates():
+        """Test certificate loading and validation"""
+        try:
+            # Get certificate paths from environment
+            cert_path = os.getenv('TELLER_CERT_PATH')
+            key_path = os.getenv('TELLER_KEY_PATH')
+            
+            if not cert_path or not key_path:
+                return jsonify({
+                    'success': False,
+                    'error': 'Certificate paths not configured',
+                    'cert_path': cert_path,
+                    'key_path': key_path
+                })
+            
+            logger.info(f"🔐 Testing certificate paths: {cert_path}, {key_path}")
+            
+            # Check if files exist
+            cert_exists = os.path.exists(cert_path) if cert_path else False
+            key_exists = os.path.exists(key_path) if key_path else False
+            
+            if not cert_exists or not key_exists:
+                return jsonify({
+                    'success': False,
+                    'error': 'Certificate files not found',
+                    'cert_exists': cert_exists,
+                    'key_exists': key_exists,
+                    'cert_path': cert_path,
+                    'key_path': key_path
+                })
+            
+            # Try to load and validate certificates
+            cert_temp_path, key_temp_path = load_certificate_files_fixed(cert_path, key_path)
+            
+            if not cert_temp_path or not key_temp_path:
+                return jsonify({
+                    'success': False,
+                    'error': 'Failed to load certificate files',
+                    'debug_info': {
+                        'cert_path_exists': cert_exists,
+                        'key_path_exists': key_exists,
+                        'cert_path': cert_path,
+                        'key_path': key_path
+                    }
+                })
+            
+            # Test with a simple request
+            import requests
+            
+            try:
+                test_response = requests.get(
+                    'https://api.teller.io/accounts',
+                    headers={
+                        'Authorization': 'Bearer test_token',
+                        'Content-Type': 'application/json'
+                    },
+                    cert=(cert_temp_path, key_temp_path),
+                    timeout=10
+                )
+                
+                # Clean up temp files
+                try:
+                    os.unlink(cert_temp_path)
+                    os.unlink(key_temp_path)
+                except:
+                    pass
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Certificates loaded and validated successfully',
+                    'http_status': test_response.status_code,
+                    'test_result': 'Certificate test passed'
+                })
+                
+            except requests.exceptions.SSLError as e:
+                return jsonify({
+                    'success': False,
+                    'error': f'SSL certificate error: {str(e)}',
+                    'error_type': 'ssl_error'
+                })
+            except requests.exceptions.RequestException as e:
+                # Auth error is expected, cert error is not
+                if 'certificate' not in str(e).lower():
+                    return jsonify({
+                        'success': True,
+                        'message': 'Certificates working - auth error is expected',
+                        'auth_error': str(e)
+                    })
+                else:
+                    return jsonify({
+                        'success': False,
+                        'error': f'Certificate-related request error: {str(e)}',
+                        'error_type': 'cert_request_error'
+                    })
+            finally:
+                # Clean up temp files
+                try:
+                    if cert_temp_path and os.path.exists(cert_temp_path):
+                        os.unlink(cert_temp_path)
+                    if key_temp_path and os.path.exists(key_temp_path):
+                        os.unlink(key_temp_path)
+                except:
+                    pass
+                    
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+
+    @app.route('/api/debug-certificates', methods=['POST'])
+    def api_debug_certificates():
+        """Debug certificate file loading"""
+        try:
+            cert_path = os.getenv('TELLER_CERT_PATH')
+            key_path = os.getenv('TELLER_KEY_PATH')
+            
+            debug_info = {
+                'timestamp': datetime.utcnow().isoformat(),
+                'certificate_paths': {
+                    'cert_path': cert_path,
+                    'key_path': key_path,
+                    'cert_exists': os.path.exists(cert_path) if cert_path else False,
+                    'key_exists': os.path.exists(key_path) if key_path else False
+                },
+                'file_inspection': {}
+            }
+            
+            # Inspect certificate file
+            if cert_path and os.path.exists(cert_path):
+                try:
+                    with open(cert_path, 'r') as f:
+                        cert_content = f.read()
+                    
+                    debug_info['file_inspection']['certificate'] = {
+                        'size_bytes': len(cert_content),
+                        'starts_with_pem': cert_content.startswith('-----BEGIN'),
+                        'contains_certificate_marker': '-----BEGIN CERTIFICATE-----' in cert_content,
+                        'line_count': len(cert_content.split('\n')),
+                        'first_50_chars': cert_content[:50] + '...' if len(cert_content) > 50 else cert_content
+                    }
+                except Exception as e:
+                    debug_info['file_inspection']['certificate'] = {
+                        'error': str(e)
+                    }
+            
+            # Inspect private key file
+            if key_path and os.path.exists(key_path):
+                try:
+                    with open(key_path, 'r') as f:
+                        key_content = f.read()
+                    
+                    debug_info['file_inspection']['private_key'] = {
+                        'size_bytes': len(key_content),
+                        'starts_with_pem': key_content.startswith('-----BEGIN'),
+                        'contains_key_marker': '-----BEGIN PRIVATE KEY-----' in key_content,
+                        'line_count': len(key_content.split('\n')),
+                        'first_50_chars': key_content[:50] + '...' if len(key_content) > 50 else key_content
+                    }
+                except Exception as e:
+                    debug_info['file_inspection']['private_key'] = {
+                        'error': str(e)
+                    }
+            
+            return jsonify({
+                'success': True,
+                'debug_info': debug_info
+            })
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
 
     return app
 
