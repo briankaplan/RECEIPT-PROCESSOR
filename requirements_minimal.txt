@@ -15,15 +15,27 @@ google-auth-httplib2==0.2.0
 # Date/time utilities
 python-dateutil==2.9.0
 
-# Security
+# Security and crypto
 cryptography==45.0.4
 
 # Configuration
 python-dotenv==1.1.1
 
-# Core Python utilities
+# Core Python utilities (Flask dependencies)
 Jinja2==3.1.6
 MarkupSafe==3.0.2
 itsdangerous==2.2.0
 click==8.1.8
-blinker==1.9.0 
+blinker==1.9.0
+
+# Image processing and OCR (optional but imported by app.py)
+Pillow==11.1.1
+pytesseract==0.3.16
+
+# PDF processing (optional but imported by app.py)
+PyPDF2==4.0.1
+
+# HTTP utilities
+urllib3==2.3.0
+charset-normalizer==3.4.2
+certifi==2024.8.30 
