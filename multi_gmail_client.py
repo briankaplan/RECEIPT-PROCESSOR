@@ -381,6 +381,11 @@ class MultiGmailClient:
                     'size': payload.get('body', {}).get('size', 0)
                 })
 
+    def get_accounts(self) -> Dict[str, bool]:
+        """Get account connection status (compatible with test scripts)"""
+        self.init_services()
+        return {email: (config.get('service') is not None) for email, config in self.accounts.items()}
+
     def get_available_accounts(self) -> List[Dict]:
         """Get list of available Gmail accounts"""
         self.init_services()
