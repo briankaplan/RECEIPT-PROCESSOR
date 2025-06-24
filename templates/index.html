@@ -1092,23 +1092,8 @@
             updateConnectionStatus(true);
             addLogEntry('🔗 Dashboard initialized successfully', 'success');
             
-            // Simulate initial data load
-            setTimeout(() => {
-                updateDashboard({
-                    processed_count: 127,
-                    receipts_count: 89,
-                    bank_accounts: 3,
-                    matched_receipts: 76,
-                    total_amount: 2847.39,
-                    total_accounts: 3,
-                    authenticated_accounts: 3,
-                    mongo_connected: true,
-                    ai_connected: true,
-                    teller_connected: true,
-                    r2_connected: true,
-                    sheets_connected: false
-                });
-            }, 1000);
+            // Load REAL data from API instead of fake demo data
+            updateStatusFromAPI();
         }
 
         // Enhanced connection status
@@ -1422,7 +1407,7 @@
                 .then(data => {
                     const services = data.services || {};
                     
-                    // Enhanced status processing
+                    // Real status processing - NO MORE DEMO DATA
                     updateDashboard({
                         authenticated_accounts: services.gmail?.connected_accounts || 0,
                         total_accounts: services.gmail?.total_accounts || 3,
@@ -1432,10 +1417,10 @@
                         r2_connected: services.r2?.status === 'connected',
                         sheets_connected: services.sheets?.status === 'connected',
                         bank_accounts: services.teller?.connected_users || 0,
-                        processed_count: appState.stats.processed_count || 127,
-                        receipts_count: appState.stats.receipts_count || 89,
-                        matched_receipts: appState.stats.matched_receipts || 76,
-                        total_amount: appState.stats.total_amount || 2847.39
+                        processed_count: services.mongodb?.processed_count || 0,
+                        receipts_count: services.mongodb?.receipts_count || 0,
+                        matched_receipts: services.mongodb?.matched_receipts || 0,
+                        total_amount: services.mongodb?.total_amount || 0
                     });
                     
                     addLogEntry('✅ System status updated successfully', 'success');

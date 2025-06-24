@@ -100,6 +100,13 @@
         <strong>For Challenge Flow:</strong> Username: <code>challenge</code>, Password: <code>password</code><br>
         <em>Note: All institutions behave identically in sandbox mode</em>
       </div>
+      {% else %}
+      <div style="background: #d1edff; color: #0c5460; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9rem;">
+        <strong>🏦 Development Mode - Real Banking:</strong><br>
+        Connect your actual bank accounts through secure OAuth.<br>
+        <strong>Supported:</strong> Chase, Bank of America, Wells Fargo, Capital One, and 3000+ institutions<br>
+        <em>Your credentials are never stored - authentication handled by Teller.io</em>
+      </div>
       {% endif %}
       
       <button id="teller-connect" class="connect-btn">
