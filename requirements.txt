@@ -1,7 +1,9 @@
-# Absolute minimal dependencies for health endpoint
-flask==2.3.3
-gunicorn==21.2.0
+# Secure, updated dependencies addressing GitHub security vulnerabilities
+flask==3.1.0
+gunicorn==23.0.0
 python-dotenv==1.0.1
-requests==2.31.0
-pymongo==4.6.3
-python-dateutil==2.8.2 
+requests==2.32.3
+pymongo==4.8.0
+python-dateutil==2.9.0
+urllib3==2.3.0
+certifi==2024.8.30 
