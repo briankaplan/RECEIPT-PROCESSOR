@@ -72,9 +72,9 @@ services:
       - key: TELLER_SIGNING_KEY
         value: "cXLqnm451Bi1sMtKTPWOwdFz3gMtNYPn2hVkgXxy9gc="
       - key: TELLER_CERT_PATH
-        value: /etc/secrets/teller_certificate.pem
+        value: /etc/secrets/teller_certificate.b64
       - key: TELLER_KEY_PATH
-        value: /etc/secrets/teller_private_key.pem
+        value: /etc/secrets/teller_private_key.b64
       
       # AI Services
       - key: HUGGINGFACE_API_KEY
@@ -132,11 +132,11 @@ services:
       
       # Google Services Configuration
       - key: GOOGLE_CREDENTIALS_PATH
-        value: /etc/secrets/gmail_credentials.json
+        value: /etc/secrets/gmail_credentials.b64
       - key: GOOGLE_SERVICE_ACCOUNT_PATH
-        value: /etc/secrets/service_account.json
+        value: /etc/secrets/service_account.b64
       - key: GOOGLE_APPLICATION_CREDENTIALS
-        value: /etc/secrets/service_account.json
+        value: /etc/secrets/service_account.b64
       - key: GOOGLE_VISION_API_KEY
         value: AIzaSyBZ9qhpU4qn0QzUPLs4tZfKII52BEOELzc
       - key: GOOGLE_SHEETS_ID

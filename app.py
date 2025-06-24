@@ -180,6 +180,79 @@ class Config:
 # UTILITY FUNCTIONS
 # ============================================================================
 
+def load_credential_file(file_path: str, is_binary: bool = False):
+    """
+    Load credential files with base64 decode support for Render compatibility.
+    
+    Args:
+        file_path: Path to the credential file
+        is_binary: If True, returns raw bytes; if False, returns text
+    
+    Returns:
+        File content as bytes or string, or None if file not found
+    """
+    if not file_path or not os.path.exists(file_path):
+        return None
+    
+    try:
+        # Try loading as regular file first
+        mode = 'rb' if is_binary else 'r'
+        with open(file_path, mode) as f:
+            content = f.read()
+        
+        # If it's a text file and looks like base64, try decoding
+        if not is_binary and isinstance(content, str):
+            content = content.strip()
+            # Check if it looks like base64 (no spaces, reasonable length, base64 chars)
+            if (len(content) > 100 and 
+                ' ' not in content and 
+                '\n' not in content and 
+                all(c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=' for c in content)):
+                try:
+                    # It's base64 encoded, decode it
+                    import base64
+                    decoded = base64.b64decode(content)
+                    return decoded.decode('utf-8') if not is_binary else decoded
+                except Exception:
+                    # If base64 decode fails, return original content
+                    pass
+        
+        return content
+        
+    except Exception as e:
+        logger.error(f"Failed to load credential file {file_path}: {e}")
+        return None
+
+def load_certificate_files(cert_path: str, key_path: str):
+    """
+    Load Teller certificate files with base64 support.
+    Returns tuple of (cert_content, key_content) or (None, None) if failed.
+    """
+    cert_content = load_credential_file(cert_path, is_binary=False)
+    key_content = load_credential_file(key_path, is_binary=False)
+    
+    if cert_content and key_content:
+        # For requests library, we need to write temporary files
+        import tempfile
+        
+        try:
+            # Create temporary certificate files
+            cert_fd, cert_temp_path = tempfile.mkstemp(suffix='.pem', text=True)
+            key_fd, key_temp_path = tempfile.mkstemp(suffix='.pem', text=True)
+            
+            with os.fdopen(cert_fd, 'w') as f:
+                f.write(cert_content)
+            with os.fdopen(key_fd, 'w') as f:
+                f.write(key_content)
+            
+            return cert_temp_path, key_temp_path
+            
+        except Exception as e:
+            logger.error(f"Failed to create temporary certificate files: {e}")
+            return None, None
+    
+    return None, None
+
 def parse_teller_date(date_str):
     """Safely parse Teller API date strings"""
     if not date_str:
@@ -335,11 +408,12 @@ class SafeSheetsClient:
         self._connect()
     
     def _connect(self):
-        """Connect to Google Sheets with service account"""
+        """Connect to Google Sheets with service account (supports base64 files)"""
         try:
             # Try multiple credential paths for local and Render deployment
             credential_paths = [
-                '/etc/secrets/service_account.json',  # Render deployment path
+                '/etc/secrets/service_account.b64',  # Render deployment path (base64)
+                '/etc/secrets/service_account.json',  # Render deployment path (legacy)
                 '/opt/render/project/src/credentials/service_account.json',  # Alternative Render path
                 'credentials/service_account.json',  # Local development
                 '/Users/briankaplan/Receipt_Matcher/RECEIPT-PROCESSOR/credentials/service_account.json'  # User's local path
@@ -347,20 +421,28 @@ class SafeSheetsClient:
             
             credentials = None
             for path in credential_paths:
-                if os.path.exists(path):
-                    try:
-                        # Define the scope for Google Sheets
-                        scope = [
-                            'https://spreadsheets.google.com/feeds',
-                            'https://www.googleapis.com/auth/drive'
-                        ]
-                        
-                        credentials = Credentials.from_service_account_file(path, scopes=scope)
-                        logger.info(f"✅ Google Sheets credentials loaded from: {path}")
-                        break
-                    except Exception as e:
-                        logger.warning(f"Failed to load credentials from {path}: {e}")
+                try:
+                    # Load credential content with base64 support
+                    cred_content = load_credential_file(path, is_binary=False)
+                    if not cred_content:
                         continue
+                    
+                    # Define the scope for Google Sheets
+                    scope = [
+                        'https://spreadsheets.google.com/feeds',
+                        'https://www.googleapis.com/auth/drive'
+                    ]
+                    
+                    # Parse JSON content and create credentials from info
+                    import json
+                    cred_info = json.loads(cred_content)
+                    credentials = Credentials.from_service_account_info(cred_info, scopes=scope)
+                    logger.info(f"✅ Google Sheets credentials loaded from: {path}")
+                    break
+                    
+                except Exception as e:
+                    logger.warning(f"Failed to load credentials from {path}: {e}")
+                    continue
             
             if credentials:
                 self.client = gspread.authorize(credentials)
@@ -1371,12 +1453,16 @@ def create_app():
                         'timeout': 30
                     }
                     
-                    # Add client certificates if available
-                    if cert_path and key_path and os.path.exists(cert_path) and os.path.exists(key_path):
-                        request_params['cert'] = (cert_path, key_path)
-                        logger.info(f"🔐 Using client certificates for Teller API")
+                    # Add client certificates if available (with base64 support)
+                    if cert_path and key_path:
+                        cert_temp_path, key_temp_path = load_certificate_files(cert_path, key_path)
+                        if cert_temp_path and key_temp_path:
+                            request_params['cert'] = (cert_temp_path, key_temp_path)
+                            logger.info(f"🔐 Using client certificates for Teller API (base64 supported)")
+                        else:
+                            logger.warning(f"⚠️ Failed to load client certificates - Teller development tier requires certificates")
                     else:
-                        logger.warning(f"⚠️ No client certificates found - Teller development tier requires certificates")
+                        logger.warning(f"⚠️ No client certificate paths configured - Teller development tier requires certificates")
                     
                     # Get ALL accounts for this user first (correct Teller API pattern)
                     account_response = requests.get(

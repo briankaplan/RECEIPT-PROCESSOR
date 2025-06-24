@@ -13,6 +13,21 @@ credentials/
 *.key
 *.crt
 
+# Base64 encoded credential files (Render upload format)
+*.b64
+*_credentials.b64
+*_service_account.b64
+*_certificate.b64
+*_private_key.b64
+kaplan_brian_gmail.b64
+brian_downhome.b64
+brian_musiccityrodeo.b64
+service_account.b64
+gmail_credentials.b64
+google_credentials.b64
+teller_certificate.b64
+teller_private_key.b64
+
 # Gmail tokens and auth files
 gmail_tokens/
 gmail_auth/
