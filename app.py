@@ -20,6 +20,7 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for
 
 # MongoDB
 from pymongo import MongoClient
+from bson import ObjectId
 
 # Google Sheets integration
 try:
@@ -164,15 +165,15 @@ class Config:
     GMAIL_ACCOUNTS = {
         'kaplan.brian@gmail.com': {
             'display_name': 'Personal Gmail',
-            'pickle_file': '/etc/secrets/kaplan_brian_gmail.pickle'
+            'pickle_file': '/etc/secrets/kaplan_brian_gmail.b64'
         },
         'brian@downhome.com': {
             'display_name': 'Down Home Business', 
-            'pickle_file': '/etc/secrets/brian_downhome.pickle'
+            'pickle_file': '/etc/secrets/brian_downhome.b64'
         },
         'brian@musiccityrodeo.com': {
             'display_name': 'Music City Rodeo',
-            'pickle_file': '/etc/secrets/brian_musiccityrodeo.pickle'
+            'pickle_file': '/etc/secrets/brian_musiccityrodeo.b64'
         }
     }
 
