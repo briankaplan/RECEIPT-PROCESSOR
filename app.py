@@ -631,6 +631,8 @@ def create_app():
                             break
                         
                         receipt_record = {
+                            "email_id": f"synthetic_{i}_{email.replace('@', '_').replace('.', '_')}",
+                            "account": email,
                             "gmail_account": email,
                             "subject": f"Receipt from Business Store #{i+1}",
                             "sender": f"noreply@businessstore{i+1}.com",
@@ -645,7 +647,13 @@ def create_app():
                             "processing_job_id": job_id,
                             "created_at": datetime.utcnow()
                         }
-                        mongo_client.db.receipts.insert_one(receipt_record)
+                        
+                        # Use upsert to avoid duplicate key errors
+                        mongo_client.db.receipts.replace_one(
+                            {"email_id": receipt_record["email_id"], "account": receipt_record["account"]},
+                            receipt_record,
+                            upsert=True
+                        )
                     
                     total_receipts_found += account_results["receipts_found"]
                     total_matched += account_results["receipts_found"] // 3  # Realistic match rate
@@ -674,8 +682,9 @@ def create_app():
             }
             
             # Update job status
+            from bson import ObjectId
             mongo_client.db.processing_jobs.update_one(
-                {"_id": mongo_client.db.processing_jobs.find_one({"_id": mongo_client.db.ObjectId(job_id)})["_id"]},
+                {"_id": ObjectId(job_id)},
                 {"$set": {"status": "completed", "final_results": final_results, "completed_at": datetime.utcnow()}}
             )
             
