@@ -957,9 +957,9 @@
                                     </div>
                                     <h6 class="mb-2 fw-bold">Export Data</h6>
                                     <p class="text-muted small mb-3">Download CSV reports or sync to accounting systems</p>
-                                    <button class="action-btn w-100" onclick="exportData()">
-                                        <i class="fas fa-file-csv"></i>
-                                        <span>Export CSV</span>
+                                    <button type="button" class="btn btn-outline-success" onclick="exportData()">
+                                        <i class="fas fa-file-export me-2"></i>
+                                        <span>Export to Google Sheets</span>
                                     </button>
                                 </div>
                             </div>
@@ -1414,9 +1414,34 @@
         }
 
         function exportData() {
-            addLogEntry('📊 Exporting data to CSV format...', 'info');
-            window.open('/api/export-csv', '_blank');
-            addLogEntry('✅ CSV export initiated successfully', 'success');
+            addLogEntry('📊 Exporting data to Google Sheets...', 'info');
+            
+            fetch('/api/export-sheets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    addLogEntry(`✅ Data exported successfully to Google Sheets`, 'success');
+                    addLogEntry(`📄 Receipts: ${result.receipts_count} rows`, 'info');
+                    addLogEntry(`🏦 Bank Transactions: ${result.transactions_count} rows`, 'info');
+                    addLogEntry(`🔗 Spreadsheet URL: ${result.spreadsheet_url}`, 'info');
+                    
+                    // Open the Google Sheets URL in a new tab
+                    window.open(result.spreadsheet_url, '_blank');
+                    
+                    // Show success notification
+                    showNotification('Google Sheets Export', `Data exported successfully! Created ${result.worksheets.length} worksheets.`, 'success');
+                } else {
+                    addLogEntry(`❌ Export failed: ${result.error}`, 'error');
+                    showNotification('Export Failed', result.error, 'error');
+                }
+            })
+            .catch(error => {
+                addLogEntry(`❌ Export error: ${error.message}`, 'error');
+                showNotification('Export Error', 'Failed to export data to Google Sheets', 'error');
+            });
         }
 
         function exportLog() {

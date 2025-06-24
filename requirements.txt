@@ -6,4 +6,11 @@ requests==2.32.3
 pymongo==4.8.0
 python-dateutil==2.9.0
 urllib3==2.3.0
-certifi==2024.8.30 
+certifi==2024.8.30
+
+# Google Sheets Integration
+google-auth==2.34.0
+google-auth-oauthlib==1.2.1
+google-auth-httplib2==0.2.0
+gspread==6.1.2
+google-api-python-client==2.147.0 

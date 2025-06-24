@@ -24,6 +24,11 @@ import requests
 import hmac
 import hashlib
 
+# Google Sheets integration
+import gspread
+from google.auth.exceptions import DefaultCredentialsError
+from google.oauth2.service_account import Credentials
+
 # Utilities
 from urllib.parse import urlencode
 
@@ -192,6 +197,106 @@ class SafeTellerClient:
             logger.error(f"Signature verification failed: {e}")
             return False
 
+class SafeSheetsClient:
+    """Google Sheets client with service account authentication"""
+    
+    def __init__(self):
+        self.client = None
+        self.connected = False
+        self._connect()
+    
+    def _connect(self):
+        """Connect to Google Sheets with service account"""
+        try:
+            # Try multiple credential paths for local and Render deployment
+            credential_paths = [
+                '/etc/secrets/service_account.json',  # Render deployment path
+                '/opt/render/project/src/credentials/service_account.json',  # Alternative Render path
+                'credentials/service_account.json',  # Local development
+                '/Users/briankaplan/Receipt_Matcher/RECEIPT-PROCESSOR/credentials/service_account.json'  # User's local path
+            ]
+            
+            credentials = None
+            for path in credential_paths:
+                if os.path.exists(path):
+                    try:
+                        # Define the scope for Google Sheets
+                        scope = [
+                            'https://spreadsheets.google.com/feeds',
+                            'https://www.googleapis.com/auth/drive'
+                        ]
+                        
+                        credentials = Credentials.from_service_account_file(path, scopes=scope)
+                        logger.info(f"✅ Google Sheets credentials loaded from: {path}")
+                        break
+                    except Exception as e:
+                        logger.warning(f"Failed to load credentials from {path}: {e}")
+                        continue
+            
+            if credentials:
+                self.client = gspread.authorize(credentials)
+                self.connected = True
+                logger.info("✅ Google Sheets client connected successfully")
+            else:
+                logger.warning("❌ No valid Google Sheets credentials found")
+                self.connected = False
+                
+        except Exception as e:
+            logger.error(f"Google Sheets connection failed: {e}")
+            self.connected = False
+    
+    def create_spreadsheet(self, title: str, folder_id: str = None) -> Optional[str]:
+        """Create a new Google Spreadsheet"""
+        try:
+            if not self.connected:
+                return None
+            
+            spreadsheet = self.client.create(title)
+            
+            # Move to specific folder if provided
+            if folder_id:
+                try:
+                    spreadsheet.share(None, perm_type='domain', role='reader', domain='gmail.com')
+                except:
+                    pass  # Ignore sharing errors
+            
+            logger.info(f"✅ Created Google Sheet: {title}")
+            return spreadsheet.id
+            
+        except Exception as e:
+            logger.error(f"Failed to create spreadsheet: {e}")
+            return None
+    
+    def update_sheet(self, spreadsheet_id: str, worksheet_name: str, data: List[List[str]]) -> bool:
+        """Update a worksheet with data"""
+        try:
+            if not self.connected:
+                return False
+            
+            spreadsheet = self.client.open_by_key(spreadsheet_id)
+            
+            # Try to get existing worksheet or create new one
+            try:
+                worksheet = spreadsheet.worksheet(worksheet_name)
+            except gspread.WorksheetNotFound:
+                worksheet = spreadsheet.add_worksheet(title=worksheet_name, rows=len(data)+10, cols=len(data[0]) if data else 10)
+            
+            # Clear existing data and update
+            worksheet.clear()
+            if data:
+                worksheet.update(data, value_input_option='RAW')
+            
+            logger.info(f"✅ Updated Google Sheet: {worksheet_name} with {len(data)} rows")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to update spreadsheet: {e}")
+            return False
+    
+    def get_spreadsheet_url(self, spreadsheet_id: str) -> str:
+        """Get the public URL for a spreadsheet"""
+        return f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit"
+
 # ============================================================================
 # FLASK APPLICATION
 # ============================================================================
@@ -209,6 +314,7 @@ def create_app():
     # Initialize clients safely
     mongo_client = SafeMongoClient()
     teller_client = SafeTellerClient()
+    sheets_client = SafeSheetsClient()
     
     logger.info(f"✅ App created - Environment: {Config.TELLER_ENVIRONMENT}")
     
@@ -570,20 +676,111 @@ def create_app():
             logger.error(f"Process receipts error: {e}")
             return jsonify({"error": str(e)}), 500
     
-    @app.route('/api/export-csv')
-    def api_export_csv():
-        """API endpoint to export CSV"""
+    @app.route('/api/export-sheets', methods=['POST'])
+    def api_export_sheets():
+        """Export receipts and bank transactions to Google Sheets"""
         try:
-            # Simulate CSV export
+            if not sheets_client.connected:
+                return jsonify({
+                    "success": False,
+                    "error": "Google Sheets not connected. Check service account credentials."
+                }), 500
+            
+            # Create spreadsheet name with timestamp
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+            spreadsheet_title = f"Receipt_Matcher_Export_{timestamp}"
+            
+            # Create new spreadsheet
+            spreadsheet_id = sheets_client.create_spreadsheet(spreadsheet_title)
+            if not spreadsheet_id:
+                return jsonify({
+                    "success": False,
+                    "error": "Failed to create Google Spreadsheet"
+                }), 500
+            
+            # Get receipts data
+            receipts_data = []
+            if mongo_client.connected:
+                receipts = list(mongo_client.db.receipts.find().sort("date", -1))
+                
+                # Headers for receipts
+                receipts_data.append([
+                    'Date', 'Merchant', 'Amount', 'Category', 'Gmail Account', 
+                    'Bank Match', 'AI Confidence', 'Status', 'Description'
+                ])
+                
+                # Add receipt rows
+                for receipt in receipts:
+                    receipts_data.append([
+                        receipt.get('date', ''),
+                        receipt.get('merchant', ''),
+                        str(receipt.get('amount', 0)),
+                        receipt.get('category', ''),
+                        receipt.get('gmail_account', ''),
+                        'Yes' if receipt.get('bank_match_id') else 'No',
+                        f"{receipt.get('ai_confidence', 0)*100:.1f}%" if receipt.get('ai_confidence') else 'N/A',
+                        receipt.get('status', 'processed'),
+                        receipt.get('description', '')
+                    ])
+            
+            # Get bank transactions data
+            transactions_data = []
+            if mongo_client.connected:
+                transactions = list(mongo_client.db.bank_transactions.find().sort("date", -1))
+                
+                # Headers for transactions
+                transactions_data.append([
+                    'Date', 'Description', 'Amount', 'Type', 'Account', 
+                    'Receipt Match', 'Status', 'Bank Name', 'Category'
+                ])
+                
+                # Add transaction rows
+                for transaction in transactions:
+                    transactions_data.append([
+                        transaction.get('date', ''),
+                        transaction.get('description', ''),
+                        str(transaction.get('amount', 0)),
+                        transaction.get('type', ''),
+                        transaction.get('account_id', ''),
+                        'Yes' if transaction.get('receipt_match_id') else 'No',
+                        transaction.get('status', ''),
+                        transaction.get('account_name', ''),
+                        transaction.get('category', '')
+                    ])
+            
+            # Update worksheets
+            success = True
+            if receipts_data:
+                success &= sheets_client.update_sheet(spreadsheet_id, "Receipts", receipts_data)
+            
+            if transactions_data:
+                success &= sheets_client.update_sheet(spreadsheet_id, "Bank_Transactions", transactions_data)
+            
+            if not success:
+                return jsonify({
+                    "success": False,
+                    "error": "Failed to update spreadsheet data"
+                }), 500
+            
+            # Return success with spreadsheet URL
+            spreadsheet_url = sheets_client.get_spreadsheet_url(spreadsheet_id)
+            
             return jsonify({
                 "success": True,
-                "message": "CSV export completed",
-                "timestamp": datetime.utcnow().isoformat()
+                "message": f"Data exported successfully to Google Sheets",
+                "spreadsheet_id": spreadsheet_id,
+                "spreadsheet_url": spreadsheet_url,
+                "worksheets": ["Receipts", "Bank_Transactions"],
+                "receipts_count": len(receipts_data) - 1 if receipts_data else 0,
+                "transactions_count": len(transactions_data) - 1 if transactions_data else 0
             })
             
         except Exception as e:
-            logger.error(f"Export CSV error: {e}")
-            return jsonify({"error": str(e)}), 500
+            logger.error(f"Google Sheets export error: {e}")
+            return jsonify({
+                "success": False,
+                "error": f"Export failed: {str(e)}"
+            }), 500
     
     @app.route('/api/clear-test-data', methods=['POST'])
     def api_clear_test_data():
