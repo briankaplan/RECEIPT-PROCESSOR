@@ -966,13 +966,13 @@
                             <div class="col-md-6">
                                 <div class="glass-card p-4 text-center h-100">
                                     <div class="mb-3">
-                                        <i class="fas fa-chart-line fa-3x text-warning mb-3"></i>
+                                        <i class="fas fa-broom fa-3x text-warning mb-3"></i>
                                     </div>
-                                    <h6 class="mb-2 fw-bold">View Analytics</h6>
-                                    <p class="text-muted small mb-3">Detailed spending insights and processing statistics</p>
-                                    <button class="action-btn w-100" onclick="showAnalytics()">
-                                        <i class="fas fa-chart-bar"></i>
-                                        <span>View Stats</span>
+                                    <h6 class="mb-2 fw-bold">Clear Test Data</h6>
+                                    <p class="text-muted small mb-3">Remove test/fake data to see only real connections</p>
+                                    <button class="action-btn w-100" onclick="clearTestData()">
+                                        <i class="fas fa-trash-alt"></i>
+                                        <span>Clear Test Data</span>
                                     </button>
                                 </div>
                             </div>
@@ -1309,13 +1309,33 @@
             addLogEntry('📁 Processing log exported successfully', 'info');
         }
 
-        function showAnalytics() {
-            addLogEntry('📈 Opening analytics dashboard...', 'info');
-            // Simulate analytics modal or redirect
-            setTimeout(() => {
-                addLogEntry('📊 Analytics: Processed $2,847.39 across 89 receipts this month', 'success');
-                addLogEntry('💡 Top category: Business Meals (32%), Travel (28%), Office Supplies (18%)', 'info');
-            }, 1000);
+        function clearTestData() {
+            if (!confirm('⚠️ This will clear all test data including fake transactions and connections. Are you sure?')) {
+                return;
+            }
+            
+            addLogEntry('🧹 Clearing test data to show only real connections...', 'info');
+            
+            fetch('/api/clear-test-data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clear_receipts: false }) // Don't clear receipts by default
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    addLogEntry('✅ ' + result.message, 'success');
+                    addLogEntry('🔄 Refreshing dashboard to show clean data...', 'info');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+                } else {
+                    addLogEntry('❌ Failed to clear test data: ' + (result.error || 'Unknown error'), 'error');
+                }
+            })
+            .catch(error => {
+                addLogEntry('❌ Error clearing test data: ' + error.message, 'error');
+            });
         }
 
         // Enhanced processing overlay

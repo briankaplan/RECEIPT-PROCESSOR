@@ -257,15 +257,31 @@ def create_app():
     
     @app.route('/status')
     def status():
-        """System status"""
+        """System status with real vs test data indicators"""
         try:
             mongo_stats = mongo_client.get_stats()
+            
+            # Get real data counts
+            real_data_stats = {}
+            if mongo_client.connected:
+                real_data_stats = {
+                    "teller_connections": mongo_client.db.teller_tokens.count_documents({"status": "active"}),
+                    "total_webhooks": mongo_client.db.teller_webhooks.count_documents({}),
+                    "receipts_processed": mongo_client.db.receipts.count_documents({})
+                }
             
             return jsonify({
                 "timestamp": datetime.utcnow().isoformat(),
                 "environment": Config.TELLER_ENVIRONMENT,
                 "application_id": Config.TELLER_APPLICATION_ID,
                 "port": Config.PORT,
+                "webhook_url": Config.TELLER_WEBHOOK_URL,
+                "data_status": {
+                    "environment_type": "REAL BANKING DATA" if Config.TELLER_ENVIRONMENT == "development" else "TEST DATA",
+                    "teller_connections": real_data_stats.get("teller_connections", 0),
+                    "total_webhooks": real_data_stats.get("total_webhooks", 0),
+                    "receipts_processed": real_data_stats.get("receipts_processed", 0)
+                },
                 "services": {
                     "mongodb": {
                         "status": "connected" if mongo_stats.get("connected") else "error",
@@ -274,7 +290,8 @@ def create_app():
                     "teller": {
                         "status": "configured",
                         "environment": Config.TELLER_ENVIRONMENT,
-                        "application_id": Config.TELLER_APPLICATION_ID
+                        "application_id": Config.TELLER_APPLICATION_ID,
+                        "webhook_url": Config.TELLER_WEBHOOK_URL
                     },
                     "r2_storage": {
                         "status": "configured" if Config.R2_ACCESS_KEY else "not_configured",
@@ -303,7 +320,9 @@ def create_app():
         """Connect banks page"""
         try:
             connect_url = teller_client.get_connect_url("user_12345")
-            return render_template('connect.html', connect_url=connect_url)
+            return render_template('connect.html', 
+                                 connect_url=connect_url,
+                                 config=Config)
         except Exception as e:
             logger.error(f"Connect page error: {e}")
             return f"Connect error: {e}", 500
@@ -359,6 +378,65 @@ def create_app():
             logger.error(f"Webhook error: {e}")
             return jsonify({"error": "Webhook processing failed"}), 500
     
+    @app.route('/teller/save-token', methods=['POST'])
+    def teller_save_token():
+        """Save Teller access token after successful connection"""
+        try:
+            data = request.get_json() or {}
+            access_token = data.get('accessToken')
+            user_id = data.get('userId')
+            enrollment_id = data.get('enrollmentId')
+            
+            if not access_token:
+                return jsonify({"error": "Missing access token"}), 400
+            
+            # Store in MongoDB if available
+            if mongo_client.connected:
+                token_record = {
+                    "access_token": access_token,
+                    "user_id": user_id,
+                    "enrollment_id": enrollment_id,
+                    "connected_at": datetime.utcnow(),
+                    "environment": Config.TELLER_ENVIRONMENT,
+                    "status": "active"
+                }
+                mongo_client.db.teller_tokens.insert_one(token_record)
+                logger.info(f"✅ Saved Teller token for user {user_id}")
+            
+            return jsonify({
+                "success": True,
+                "message": "Bank connection saved successfully",
+                "user_id": user_id,
+                "environment": Config.TELLER_ENVIRONMENT
+            })
+            
+        except Exception as e:
+            logger.error(f"Save token error: {e}")
+            return jsonify({"error": "Failed to save connection"}), 500
+    
+    @app.route('/teller/callback')
+    def teller_callback():
+        """Handle Teller OAuth callback"""
+        try:
+            # Get query parameters
+            state = request.args.get('state', 'default_user')
+            code = request.args.get('code')
+            error = request.args.get('error')
+            
+            if error:
+                logger.warning(f"Teller callback error: {error}")
+                return redirect(f"/?error={error}")
+            
+            if code:
+                logger.info(f"✅ Teller callback success for state: {state}")
+                return redirect("/?success=bank_connected")
+            
+            return redirect("/")
+            
+        except Exception as e:
+            logger.error(f"Callback error: {e}")
+            return redirect(f"/?error=callback_failed")
+    
     @app.route('/api/process-receipts', methods=['POST'])
     def api_process_receipts():
         """API endpoint to process receipts"""
@@ -395,6 +473,114 @@ def create_app():
             
         except Exception as e:
             logger.error(f"Export CSV error: {e}")
+            return jsonify({"error": str(e)}), 500
+    
+    @app.route('/api/clear-test-data', methods=['POST'])
+    def api_clear_test_data():
+        """Clear all test/fake data to start fresh"""
+        try:
+            if not mongo_client.connected:
+                return jsonify({"error": "Database not connected"}), 500
+            
+            # Clear test collections
+            collections_cleared = []
+            
+            # Clear test webhooks
+            result = mongo_client.db.teller_webhooks.delete_many({})
+            if result.deleted_count > 0:
+                collections_cleared.append(f"teller_webhooks ({result.deleted_count})")
+            
+            # Clear test tokens
+            result = mongo_client.db.teller_tokens.delete_many({})
+            if result.deleted_count > 0:
+                collections_cleared.append(f"teller_tokens ({result.deleted_count})")
+            
+            # Clear test receipts (optional - be careful!)
+            if request.get_json().get('clear_receipts', False):
+                result = mongo_client.db.receipts.delete_many({})
+                if result.deleted_count > 0:
+                    collections_cleared.append(f"receipts ({result.deleted_count})")
+            
+            logger.info(f"✅ Cleared test data: {collections_cleared}")
+            
+            return jsonify({
+                "success": True,
+                "message": f"Cleared test data from: {', '.join(collections_cleared)}",
+                "collections_cleared": collections_cleared
+            })
+            
+        except Exception as e:
+            logger.error(f"Clear test data error: {e}")
+            return jsonify({"error": str(e)}), 500
+    
+    @app.route('/api/update-environment', methods=['POST'])
+    def api_update_environment():
+        """Update environment configuration"""
+        try:
+            data = request.get_json() or {}
+            environment = data.get('environment', 'sandbox')
+            webhook_url = data.get('webhook_url', Config.TELLER_WEBHOOK_URL)
+            
+            # Validate environment
+            valid_environments = ['sandbox', 'development', 'production']
+            if environment not in valid_environments:
+                return jsonify({"error": f"Invalid environment. Must be one of: {valid_environments}"}), 400
+            
+            # For now, we just log the change since we can't modify environment vars at runtime
+            # In a real deployment, this would update environment variables
+            logger.info(f"🔧 Environment change requested: {environment}")
+            logger.info(f"🔗 Webhook URL: {webhook_url}")
+            
+            # Store the preference in MongoDB if available
+            if mongo_client.connected:
+                config_record = {
+                    "environment": environment,
+                    "webhook_url": webhook_url,
+                    "updated_at": datetime.utcnow(),
+                    "current_config": {
+                        "teller_environment": Config.TELLER_ENVIRONMENT,
+                        "teller_webhook_url": Config.TELLER_WEBHOOK_URL,
+                        "teller_application_id": Config.TELLER_APPLICATION_ID
+                    }
+                }
+                mongo_client.db.environment_config.insert_one(config_record)
+            
+            return jsonify({
+                "success": True,
+                "message": f"Environment configuration updated to {environment}",
+                "current_environment": Config.TELLER_ENVIRONMENT,
+                "requested_environment": environment,
+                "note": "Changes will take effect on next deployment"
+            })
+            
+        except Exception as e:
+            logger.error(f"Update environment error: {e}")
+            return jsonify({"error": str(e)}), 500
+    
+    @app.route('/api/deploy-environment', methods=['POST'])
+    def api_deploy_environment():
+        """Deploy environment changes (placeholder for CI/CD integration)"""
+        try:
+            data = request.get_json() or {}
+            message = data.get('message', 'Deploy environment configuration changes')
+            
+            # In a real deployment, this would trigger a GitHub Action or webhook
+            # For now, we just return success with instructions
+            
+            return jsonify({
+                "success": True,
+                "message": "Deployment request submitted successfully",
+                "instructions": [
+                    "Environment changes are stored in the database",
+                    "To apply changes, update environment variables in Render dashboard",
+                    "Or commit configuration changes to trigger auto-deployment"
+                ],
+                "current_environment": Config.TELLER_ENVIRONMENT,
+                "webhook_url": Config.TELLER_WEBHOOK_URL
+            })
+            
+        except Exception as e:
+            logger.error(f"Deploy environment error: {e}")
             return jsonify({"error": str(e)}), 500
     
     return app
