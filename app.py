@@ -1322,6 +1322,7 @@ def create_app():
             
             total_transactions = 0
             sync_results = []
+            certificate_error_count = 0
             
             logger.info(f"🏦 Starting bank sync for {len(connected_accounts)} accounts")
             
@@ -1340,17 +1341,33 @@ def create_app():
                     
                     logger.info(f"🏦 Syncing for Teller user: {user_id}")
                     
-                    # Real Teller API call
+                    # Real Teller API call with certificate handling
                     headers = {
                         'Authorization': f'Bearer {access_token}',
                         'Content-Type': 'application/json'
                     }
                     
-                    # Get account details first
+                    # Check if we have client certificates for Teller API
+                    cert_path = os.getenv('TELLER_CERT_PATH')
+                    key_path = os.getenv('TELLER_KEY_PATH')
+                    
+                    # Prepare request parameters
+                    request_params = {
+                        'headers': headers,
+                        'timeout': 30
+                    }
+                    
+                    # Add client certificates if available
+                    if cert_path and key_path and os.path.exists(cert_path) and os.path.exists(key_path):
+                        request_params['cert'] = (cert_path, key_path)
+                        logger.info(f"🔐 Using client certificates for Teller API")
+                    else:
+                        logger.warning(f"⚠️ No client certificates found - Teller development tier requires certificates")
+                    
+                    # Get ALL accounts for this user first (correct Teller API pattern)
                     account_response = requests.get(
-                        f"{Config.TELLER_API_URL}/accounts/{account_id}",
-                        headers=headers,
-                        timeout=30
+                        f"{Config.TELLER_API_URL}/accounts",
+                        **request_params
                     )
                     
                     if account_response.status_code == 200:
@@ -1366,9 +1383,8 @@ def create_app():
                             
                             transactions_response = requests.get(
                                 f"{Config.TELLER_API_URL}/accounts/{account_id}/transactions",
-                                headers=headers,
                                 params={'from_date': from_date, 'count': 1000},
-                                timeout=30
+                                **request_params
                             )
                             
                             if transactions_response.status_code == 200:
@@ -1429,6 +1445,19 @@ def create_app():
                                 })
                                 logger.error(f"❌ {error_msg}")
                     
+                    elif account_response.status_code == 400 and 'certificate' in account_response.text.lower():
+                        certificate_error_count += 1
+                        error_msg = f"Teller client certificate required for API access in development tier"
+                        sync_results.append({
+                            'user_id': user_id,
+                            'status': 'certificate_required',
+                            'error': error_msg,
+                            'action_required': 'configure_teller_certificates',
+                            'certificates_available': bool(cert_path and key_path),
+                            'note': 'Bank connections work, but transaction sync requires certificates'
+                        })
+                        logger.warning(f"🔐 {error_msg} for user {user_id}")
+                    
                     elif account_response.status_code == 401:
                         error_msg = f"Invalid or expired access token for user {user_id}"
                         sync_results.append({
@@ -1481,21 +1510,39 @@ def create_app():
                 'days_back': days_back,
                 'results': sync_results,
                 'status': 'completed',
+                'certificate_errors': certificate_error_count,
                 'persistent_memory_updated': True
             }
             
             mongo_client.db.bank_sync_jobs.insert_one(sync_job)
             
+            # Generate appropriate response based on results
+            if certificate_error_count > 0:
+                message = f"Bank connections active but transaction sync requires Teller client certificates. {certificate_error_count} accounts need certificates configured."
+                success_status = False
+            elif total_transactions > 0:
+                message = f'Successfully synced {total_transactions} transactions from {len(connected_accounts)} bank accounts'
+                success_status = True
+            else:
+                message = f'No transactions found in the last {days_back} days from {len(connected_accounts)} connected accounts'
+                success_status = True
+            
             logger.info(f"🎉 Bank sync completed: {total_transactions} transactions from {len(connected_accounts)} accounts")
             
             return jsonify({
-                'success': True,
+                'success': success_status,
                 'total_transactions_synced': total_transactions,
                 'accounts_processed': len(connected_accounts),
+                'certificate_errors': certificate_error_count,
                 'sync_results': sync_results,
-                'message': f'Successfully synced {total_transactions} transactions from {len(connected_accounts)} bank accounts',
+                'message': message,
                 'date_range': f"{days_back} days back to today",
-                'persistent_memory': True  # Indicate memory system is active
+                'persistent_memory': True,
+                'certificate_status': {
+                    'required': certificate_error_count > 0,
+                    'configured': bool(os.getenv('TELLER_CERT_PATH') and os.getenv('TELLER_KEY_PATH')),
+                    'note': 'Teller development tier requires client certificates for transaction API access'
+                }
             })
             
         except Exception as e:
