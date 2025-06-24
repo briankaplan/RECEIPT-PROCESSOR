@@ -484,11 +484,11 @@
             </button>
         </div>
 
-        <!-- Receipts Table -->
+        <!-- Categorized Expenses Table -->
         <div class="data-section">
             <div class="data-header">
                 <h3 class="data-title">
-                    <i class="fas fa-receipt me-2"></i>Processed Receipts
+                    <i class="fas fa-tags me-2"></i>Categorized Expenses
                 </h3>
                 <button class="btn btn-outline-primary btn-sm" onclick="refreshReceipts()">
                     <i class="fas fa-sync-alt"></i> Refresh
@@ -496,9 +496,9 @@
             </div>
             <div class="table-responsive" id="receiptsTableContainer">
                 <div class="empty-state">
-                    <i class="fas fa-receipt"></i>
-                    <h6>No Receipts Processed Yet</h6>
-                    <p>Click "Process Receipts" to scan your Gmail accounts</p>
+                    <i class="fas fa-tags"></i>
+                    <h6>No Categorized Expenses Yet</h6>
+                    <p>Click "Create Test Receipts" to see sample categorized data or "Process Receipts" to scan your Gmail accounts</p>
                 </div>
             </div>
         </div>
@@ -680,58 +680,79 @@
 
         function generateReceiptsTable(receipts) {
             return `
-                <table class="table table-hover">
-                    <thead>
+                <table class="table table-hover table-sm">
+                    <thead class="table-dark">
                         <tr>
                             <th>Date</th>
                             <th>Merchant</th>
                             <th>Amount</th>
-                            <th>Category & Business</th>
-                            <th>Confidence</th>
-                            <th>Account</th>
-                            <th>Status</th>
+                            <th>Category</th>
+                            <th>Business Type</th>
+                            <th>Receipt URL</th>
+                            <th>Matched</th>
+                            <th>Details</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${receipts.map(receipt => `
                             <tr>
-                                <td>${new Date(receipt.transaction_date || receipt.date).toLocaleDateString()}</td>
+                                <td>
+                                    <small>${new Date(receipt.transaction_date || receipt.date).toLocaleDateString()}</small>
+                                </td>
                                 <td>
                                     <strong>${receipt.merchant || 'Unknown'}</strong>
                                     ${receipt.business_purpose ? `<br><small class="text-muted">💼 ${receipt.business_purpose}</small>` : ''}
-                                    ${receipt.description && receipt.description !== receipt.merchant ? `<br><small class="text-info">${receipt.description}</small>` : ''}
                                 </td>
                                 <td>
                                     <span class="fw-bold text-success">$${(receipt.price || receipt.amount || 0).toFixed(2)}</span>
-                                    ${receipt.tax_deductible ? '<br><small class="badge badge-sm bg-success">Tax Deductible</small>' : ''}
+                                    ${receipt.tax_deductible ? '<br><small class="badge badge-sm bg-success">💰 Deductible</small>' : ''}
                                 </td>
                                 <td>
                                     <span class="badge bg-primary">${receipt.category || 'Uncategorized'}</span>
                                     ${receipt.ai_subcategory ? `<br><small class="badge badge-sm bg-info">${receipt.ai_subcategory}</small>` : ''}
-                                    ${receipt.business_type ? `<br><small class="text-muted">🏢 ${receipt.business_type}</small>` : ''}
+                                    ${receipt.confidence_score ? `<br><small class="text-muted">${(receipt.confidence_score * 100).toFixed(0)}% confidence</small>` : ''}
                                 </td>
                                 <td>
-                                    ${receipt.confidence_score ? 
-                                        `<span class="badge ${receipt.confidence_score > 0.8 ? 'bg-success' : receipt.confidence_score > 0.6 ? 'bg-warning' : 'bg-secondary'}">${(receipt.confidence_score * 100).toFixed(0)}%</span>` : 
-                                        '<span class="badge bg-light text-dark">N/A</span>'
-                                    }
-                                    ${receipt.needs_review ? '<br><small class="text-warning">⚠️ Review</small>' : ''}
-                                </td>
-                                <td>
-                                    <small>${receipt.account_name || receipt.gmail_account || receipt.account}</small>
+                                    <span class="badge ${receipt.business_type === 'Down Home' ? 'bg-warning' : receipt.business_type === 'Music City Rodeo' ? 'bg-info' : 'bg-secondary'}">${receipt.business_type || 'Personal'}</span>
+                                    ${receipt.account_name ? `<br><small class="text-muted">${receipt.account_name}</small>` : ''}
                                     ${receipt.is_subscription ? '<br><small class="badge badge-sm bg-info">📱 Subscription</small>' : ''}
+                                </td>
+                                <td>
+                                    ${receipt.receipt_url ? 
+                                        `<a href="${receipt.receipt_url}" target="_blank" class="btn btn-sm btn-outline-primary" title="View Receipt"><i class="fas fa-external-link-alt"></i></a>` :
+                                        receipt.gmail_link ? 
+                                            `<a href="${receipt.gmail_link}" target="_blank" class="btn btn-sm btn-outline-info" title="View Email"><i class="fas fa-envelope"></i></a>` :
+                                            '<small class="text-muted">No URL</small>'
+                                    }
                                 </td>
                                 <td>
                                     ${receipt.match_status === 'Matched' || receipt.bank_matched ? 
                                         '<span class="badge bg-success">✅ Matched</span>' : 
                                         '<span class="badge bg-warning">🔍 Unmatched</span>'
                                     }
-                                    ${receipt.source_type === 'test_data' ? '<br><small class="badge badge-sm bg-secondary">Test Data</small>' : ''}
+                                    ${receipt.matched_transaction_data ? `<br><small class="text-success">Bank: $${Math.abs(receipt.matched_transaction_data.amount || 0).toFixed(2)}</small>` : ''}
+                                </td>
+                                <td>
+                                    <div class="btn-group-vertical btn-group-sm">
+                                        <button class="btn btn-outline-secondary btn-sm" onclick="showReceiptDetails('${receipt._id || receipt.id}')" title="View Details">
+                                            <i class="fas fa-info-circle"></i>
+                                        </button>
+                                        ${receipt.needs_review ? '<small class="badge bg-warning">⚠️ Review</small>' : ''}
+                                        ${receipt.source_type === 'test_data' ? '<br><small class="badge badge-sm bg-secondary">Test</small>' : ''}
+                                    </div>
                                 </td>
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
+                <div class="mt-3">
+                    <small class="text-muted">
+                        Showing ${receipts.length} expense${receipts.length !== 1 ? 's' : ''} • 
+                        Categories: ${[...new Set(receipts.map(r => r.category).filter(Boolean))].length} unique • 
+                        Business Types: ${[...new Set(receipts.map(r => r.business_type).filter(Boolean))].join(', ') || 'None'} • 
+                        Total: $${receipts.reduce((sum, r) => sum + (r.price || r.amount || 0), 0).toFixed(2)}
+                    </small>
+                </div>
             `;
         }
 
@@ -1040,6 +1061,113 @@
             document.body.appendChild(input);
             input.click();
             document.body.removeChild(input);
+        }
+
+        // Receipt Details Modal
+        async function showReceiptDetails(receiptId) {
+            try {
+                const response = await fetch(`/api/receipts/${receiptId}`);
+                const result = await response.json();
+                
+                if (result.success && result.receipt) {
+                    const receipt = result.receipt;
+                    
+                    // Create modal content
+                    const modalContent = `
+                        <div class="modal fade" id="receiptModal" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Receipt Details - ${receipt.merchant || 'Unknown'}</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <h6>Basic Information</h6>
+                                                <table class="table table-sm">
+                                                    <tr><td><strong>Date:</strong></td><td>${new Date(receipt.transaction_date || receipt.date).toLocaleDateString()}</td></tr>
+                                                    <tr><td><strong>Merchant:</strong></td><td>${receipt.merchant || 'Unknown'}</td></tr>
+                                                    <tr><td><strong>Amount:</strong></td><td>$${(receipt.price || receipt.amount || 0).toFixed(2)}</td></tr>
+                                                    <tr><td><strong>Description:</strong></td><td>${receipt.description || 'N/A'}</td></tr>
+                                                    <tr><td><strong>Account:</strong></td><td>${receipt.account_name || receipt.account || 'N/A'}</td></tr>
+                                                </table>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h6>Categorization</h6>
+                                                <table class="table table-sm">
+                                                    <tr><td><strong>Category:</strong></td><td><span class="badge bg-primary">${receipt.category || 'Uncategorized'}</span></td></tr>
+                                                    <tr><td><strong>Subcategory:</strong></td><td>${receipt.ai_subcategory || 'N/A'}</td></tr>
+                                                    <tr><td><strong>Business Type:</strong></td><td><span class="badge bg-info">${receipt.business_type || 'Personal'}</span></td></tr>
+                                                    <tr><td><strong>Confidence:</strong></td><td>${receipt.confidence_score ? (receipt.confidence_score * 100).toFixed(0) + '%' : 'N/A'}</td></tr>
+                                                    <tr><td><strong>Tax Deductible:</strong></td><td>${receipt.tax_deductible ? '✅ Yes' : '❌ No'}</td></tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        
+                                        ${receipt.business_purpose ? `
+                                            <div class="mt-3">
+                                                <h6>Business Purpose</h6>
+                                                <p class="bg-light p-2 rounded">${receipt.business_purpose}</p>
+                                            </div>
+                                        ` : ''}
+                                        
+                                        ${receipt.items && receipt.items.length > 0 ? `
+                                            <div class="mt-3">
+                                                <h6>Items</h6>
+                                                <table class="table table-sm">
+                                                    <thead><tr><th>Item</th><th>Price</th></tr></thead>
+                                                    <tbody>
+                                                        ${receipt.items.map(item => `
+                                                            <tr>
+                                                                <td>${item.name || 'Unknown Item'}</td>
+                                                                <td>$${(item.price || 0).toFixed(2)}</td>
+                                                            </tr>
+                                                        `).join('')}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        ` : ''}
+                                        
+                                        <div class="mt-3">
+                                            <h6>Status & Links</h6>
+                                            <div class="d-flex gap-2 flex-wrap">
+                                                ${receipt.receipt_url ? `<a href="${receipt.receipt_url}" target="_blank" class="btn btn-sm btn-primary">View Receipt</a>` : ''}
+                                                ${receipt.gmail_link ? `<a href="${receipt.gmail_link}" target="_blank" class="btn btn-sm btn-info">View Email</a>` : ''}
+                                                <span class="badge ${receipt.match_status === 'Matched' ? 'bg-success' : 'bg-warning'}">${receipt.match_status || 'Unmatched'}</span>
+                                                ${receipt.is_subscription ? '<span class="badge bg-info">Subscription</span>' : ''}
+                                                ${receipt.needs_review ? '<span class="badge bg-warning">Needs Review</span>' : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Remove existing modal
+                    const existingModal = document.getElementById('receiptModal');
+                    if (existingModal) {
+                        existingModal.remove();
+                    }
+                    
+                    // Add modal to body
+                    document.body.insertAdjacentHTML('beforeend', modalContent);
+                    
+                    // Show modal
+                    const modal = new bootstrap.Modal(document.getElementById('receiptModal'));
+                    modal.show();
+                    
+                } else {
+                    alert('❌ Error loading receipt details');
+                }
+                
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
         }
     </script>
 </body>
