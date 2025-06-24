@@ -966,6 +966,19 @@
                             <div class="col-md-6">
                                 <div class="glass-card p-4 text-center h-100">
                                     <div class="mb-3">
+                                        <i class="fas fa-sync fa-3x text-info mb-3"></i>
+                                    </div>
+                                    <h6 class="mb-2 fw-bold">Sync Bank Data</h6>
+                                    <p class="text-muted small mb-3">Download 1 year of Chase transactions to database</p>
+                                    <button class="action-btn w-100" onclick="syncBankTransactions()">
+                                        <i class="fas fa-university"></i>
+                                        <span>Sync Bank Transactions</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="glass-card p-4 text-center h-100">
+                                    <div class="mb-3">
                                         <i class="fas fa-broom fa-3x text-warning mb-3"></i>
                                     </div>
                                     <h6 class="mb-2 fw-bold">Clear Test Data</h6>
@@ -1036,6 +1049,133 @@
                                 <small id="active-connections" class="text-success fw-bold">1</small>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enhanced Receipts Table -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-table me-2 text-success"></i>
+                                Processed Receipts & Bank Matches
+                            </h5>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-outline-success btn-sm" onclick="refreshReceiptsTable()">
+                                    <i class="fas fa-sync me-1"></i>
+                                    Refresh
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm" onclick="exportReceiptsCSV()">
+                                    <i class="fas fa-download me-1"></i>
+                                    Export CSV
+                                </button>
+                            </div>
+                        </div>
+                        <div id="receipts-table-container" class="table-responsive">
+                            <div class="text-center py-5 text-muted">
+                                <i class="fas fa-receipt fa-3x mb-3 opacity-50"></i>
+                                <h6>Receipt & Transaction Matching</h6>
+                                <p class="mb-0">Process receipts to see matched transactions here</p>
+                                <small>Year's worth of Gmail emails will be matched with Chase banking data</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COMPREHENSIVE BANK TRANSACTIONS TABLE -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-university me-2 text-primary"></i>
+                                Bank Transactions (Chase Data)
+                            </h5>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-outline-info btn-sm" onclick="refreshBankTransactions()">
+                                    <i class="fas fa-sync me-1"></i>
+                                    Refresh
+                                </button>
+                                <button class="btn btn-outline-success btn-sm" onclick="exportBankTransactionsCSV()">
+                                    <i class="fas fa-download me-1"></i>
+                                    Export All
+                                </button>
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-filter"></i> Filter
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#" onclick="filterTransactions('all')">All Transactions</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="filterTransactions('matched')">✅ Matched Only</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="filterTransactions('unmatched')">⏳ Unmatched Only</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item" href="#" onclick="filterTransactions('expenses')">💸 Expenses</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="filterTransactions('income')">💰 Income</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Transaction Stats Summary -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-3">
+                                <div class="border rounded p-3 text-center">
+                                    <h6 class="text-primary mb-1" id="total-transactions">0</h6>
+                                    <small class="text-muted">Total Transactions</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="border rounded p-3 text-center">
+                                    <h6 class="text-success mb-1" id="matched-transactions">0</h6>
+                                    <small class="text-muted">✅ Matched</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="border rounded p-3 text-center">
+                                    <h6 class="text-warning mb-1" id="unmatched-transactions">0</h6>
+                                    <small class="text-muted">⏳ Unmatched</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="border rounded p-3 text-center">
+                                    <h6 class="text-info mb-1" id="match-percentage">0%</h6>
+                                    <small class="text-muted">Match Rate</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="bank-transactions-container" class="table-responsive">
+                            <div class="text-center py-5 text-muted">
+                                <i class="fas fa-university fa-3x mb-3 opacity-50"></i>
+                                <h6>Bank Transaction Management</h6>
+                                <p class="mb-3">Sync bank data to see all Chase transactions with receipt matching</p>
+                                <button class="btn btn-primary" onclick="syncBankTransactions()">
+                                    <i class="fas fa-sync"></i> Sync Bank Transactions
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Pagination Controls -->
+                        <nav id="bank-pagination" style="display: none;">
+                            <ul class="pagination justify-content-center">
+                                <li class="page-item" id="prev-page">
+                                    <a class="page-link" href="#" onclick="loadBankTransactions(currentBankPage - 1)">Previous</a>
+                                </li>
+                                <li class="page-item active">
+                                    <span class="page-link" id="current-page-info">Page 1</span>
+                                </li>
+                                <li class="page-item" id="next-page">
+                                    <a class="page-link" href="#" onclick="loadBankTransactions(currentBankPage + 1)">Next</a>
+                                </li>
+                            </ul>
+                        </nav>
                     </div>
                 </div>
             </div>
@@ -1249,21 +1389,22 @@
                 const response = await fetch('/api/process-receipts', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ days: 30, max_receipts: 25 })
+                    body: JSON.stringify({ days: 365, max_receipts: 1000 }) // 1 YEAR of data!
                 });
                 
                 if (!response.ok) throw new Error('Processing failed');
                 
                 const result = await response.json();
                 addLogEntry('✅ Receipt processing completed successfully', 'success');
-                addLogEntry(`📊 Found ${result.receipts_found || 12} receipts, matched ${result.matched || 8} transactions`, 'success');
+                addLogEntry(`📊 Found ${result.receipts_found} receipts, matched ${result.matched} transactions`, 'success');
+                addLogEntry(`💰 Total amount processed: $${result.total_amount}`, 'info');
+                addLogEntry(`🎯 Match rate: ${result.match_rate}`, 'info');
                 
-                // Update dashboard with new data
-                updateDashboard({
-                    ...appState.stats,
-                    processed_count: (appState.stats.processed_count || 0) + 12,
-                    receipts_count: (appState.stats.receipts_count || 0) + 8
-                });
+                // Refresh the receipts table with new data
+                loadReceiptsTable();
+                
+                // Update dashboard with REAL data from MongoDB
+                updateStatusFromAPI();
                 
             } catch (error) {
                 addLogEntry(`❌ Processing failed: ${error.message}`, 'error');
@@ -1398,29 +1539,33 @@
         }
 
         function updateStatusFromAPI() {
-            // Simulate API call with enhanced error handling
-            fetch('/status')
+            // Use REAL status endpoint with proper service lights
+            fetch('/api/status/real')
                 .then(response => {
                     if (!response.ok) throw new Error('Status update failed');
                     return response.json();
                 })
                 .then(data => {
                     const services = data.services || {};
+                    const counts = data.counts || {};
                     
-                    // Real status processing - NO MORE DEMO DATA
+                    // Update REAL service lights based on API response
+                    updateServiceLights(services);
+                    
+                    // Update dashboard with REAL data from MongoDB
                     updateDashboard({
-                        authenticated_accounts: services.gmail?.connected_accounts || 0,
-                        total_accounts: services.gmail?.total_accounts || 3,
-                        mongo_connected: services.mongodb?.status === 'connected',
-                        ai_connected: services.huggingface?.status === 'connected',
-                        teller_connected: services.teller?.status === 'configured',
-                        r2_connected: services.r2?.status === 'connected',
-                        sheets_connected: services.sheets?.status === 'connected',
-                        bank_accounts: services.teller?.connected_users || 0,
-                        processed_count: services.mongodb?.processed_count || 0,
-                        receipts_count: services.mongodb?.receipts_count || 0,
-                        matched_receipts: services.mongodb?.matched_receipts || 0,
-                        total_amount: services.mongodb?.total_amount || 0
+                        authenticated_accounts: services.gmail?.accounts_configured || 0,
+                        total_accounts: 3, // Config has 3 Gmail accounts
+                        mongo_connected: services.mongodb?.connected,
+                        ai_connected: services.huggingface?.connected,
+                        teller_connected: services.teller?.connected,
+                        r2_connected: services.r2?.connected,
+                        sheets_connected: false, // Not configured
+                        bank_accounts: 0, // No banks connected yet
+                        processed_count: counts.total_receipts || 0,
+                        receipts_count: counts.processed_receipts || 0,
+                        matched_receipts: counts.matched_transactions || 0,
+                        total_amount: counts.total_amount || 0.0
                     });
                     
                     addLogEntry('✅ System status updated successfully', 'success');
@@ -1429,6 +1574,24 @@
                     addLogEntry(`❌ Status update failed: ${error.message}`, 'error');
                     updateConnectionStatus(false);
                 });
+        }
+        
+        function updateServiceLights(services) {
+            // Update each service light based on real status
+            Object.keys(services).forEach(serviceName => {
+                const service = services[serviceName];
+                const lightElement = document.querySelector(`[data-service="${serviceName}"]`);
+                
+                if (lightElement) {
+                    lightElement.className = `status-light ${service.light}`;
+                    
+                    // Update status text
+                    const statusText = lightElement.nextElementSibling;
+                    if (statusText) {
+                        statusText.textContent = service.status;
+                    }
+                }
+            });
         }
 
         // Enhanced keyboard shortcuts
@@ -1470,6 +1633,8 @@
             initializeTheme();
             initializeConnection();
             updateStatusFromAPI();
+            loadReceiptsTable(); // Load existing receipts on startup
+            loadBankTransactions(1); // Load existing bank transactions on startup
             
             // Auto-refresh every 30 seconds
             setInterval(updateStatusFromAPI, 30000);
@@ -1478,6 +1643,7 @@
             addLogEntry('🎉 Receipt Processor Pro initialized successfully', 'success');
             addLogEntry('💡 Keyboard shortcuts: Ctrl+S (scanner), Ctrl+P (process), Ctrl+E (export)', 'info');
             addLogEntry('🔗 Multi-account Gmail integration active', 'info');
+            addLogEntry('🏦 Bank transactions table ready - sync Chase data to populate', 'info');
         });
 
         // Enhanced page visibility handling
@@ -1498,6 +1664,473 @@
             updateConnectionStatus(false);
             addLogEntry('📡 Internet connection lost - operating in offline mode', 'warning');
         });
+        
+        // RECEIPTS TABLE FUNCTIONS
+        function refreshReceiptsTable() {
+            addLogEntry('🔄 Refreshing receipts table...', 'info');
+            loadReceiptsTable();
+        }
+        
+        function loadReceiptsTable() {
+            fetch('/api/receipts?limit=50')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.receipts && data.receipts.length > 0) {
+                        displayReceiptsTable(data.receipts, data.total_count);
+                        addLogEntry(`✅ Loaded ${data.receipts.length} receipts from database`, 'success');
+                    } else {
+                        showEmptyReceiptsTable();
+                    }
+                })
+                .catch(error => {
+                    addLogEntry(`❌ Failed to load receipts: ${error.message}`, 'error');
+                    showEmptyReceiptsTable();
+                });
+        }
+        
+        function displayReceiptsTable(receipts, totalCount) {
+            const container = document.getElementById('receipts-table-container');
+            
+            const tableHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <small class="text-muted">Showing ${receipts.length} of ${totalCount} total receipts</small>
+                    <div class="d-flex gap-2">
+                        <span class="badge bg-success">${receipts.filter(r => r.bank_matched).length} Matched</span>
+                        <span class="badge bg-warning">${receipts.filter(r => !r.bank_matched).length} Unmatched</span>
+                    </div>
+                </div>
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Date</th>
+                            <th>Merchant</th>
+                            <th>Amount</th>
+                            <th>Category</th>
+                            <th>Gmail Account</th>
+                            <th>Bank Match</th>
+                            <th>AI Confidence</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${receipts.map(receipt => `
+                            <tr class="${receipt.bank_matched ? 'table-success' : 'table-warning'}">
+                                <td>
+                                    <small class="text-muted">
+                                        ${new Date(receipt.date).toLocaleDateString()}
+                                    </small>
+                                </td>
+                                <td>
+                                    <strong>${receipt.merchant}</strong><br>
+                                    <small class="text-muted">${receipt.subject}</small>
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-success">$${receipt.amount}</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">${receipt.category}</span>
+                                </td>
+                                <td>
+                                    <small class="text-muted">${receipt.gmail_account}</small>
+                                </td>
+                                <td>
+                                    ${receipt.bank_matched 
+                                        ? `<span class="badge bg-success"><i class="fas fa-check"></i> ${receipt.matching_transaction}</span>` 
+                                        : '<span class="badge bg-warning"><i class="fas fa-clock"></i> Pending</span>'
+                                    }
+                                </td>
+                                <td>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar ${receipt.ai_confidence > 0.8 ? 'bg-success' : receipt.ai_confidence > 0.6 ? 'bg-warning' : 'bg-danger'}" 
+                                             style="width: ${(receipt.ai_confidence * 100)}%"></div>
+                                    </div>
+                                    <small class="text-muted">${Math.round(receipt.ai_confidence * 100)}%</small>
+                                </td>
+                                <td>
+                                    <span class="badge ${receipt.status === 'processed' ? 'bg-success' : 'bg-secondary'}">
+                                        ${receipt.status}
+                                    </span>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            container.innerHTML = tableHTML;
+        }
+        
+        function showEmptyReceiptsTable() {
+            const container = document.getElementById('receipts-table-container');
+            container.innerHTML = `
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-receipt fa-3x mb-3 opacity-50"></i>
+                    <h6>No Receipts Processed Yet</h6>
+                    <p class="mb-3">Click "Start Processing" to scan your Gmail accounts for receipts</p>
+                    <button class="btn btn-primary" onclick="processReceipts()">
+                        <i class="fas fa-play"></i> Start Processing Receipts
+                    </button>
+                </div>
+            `;
+        }
+        
+        function exportReceiptsCSV() {
+            addLogEntry('📊 Exporting receipts to CSV...', 'info');
+            
+            fetch('/api/receipts?limit=1000') // Export more for CSV
+                .then(response => response.json())
+                .then(data => {
+                    if (data.receipts && data.receipts.length > 0) {
+                        const csv = generateReceiptsCSV(data.receipts);
+                        downloadCSV(csv, 'receipts-export.csv');
+                        addLogEntry(`✅ Exported ${data.receipts.length} receipts to CSV`, 'success');
+                    } else {
+                        addLogEntry('⚠️ No receipts to export', 'warning');
+                    }
+                })
+                .catch(error => {
+                    addLogEntry(`❌ CSV export failed: ${error.message}`, 'error');
+                });
+        }
+        
+        function generateReceiptsCSV(receipts) {
+            const headers = ['Date', 'Merchant', 'Amount', 'Category', 'Gmail Account', 'Bank Matched', 'Matching Transaction', 'AI Confidence', 'Status'];
+            const rows = receipts.map(receipt => [
+                new Date(receipt.date).toLocaleDateString(),
+                receipt.merchant,
+                receipt.amount,
+                receipt.category,
+                receipt.gmail_account,
+                receipt.bank_matched ? 'Yes' : 'No',
+                receipt.matching_transaction || 'N/A',
+                Math.round(receipt.ai_confidence * 100) + '%',
+                receipt.status
+            ]);
+            
+            return [headers, ...rows].map(row => 
+                row.map(cell => `"${cell}"`).join(',')
+            ).join('\n');
+        }
+        
+        function downloadCSV(csv, filename) {
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+        
+        // BANK TRANSACTIONS TABLE - COMPREHENSIVE FUNCTIONALITY
+        let currentBankPage = 1;
+        let currentBankFilter = 'all';
+        const bankTransactionsPerPage = 25;
+        
+        function refreshBankTransactions() {
+            addLogEntry('🔄 Refreshing bank transactions...', 'info');
+            loadBankTransactions(1);
+        }
+        
+        function loadBankTransactions(page = 1) {
+            currentBankPage = page;
+            const skip = (page - 1) * bankTransactionsPerPage;
+            
+            let url = `/api/bank-transactions?limit=${bankTransactionsPerPage}&skip=${skip}`;
+            
+            // Add filtering
+            if (currentBankFilter !== 'all') {
+                url += `&filter=${currentBankFilter}`;
+            }
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.transactions && data.transactions.length > 0) {
+                        displayBankTransactionsTable(data.transactions, data.total_count, data.showing, data.has_more);
+                        updateBankTransactionStats(data);
+                        showBankPagination(data.total_count);
+                        addLogEntry(`✅ Loaded ${data.transactions.length} bank transactions (page ${page})`, 'success');
+                    } else {
+                        showEmptyBankTransactionsTable();
+                        hideBankPagination();
+                    }
+                })
+                .catch(error => {
+                    addLogEntry(`❌ Failed to load bank transactions: ${error.message}`, 'error');
+                    showEmptyBankTransactionsTable();
+                });
+        }
+        
+        function displayBankTransactionsTable(transactions, totalCount, showing, hasMore) {
+            const container = document.getElementById('bank-transactions-container');
+            
+            // Check for matched receipts
+            const matchedCount = transactions.filter(t => t.receipt_matched).length;
+            const unmatchedCount = transactions.length - matchedCount;
+            
+            const tableHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <small class="text-muted">
+                        Showing ${showing} of ${totalCount} transactions 
+                        (${matchedCount} matched, ${unmatchedCount} unmatched)
+                    </small>
+                    <div class="d-flex gap-2">
+                        <span class="badge bg-success">${matchedCount} Matched</span>
+                        <span class="badge bg-warning">${unmatchedCount} Need Receipts</span>
+                    </div>
+                </div>
+                <table class="table table-hover table-sm">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Amount</th>
+                            <th>Type</th>
+                            <th>Account</th>
+                            <th>Receipt Match</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${transactions.map(txn => {
+                            const isExpense = txn.amount < 0;
+                            const amount = Math.abs(txn.amount);
+                            const amountClass = isExpense ? 'text-danger' : 'text-success';
+                            const amountPrefix = isExpense ? '-$' : '+$';
+                            
+                            return `
+                            <tr class="${txn.receipt_matched ? 'table-success' : (isExpense ? 'table-warning' : '')}">
+                                <td>
+                                    <small class="text-muted">
+                                        ${new Date(txn.date).toLocaleDateString()}
+                                    </small>
+                                </td>
+                                <td>
+                                    <strong class="d-block">${txn.description || 'N/A'}</strong>
+                                    ${txn.counterparty?.name ? `<small class="text-muted">${txn.counterparty.name}</small>` : ''}
+                                </td>
+                                <td>
+                                    <span class="fw-bold ${amountClass}">${amountPrefix}${amount.toFixed(2)}</span>
+                                </td>
+                                <td>
+                                    <span class="badge ${isExpense ? 'bg-warning' : 'bg-info'}">
+                                        ${isExpense ? '💸 Expense' : '💰 Income'}
+                                    </span>
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        ${txn.bank_name}<br>
+                                        ${txn.account_name}
+                                    </small>
+                                </td>
+                                <td>
+                                    ${txn.receipt_matched 
+                                        ? `<span class="badge bg-success"><i class="fas fa-check"></i> Receipt Found</span>
+                                           <br><small class="text-muted">ID: ${txn.matched_receipt_id}</small>` 
+                                        : isExpense 
+                                            ? '<span class="badge bg-warning"><i class="fas fa-search"></i> Needs Receipt</span>'
+                                            : '<span class="badge bg-secondary"><i class="fas fa-minus"></i> N/A</span>'
+                                    }
+                                </td>
+                                <td>
+                                    ${txn.category 
+                                        ? `<span class="badge bg-primary">${txn.category}</span>`
+                                        : isExpense 
+                                            ? '<span class="badge bg-light text-dark">Uncategorized</span>'
+                                            : '<span class="badge bg-secondary">Income</span>'
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge ${txn.status === 'posted' ? 'bg-success' : 'bg-warning'}">
+                                        ${txn.status || 'pending'}
+                                    </span>
+                                </td>
+                            </tr>
+                        `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            container.innerHTML = tableHTML;
+        }
+        
+        function updateBankTransactionStats(data) {
+            const transactions = data.transactions || [];
+            const matchedCount = transactions.filter(t => t.receipt_matched).length;
+            const unmatchedCount = transactions.length - matchedCount;
+            const matchPercentage = transactions.length > 0 ? Math.round((matchedCount / transactions.length) * 100) : 0;
+            
+            document.getElementById('total-transactions').textContent = data.total_count || 0;
+            document.getElementById('matched-transactions').textContent = matchedCount;
+            document.getElementById('unmatched-transactions').textContent = unmatchedCount;
+            document.getElementById('match-percentage').textContent = `${matchPercentage}%`;
+        }
+        
+        function showEmptyBankTransactionsTable() {
+            const container = document.getElementById('bank-transactions-container');
+            container.innerHTML = `
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-university fa-3x mb-3 opacity-50"></i>
+                    <h6>No Bank Transactions Found</h6>
+                    <p class="mb-3">Sync your bank accounts to download transaction history</p>
+                    <button class="btn btn-primary" onclick="syncBankTransactions()">
+                        <i class="fas fa-sync"></i> Sync Bank Transactions
+                    </button>
+                </div>
+            `;
+            
+            // Reset stats
+            document.getElementById('total-transactions').textContent = '0';
+            document.getElementById('matched-transactions').textContent = '0';
+            document.getElementById('unmatched-transactions').textContent = '0';
+            document.getElementById('match-percentage').textContent = '0%';
+        }
+        
+        function showBankPagination(totalCount) {
+            const pagination = document.getElementById('bank-pagination');
+            const totalPages = Math.ceil(totalCount / bankTransactionsPerPage);
+            
+            if (totalPages > 1) {
+                pagination.style.display = 'block';
+                
+                // Update pagination controls
+                document.getElementById('current-page-info').textContent = `Page ${currentBankPage} of ${totalPages}`;
+                
+                const prevPage = document.getElementById('prev-page');
+                const nextPage = document.getElementById('next-page');
+                
+                if (currentBankPage <= 1) {
+                    prevPage.classList.add('disabled');
+                } else {
+                    prevPage.classList.remove('disabled');
+                }
+                
+                if (currentBankPage >= totalPages) {
+                    nextPage.classList.add('disabled');
+                } else {
+                    nextPage.classList.remove('disabled');
+                }
+            } else {
+                pagination.style.display = 'none';
+            }
+        }
+        
+        function hideBankPagination() {
+            document.getElementById('bank-pagination').style.display = 'none';
+        }
+        
+        function filterTransactions(filterType) {
+            currentBankFilter = filterType;
+            addLogEntry(`🔍 Filtering transactions: ${filterType}`, 'info');
+            loadBankTransactions(1); // Reset to first page
+        }
+        
+        function exportBankTransactionsCSV() {
+            addLogEntry('📊 Exporting all bank transactions to CSV...', 'info');
+            
+            fetch('/api/bank-transactions?limit=10000') // Export large amount
+                .then(response => response.json())
+                .then(data => {
+                    if (data.transactions && data.transactions.length > 0) {
+                        const csv = generateBankTransactionsCSV(data.transactions);
+                        downloadCSV(csv, 'bank-transactions-export.csv');
+                        addLogEntry(`✅ Exported ${data.transactions.length} bank transactions to CSV`, 'success');
+                    } else {
+                        addLogEntry('⚠️ No bank transactions to export', 'warning');
+                    }
+                })
+                .catch(error => {
+                    addLogEntry(`❌ Bank CSV export failed: ${error.message}`, 'error');
+                });
+        }
+        
+        function generateBankTransactionsCSV(transactions) {
+            const headers = [
+                'Date', 'Description', 'Amount', 'Type', 'Bank', 'Account', 
+                'Receipt Matched', 'Category', 'Status', 'Transaction ID', 'Counterparty'
+            ];
+            
+            const rows = transactions.map(txn => [
+                new Date(txn.date).toLocaleDateString(),
+                txn.description || '',
+                txn.amount,
+                txn.amount < 0 ? 'Expense' : 'Income',
+                txn.bank_name || '',
+                txn.account_name || '',
+                txn.receipt_matched ? 'Yes' : 'No',
+                txn.category || 'Uncategorized',
+                txn.status || 'pending',
+                txn.transaction_id || '',
+                txn.counterparty?.name || ''
+            ]);
+            
+            return [headers, ...rows].map(row => 
+                row.map(cell => `"${cell}"`).join(',')
+            ).join('\n');
+        }
+        
+        // BANK SYNCHRONIZATION FUNCTIONS
+        async function syncBankTransactions() {
+            try {
+                addLogEntry('🏦 Starting bank transaction sync...', 'info');
+                showProcessingOverlay({ progress: 0, current_step: 'Connecting to bank accounts...' });
+                
+                const response = await fetch('/api/sync-bank-transactions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ days_back: 365 }) // 1 full year
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Sync failed');
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    addLogEntry(`✅ Bank sync completed successfully!`, 'success');
+                    addLogEntry(`📊 Downloaded ${result.total_transactions_synced} transactions from ${result.accounts_processed} accounts`, 'success');
+                    addLogEntry(`📅 Date range: ${result.date_range}`, 'info');
+                    
+                    // Show sync results
+                    if (result.sync_results) {
+                        result.sync_results.forEach(account => {
+                            if (account.status === 'success') {
+                                addLogEntry(`🏛️ ${account.bank_name} - ${account.account_name}: ${account.transactions_synced} transactions`, 'success');
+                            } else {
+                                addLogEntry(`❌ ${account.account_id}: ${account.error}`, 'error');
+                            }
+                        });
+                    }
+                    
+                    // Refresh status and tables
+                    updateStatusFromAPI();
+                    loadReceiptsTable();
+                    loadBankTransactions(1); // Load the new bank transactions
+                    
+                    // Now you can process receipts against real bank data
+                    addLogEntry('💡 You can now process receipts - they will be matched against real bank transactions!', 'info');
+                    
+                } else {
+                    addLogEntry(`❌ Bank sync failed: ${result.error || 'Unknown error'}`, 'error');
+                }
+                
+            } catch (error) {
+                addLogEntry(`❌ Bank sync error: ${error.message}`, 'error');
+                
+                if (error.message.includes('No bank accounts connected')) {
+                    addLogEntry('💡 Please connect your bank accounts first via "Connect Banks" button', 'info');
+                }
+            } finally {
+                hideProcessingOverlay();
+            }
+        }
     </script>
 </body>
 </html>
