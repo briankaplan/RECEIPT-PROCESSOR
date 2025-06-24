@@ -1727,57 +1727,104 @@
                 <table class="table table-hover">
                     <thead class="table-dark">
                         <tr>
+                            <th>ID</th>
                             <th>Date</th>
                             <th>Merchant</th>
                             <th>Amount</th>
                             <th>Category</th>
+                            <th>Business Type</th>
                             <th>Gmail Account</th>
-                            <th>Bank Match</th>
+                            <th>R2 Image</th>
+                            <th>Match Status</th>
                             <th>AI Confidence</th>
-                            <th>Status</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${receipts.map(receipt => `
+                        ${receipts.map(receipt => {
+                            // Generate R2 URL if available
+                            const r2Url = receipt.image_key || receipt.r2_key ? 
+                                `${window.location.protocol}//${window.location.host}/r2/${receipt.image_key || receipt.r2_key}` : '';
+                            
+                            // Determine match status
+                            let matchStatus = 'Unmatched';
+                            let matchBadgeClass = 'bg-warning';
+                            if (receipt.bank_matched || receipt.bank_match_id) {
+                                matchStatus = 'Matched';
+                                matchBadgeClass = 'bg-success';
+                            } else if (receipt.matching_transaction) {
+                                matchStatus = 'Partial';
+                                matchBadgeClass = 'bg-info';
+                            }
+                            
+                            return `
                             <tr class="${receipt.bank_matched ? 'table-success' : 'table-warning'}">
+                                <td>
+                                    <small class="font-monospace text-muted">
+                                        ${receipt._id ? receipt._id.slice(-6) : 'N/A'}
+                                    </small>
+                                </td>
                                 <td>
                                     <small class="text-muted">
                                         ${new Date(receipt.date).toLocaleDateString()}
                                     </small>
                                 </td>
                                 <td>
-                                    <strong>${receipt.merchant}</strong><br>
-                                    <small class="text-muted">${receipt.subject}</small>
+                                    <strong>${receipt.merchant || 'Unknown'}</strong><br>
+                                    <small class="text-muted">${receipt.subject || receipt.description || ''}</small>
                                 </td>
                                 <td>
-                                    <span class="fw-bold text-success">$${receipt.amount}</span>
+                                    <span class="fw-bold text-success">$${receipt.amount || 0}</span>
                                 </td>
                                 <td>
-                                    <span class="badge bg-primary">${receipt.category}</span>
+                                    <span class="badge bg-primary">${receipt.category || 'Uncategorized'}</span>
                                 </td>
                                 <td>
-                                    <small class="text-muted">${receipt.gmail_account}</small>
+                                    <span class="badge bg-secondary">${receipt.business_type || receipt.merchant_type || 'Unknown'}</span>
                                 </td>
                                 <td>
-                                    ${receipt.bank_matched 
-                                        ? `<span class="badge bg-success"><i class="fas fa-check"></i> ${receipt.matching_transaction}</span>` 
-                                        : '<span class="badge bg-warning"><i class="fas fa-clock"></i> Pending</span>'
+                                    <small class="text-muted">${receipt.gmail_account || 'N/A'}</small><br>
+                                    <small class="text-muted">${receipt.sender || ''}</small>
+                                </td>
+                                <td>
+                                    ${r2Url ? 
+                                        `<a href="${r2Url}" target="_blank" class="btn btn-sm btn-outline-info">
+                                            <i class="fas fa-image"></i> View
+                                        </a>` : 
+                                        '<span class="text-muted">No Image</span>'
                                     }
                                 </td>
                                 <td>
-                                    <div class="progress" style="height: 8px;">
-                                        <div class="progress-bar ${receipt.ai_confidence > 0.8 ? 'bg-success' : receipt.ai_confidence > 0.6 ? 'bg-warning' : 'bg-danger'}" 
-                                             style="width: ${(receipt.ai_confidence * 100)}%"></div>
-                                    </div>
-                                    <small class="text-muted">${Math.round(receipt.ai_confidence * 100)}%</small>
+                                    <span class="badge ${matchBadgeClass}">
+                                        <i class="fas ${matchStatus === 'Matched' ? 'fa-check' : matchStatus === 'Partial' ? 'fa-clock' : 'fa-search'}"></i>
+                                        ${matchStatus}
+                                    </span>
+                                    ${receipt.matching_transaction ? 
+                                        `<br><small class="text-muted">${receipt.matching_transaction}</small>` : ''
+                                    }
                                 </td>
                                 <td>
-                                    <span class="badge ${receipt.status === 'processed' ? 'bg-success' : 'bg-secondary'}">
-                                        ${receipt.status}
-                                    </span>
+                                    <div class="progress mb-1" style="height: 6px;">
+                                        <div class="progress-bar ${receipt.ai_confidence > 0.8 ? 'bg-success' : receipt.ai_confidence > 0.6 ? 'bg-warning' : 'bg-danger'}" 
+                                             style="width: ${(receipt.ai_confidence * 100) || 0}%"></div>
+                                    </div>
+                                    <small class="text-muted">${Math.round((receipt.ai_confidence || 0) * 100)}%</small>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary btn-sm" onclick="viewReceiptDetails('${receipt._id}')" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        ${receipt.ocr_text || receipt.extracted_text ? 
+                                            `<button class="btn btn-outline-info btn-sm" onclick="viewOCRText('${receipt._id}')" title="View OCR">
+                                                <i class="fas fa-file-text"></i>
+                                            </button>` : ''
+                                        }
+                                    </div>
                                 </td>
                             </tr>
-                        `).join('')}
+                        `;
+                        }).join('')}
                     </tbody>
                 </table>
             `;
@@ -2154,6 +2201,192 @@
                 }
             } finally {
                 hideProcessingOverlay();
+            }
+        }
+
+        // Receipt detail viewing functions
+        function viewReceiptDetails(receiptId) {
+            if (!receiptId) {
+                addLogEntry('❌ No receipt ID provided', 'error');
+                return;
+            }
+            
+            fetch(`/api/receipts/${receiptId}`)
+                .then(response => response.json())
+                .then(receipt => {
+                    if (receipt) {
+                        showReceiptModal(receipt);
+                    } else {
+                        addLogEntry('❌ Receipt not found', 'error');
+                    }
+                })
+                .catch(error => {
+                    addLogEntry(`❌ Failed to load receipt details: ${error.message}`, 'error');
+                });
+        }
+        
+        function viewOCRText(receiptId) {
+            if (!receiptId) {
+                addLogEntry('❌ No receipt ID provided', 'error');
+                return;
+            }
+            
+            fetch(`/api/receipts/${receiptId}`)
+                .then(response => response.json())
+                .then(receipt => {
+                    if (receipt && (receipt.ocr_text || receipt.extracted_text)) {
+                        showOCRModal(receipt);
+                    } else {
+                        addLogEntry('❌ No OCR text available for this receipt', 'error');
+                    }
+                })
+                .catch(error => {
+                    addLogEntry(`❌ Failed to load OCR text: ${error.message}`, 'error');
+                });
+        }
+        
+        function showReceiptModal(receipt) {
+            const r2Url = receipt.image_key || receipt.r2_key ? 
+                `${window.location.protocol}//${window.location.host}/r2/${receipt.image_key || receipt.r2_key}` : '';
+            
+            const modalHtml = `
+                <div class="modal fade" id="receiptModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Receipt Details</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>Basic Information</h6>
+                                        <table class="table table-sm">
+                                            <tr><td><strong>ID:</strong></td><td>${receipt._id || 'N/A'}</td></tr>
+                                            <tr><td><strong>Date:</strong></td><td>${new Date(receipt.date).toLocaleDateString()}</td></tr>
+                                            <tr><td><strong>Merchant:</strong></td><td>${receipt.merchant || 'Unknown'}</td></tr>
+                                            <tr><td><strong>Amount:</strong></td><td>$${receipt.amount || 0}</td></tr>
+                                            <tr><td><strong>Category:</strong></td><td>${receipt.category || 'Uncategorized'}</td></tr>
+                                            <tr><td><strong>Business Type:</strong></td><td>${receipt.business_type || receipt.merchant_type || 'Unknown'}</td></tr>
+                                        </table>
+                                        
+                                        <h6>Gmail Information</h6>
+                                        <table class="table table-sm">
+                                            <tr><td><strong>Account:</strong></td><td>${receipt.gmail_account || 'N/A'}</td></tr>
+                                            <tr><td><strong>Subject:</strong></td><td>${receipt.subject || 'N/A'}</td></tr>
+                                            <tr><td><strong>Sender:</strong></td><td>${receipt.sender || 'N/A'}</td></tr>
+                                        </table>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Matching Information</h6>
+                                        <table class="table table-sm">
+                                            <tr><td><strong>Bank Matched:</strong></td><td>${receipt.bank_matched ? 'Yes' : 'No'}</td></tr>
+                                            <tr><td><strong>Match ID:</strong></td><td>${receipt.bank_match_id || 'None'}</td></tr>
+                                            <tr><td><strong>Transaction:</strong></td><td>${receipt.matching_transaction || 'None'}</td></tr>
+                                            <tr><td><strong>AI Confidence:</strong></td><td>${Math.round((receipt.ai_confidence || 0) * 100)}%</td></tr>
+                                        </table>
+                                        
+                                        <h6>Processing Information</h6>
+                                        <table class="table table-sm">
+                                            <tr><td><strong>Status:</strong></td><td>${receipt.status || 'Unknown'}</td></tr>
+                                            <tr><td><strong>Job ID:</strong></td><td>${receipt.processing_job_id || 'N/A'}</td></tr>
+                                            <tr><td><strong>Created:</strong></td><td>${receipt.created_at ? new Date(receipt.created_at).toLocaleString() : 'N/A'}</td></tr>
+                                        </table>
+                                    </div>
+                                </div>
+                                
+                                ${r2Url ? `
+                                    <div class="row mt-3">
+                                        <div class="col-12">
+                                            <h6>Receipt Image</h6>
+                                            <div class="text-center">
+                                                <img src="${r2Url}" class="img-fluid" style="max-height: 300px;" alt="Receipt Image">
+                                                <br><br>
+                                                <a href="${r2Url}" target="_blank" class="btn btn-primary">
+                                                    <i class="fas fa-external-link-alt"></i> Open Full Size
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ` : '<p class="text-muted">No image available</p>'}
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            const existingModal = document.getElementById('receiptModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Add modal to page
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('receiptModal'));
+            modal.show();
+        }
+        
+        function showOCRModal(receipt) {
+            const ocrText = receipt.ocr_text || receipt.extracted_text || 'No OCR text available';
+            
+            const modalHtml = `
+                <div class="modal fade" id="ocrModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">OCR Text - ${receipt.merchant || 'Receipt'}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <strong>Receipt ID:</strong> ${receipt._id || 'N/A'}<br>
+                                    <strong>Date:</strong> ${new Date(receipt.date).toLocaleDateString()}<br>
+                                    <strong>Amount:</strong> $${receipt.amount || 0}
+                                </div>
+                                <h6>Extracted Text:</h6>
+                                <div class="border p-3 bg-light">
+                                    <pre style="white-space: pre-wrap; font-family: monospace;">${ocrText}</pre>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-primary" onclick="copyOCRText('${receipt._id}')">
+                                    <i class="fas fa-copy"></i> Copy Text
+                                </button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            const existingModal = document.getElementById('ocrModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Add modal to page
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('ocrModal'));
+            modal.show();
+        }
+        
+        function copyOCRText(receiptId) {
+            const ocrTextElement = document.querySelector('#ocrModal pre');
+            if (ocrTextElement) {
+                navigator.clipboard.writeText(ocrTextElement.textContent).then(() => {
+                    addLogEntry('✅ OCR text copied to clipboard', 'success');
+                }).catch(err => {
+                    addLogEntry('❌ Failed to copy OCR text', 'error');
+                });
             }
         }
     </script>

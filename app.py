@@ -958,12 +958,13 @@ def create_app():
             skip = int(request.args.get('skip', 0))
             
             receipts = list(mongo_client.db.receipts.find(
-                {},
-                {"_id": 0}  # Exclude MongoDB ObjectId
+                {}
             ).sort("date", -1).limit(limit).skip(skip))
             
-            # Convert datetime objects to strings
+            # Convert datetime objects and ObjectIds to strings
             for receipt in receipts:
+                if '_id' in receipt:
+                    receipt['_id'] = str(receipt['_id'])
                 if 'date' in receipt and hasattr(receipt['date'], 'isoformat'):
                     receipt['date'] = receipt['date'].isoformat()
                 if 'created_at' in receipt and hasattr(receipt['created_at'], 'isoformat'):
@@ -1226,6 +1227,40 @@ def create_app():
             
         except Exception as e:
             logger.error(f"Get bank transactions error: {e}")
+            return jsonify({"error": str(e)}), 500
+
+    @app.route('/api/receipts/<receipt_id>')
+    def api_receipt_details(receipt_id):
+        """Get detailed information for a specific receipt"""
+        try:
+            if not mongo_client.connected:
+                return jsonify({"error": "Database not connected"}), 500
+            
+            from bson import ObjectId
+            
+            # Try to find receipt by MongoDB ObjectId
+            try:
+                receipt = mongo_client.db.receipts.find_one({"_id": ObjectId(receipt_id)})
+            except:
+                # If not a valid ObjectId, try as string ID
+                receipt = mongo_client.db.receipts.find_one({"_id": receipt_id})
+            
+            if not receipt:
+                return jsonify({"error": "Receipt not found"}), 404
+            
+            # Convert ObjectId to string for JSON serialization
+            if '_id' in receipt:
+                receipt['_id'] = str(receipt['_id'])
+            
+            # Convert datetime objects to strings
+            for field in ['date', 'created_at']:
+                if field in receipt and hasattr(receipt[field], 'isoformat'):
+                    receipt[field] = receipt[field].isoformat()
+            
+            return jsonify(receipt)
+            
+        except Exception as e:
+            logger.error(f"Get receipt details error: {e}")
             return jsonify({"error": str(e)}), 500
 
     return app
