@@ -8,12 +8,18 @@ python-dateutil==2.9.0
 urllib3==2.3.0
 certifi==2024.8.30
 
-# Google Sheets Integration - Latest Versions
+# OCR Processing Dependencies
+pytesseract==0.3.13
+Pillow==11.1.0
+PyPDF2==3.0.1
+
+# Google APIs and Sheets Integration - Latest Versions
 google-auth==2.37.0
 google-auth-oauthlib==1.2.2
 google-auth-httplib2==0.2.0
 gspread==6.1.4
 google-api-python-client==2.173.0
+google-cloud-storage==2.18.0
 
 # Additional Security Updates (compatible versions)
 aiohttp==3.12.13
