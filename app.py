@@ -126,6 +126,9 @@ from google.oauth2.service_account import Credentials
 # Utilities
 from urllib.parse import urlencode
 
+# PERSISTENT MEMORY SYSTEM
+from persistent_memory import get_persistent_memory, remember_bank_connection, remember_user_setting, remember_system_setting
+
 # ============================================================================
 # FIXED CONFIGURATION
 # ============================================================================
@@ -629,7 +632,7 @@ def create_app():
     
     @app.route('/teller/save-token', methods=['POST'])
     def teller_save_token():
-        """Save Teller access token after successful connection"""
+        """Save Teller access token after successful connection with persistent memory"""
         try:
             data = request.get_json() or {}
             access_token = data.get('accessToken')
@@ -639,7 +642,7 @@ def create_app():
             if not access_token:
                 return jsonify({"error": "Missing access token"}), 400
             
-            # Store in MongoDB if available
+            # Store in MongoDB if available (existing logic)
             if mongo_client.connected:
                 token_record = {
                     "access_token": access_token,
@@ -647,16 +650,35 @@ def create_app():
                     "enrollment_id": enrollment_id,
                     "connected_at": datetime.utcnow(),
                     "environment": Config.TELLER_ENVIRONMENT,
-                    "status": "active"
+                    "status": "active",
+                    "persistent_memory": True,  # Flag for our memory system
+                    "auto_reconnect": True,
+                    "last_sync_attempt": None,
+                    "last_successful_sync": None
                 }
                 mongo_client.db.teller_tokens.insert_one(token_record)
                 logger.info(f"✅ Saved Teller token for user {user_id}")
+                
+                # PERSISTENT MEMORY: Remember this connection long-term
+                try:
+                    from persistent_memory import get_persistent_memory
+                    memory = get_persistent_memory()
+                    enrollment_data = {
+                        'enrollment_id': enrollment_id,
+                        'environment': Config.TELLER_ENVIRONMENT,
+                        'connected_via': 'teller_connect'
+                    }
+                    memory.remember_bank_connection(user_id, access_token, enrollment_data)
+                    logger.info(f"🧠 Bank connection remembered in persistent memory for {user_id}")
+                except Exception as memory_error:
+                    logger.warning(f"Failed to save to persistent memory: {memory_error}")
             
             return jsonify({
                 "success": True,
-                "message": "Bank connection saved successfully",
+                "message": "Bank connection saved successfully and remembered for future deployments",
                 "user_id": user_id,
-                "environment": Config.TELLER_ENVIRONMENT
+                "environment": Config.TELLER_ENVIRONMENT,
+                "persistent": True
             })
             
         except Exception as e:
@@ -1435,6 +1457,22 @@ def create_app():
                     })
                     logger.error(f"❌ Error syncing user {account.get('user_id')}: {e}")
             
+            # PERSISTENT MEMORY: Update connection sync status
+            try:
+                from persistent_memory import get_persistent_memory
+                memory = get_persistent_memory()
+                
+                for result in sync_results:
+                    user_id = result.get('user_id')
+                    if user_id:
+                        success = result.get('status') == 'success'
+                        error_msg = result.get('error') if not success else None
+                        memory.update_connection_sync_status(user_id, success, error_msg)
+                        
+                logger.info("🧠 Updated connection states in persistent memory")
+            except Exception as memory_error:
+                logger.warning(f"Failed to update persistent memory: {memory_error}")
+            
             # Store sync job record
             sync_job = {
                 'started_at': datetime.utcnow(),
@@ -1442,7 +1480,8 @@ def create_app():
                 'accounts_processed': len(connected_accounts),
                 'days_back': days_back,
                 'results': sync_results,
-                'status': 'completed'
+                'status': 'completed',
+                'persistent_memory_updated': True
             }
             
             mongo_client.db.bank_sync_jobs.insert_one(sync_job)
@@ -1455,7 +1494,8 @@ def create_app():
                 'accounts_processed': len(connected_accounts),
                 'sync_results': sync_results,
                 'message': f'Successfully synced {total_transactions} transactions from {len(connected_accounts)} bank accounts',
-                'date_range': f"{days_back} days back to today"
+                'date_range': f"{days_back} days back to today",
+                'persistent_memory': True  # Indicate memory system is active
             })
             
         except Exception as e:
@@ -1735,22 +1775,25 @@ def create_app():
     
     @app.route('/api/batch-upload', methods=['POST'])
     def api_batch_upload():
-        """Handle batch upload of receipt images"""
+        """Handle batch upload of receipt images for processing"""
         try:
-            if 'files' not in request.files:
-                return jsonify({"success": False, "error": "No files uploaded"}), 400
-            
-            files = request.files.getlist('files')
-            
+            # Import required modules for batch processing
             from camera_scanner import CameraScanner
             from receipt_processor import ReceiptProcessor
-            from huggingface_client import HuggingFaceClient
             
+            # Initialize processors
             camera_scanner = CameraScanner()
             receipt_processor = ReceiptProcessor()
-            ai_client = HuggingFaceClient()
             
-            # Process batch upload
+            # Check if files were uploaded
+            if 'files' not in request.files:
+                return jsonify({"error": "No files uploaded"}), 400
+            
+            files = request.files.getlist('files')
+            if not files or all(file.filename == '' for file in files):
+                return jsonify({"error": "No files selected"}), 400
+            
+            # Process uploaded files
             processed_files = camera_scanner.process_batch_upload(files)
             
             # Extract receipt data from processed files
@@ -1781,15 +1824,244 @@ def create_app():
             
             return jsonify({
                 "success": True,
-                "files_uploaded": len(processed_files),
-                "receipts_processed": len(processed_receipts),
+                "files_processed": len(processed_files),
+                "receipts_extracted": len(processed_receipts),
                 "receipts_saved": saved_count,
-                "message": f"Successfully processed {len(processed_receipts)} receipt files"
+                "message": f"Successfully processed {len(processed_files)} files and extracted {len(processed_receipts)} receipts"
             })
             
         except Exception as e:
             logger.error(f"Batch upload error: {e}")
-            return jsonify({"success": False, "error": str(e)}), 500
+            return jsonify({"error": str(e)}), 500
+
+    # =====================================================================
+    # PERSISTENT MEMORY MANAGEMENT API ENDPOINTS
+    # =====================================================================
+    
+    @app.route('/api/memory/stats')
+    def api_memory_stats():
+        """Get persistent memory statistics"""
+        try:
+            from persistent_memory import get_persistent_memory
+            memory = get_persistent_memory()
+            
+            stats = memory.get_memory_stats()
+            
+            # Add current system status
+            stats["current_system"] = {
+                "active_bank_connections": len(list(mongo_client.db.teller_tokens.find({"status": "active"}))) if mongo_client.connected else 0,
+                "receipts_processed": mongo_client.db.receipts.count_documents({}) if mongo_client.connected else 0,
+                "last_processing_job": None
+            }
+            
+            # Get last processing job
+            if mongo_client.connected:
+                last_job = mongo_client.db.processing_jobs.find_one(
+                    {},
+                    sort=[("started_at", -1)]
+                )
+                if last_job:
+                    stats["current_system"]["last_processing_job"] = {
+                        "started_at": last_job.get("started_at").isoformat() if last_job.get("started_at") else None,
+                        "status": last_job.get("status"),
+                        "receipts_found": last_job.get("final_results", {}).get("receipts_found", 0)
+                    }
+            
+            return jsonify(stats)
+            
+        except Exception as e:
+            logger.error(f"Memory stats error: {e}")
+            return jsonify({"error": str(e)}), 500
+    
+    @app.route('/api/memory/user-settings', methods=['GET', 'POST'])
+    def api_user_settings():
+        """Get or update user settings"""
+        try:
+            from persistent_memory import get_persistent_memory
+            memory = get_persistent_memory()
+            
+            user_id = request.args.get('user_id', 'default')
+            
+            if request.method == 'GET':
+                # Get user settings
+                settings = memory.get_user_settings(user_id)
+                return jsonify({
+                    "success": True,
+                    "settings": {
+                        "user_id": settings.user_id,
+                        "email_notifications": settings.email_notifications,
+                        "processing_frequency": settings.processing_frequency,
+                        "auto_process_receipts": settings.auto_process_receipts,
+                        "default_receipt_category": settings.default_receipt_category,
+                        "amount_tolerance": settings.amount_tolerance,
+                        "date_tolerance_days": settings.date_tolerance_days,
+                        "preferred_export_format": settings.preferred_export_format,
+                        "theme": settings.theme,
+                        "dashboard_layout": settings.dashboard_layout,
+                        "language": settings.language,
+                        "timezone": settings.timezone,
+                        "created_at": settings.created_at.isoformat() if settings.created_at else None,
+                        "updated_at": settings.updated_at.isoformat() if settings.updated_at else None
+                    }
+                })
+            
+            else:  # POST - Update settings
+                data = request.get_json() or {}
+                
+                # Update individual settings
+                for key, value in data.items():
+                    if key != 'user_id':  # Don't allow changing user_id
+                        success = memory.update_user_setting(user_id, key, value)
+                        if not success:
+                            return jsonify({"error": f"Failed to update {key}"}), 500
+                
+                return jsonify({
+                    "success": True,
+                    "message": f"Updated {len(data)} user settings",
+                    "updated_settings": list(data.keys())
+                })
+                
+        except Exception as e:
+            logger.error(f"User settings error: {e}")
+            return jsonify({"error": str(e)}), 500
+    
+    @app.route('/api/memory/system-settings', methods=['GET', 'POST'])
+    def api_system_settings():
+        """Get or update system settings"""
+        try:
+            from persistent_memory import get_persistent_memory
+            memory = get_persistent_memory()
+            
+            if request.method == 'GET':
+                # Get system settings
+                settings = memory.get_system_settings()
+                return jsonify({
+                    "success": True,
+                    "settings": {
+                        "setting_id": settings.setting_id,
+                        "max_concurrent_processing": settings.max_concurrent_processing,
+                        "processing_batch_size": settings.processing_batch_size,
+                        "default_processing_days": settings.default_processing_days,
+                        "auto_backup_enabled": settings.auto_backup_enabled,
+                        "backup_frequency": settings.backup_frequency,
+                        "maintenance_mode": settings.maintenance_mode,
+                        "debug_mode": settings.debug_mode,
+                        "auto_cleanup_old_data": settings.auto_cleanup_old_data,
+                        "data_retention_days": settings.data_retention_days,
+                        "created_at": settings.created_at.isoformat() if settings.created_at else None,
+                        "updated_at": settings.updated_at.isoformat() if settings.updated_at else None
+                    }
+                })
+            
+            else:  # POST - Update settings
+                data = request.get_json() or {}
+                
+                # Update individual settings
+                updated_count = 0
+                for key, value in data.items():
+                    if key != 'setting_id':  # Don't allow changing setting_id
+                        success = memory.update_system_setting(key, value)
+                        if success:
+                            updated_count += 1
+                
+                return jsonify({
+                    "success": True,
+                    "message": f"Updated {updated_count} system settings",
+                    "updated_settings": list(data.keys())
+                })
+                
+        except Exception as e:
+            logger.error(f"System settings error: {e}")
+            return jsonify({"error": str(e)}), 500
+    
+    @app.route('/api/memory/connections')
+    def api_memory_connections():
+        """Get remembered bank connections"""
+        try:
+            from persistent_memory import get_persistent_memory
+            memory = get_persistent_memory()
+            
+            connections = memory.get_remembered_bank_connections()
+            
+            # Add sync status information
+            for conn in connections:
+                user_id = conn.get('user_id')
+                
+                # Check for recent sync attempts
+                if mongo_client.connected:
+                    recent_sync = mongo_client.db.bank_sync_jobs.find_one(
+                        {},
+                        sort=[("started_at", -1)]
+                    )
+                    
+                    if recent_sync:
+                        conn['last_sync_job'] = {
+                            "started_at": recent_sync.get("started_at").isoformat() if recent_sync.get("started_at") else None,
+                            "status": recent_sync.get("status"),
+                            "total_transactions": recent_sync.get("total_transactions_synced", 0)
+                        }
+            
+            return jsonify({
+                "success": True,
+                "connections": connections,
+                "total_active": len([c for c in connections if c.get('status') == 'active']),
+                "total_connections": len(connections)
+            })
+            
+        except Exception as e:
+            logger.error(f"Memory connections error: {e}")
+            return jsonify({"error": str(e)}), 500
+    
+    @app.route('/api/memory/cache/<key>', methods=['GET', 'POST', 'DELETE'])
+    def api_memory_cache(key):
+        """Manage persistent cache entries"""
+        try:
+            from persistent_memory import get_persistent_memory
+            memory = get_persistent_memory()
+            
+            if request.method == 'GET':
+                # Get cached value
+                value = memory.cache_get(key)
+                if value is not None:
+                    return jsonify({
+                        "success": True,
+                        "key": key,
+                        "value": value,
+                        "found": True
+                    })
+                else:
+                    return jsonify({
+                        "success": True,
+                        "key": key,
+                        "value": None,
+                        "found": False
+                    })
+            
+            elif request.method == 'POST':
+                # Set cached value
+                data = request.get_json() or {}
+                value = data.get('value')
+                expires_minutes = data.get('expires_minutes', 60)
+                
+                success = memory.cache_set(key, value, expires_minutes)
+                return jsonify({
+                    "success": success,
+                    "key": key,
+                    "expires_minutes": expires_minutes
+                })
+            
+            elif request.method == 'DELETE':
+                # Delete cached value
+                success = memory.cache_delete(key)
+                return jsonify({
+                    "success": success,
+                    "key": key,
+                    "deleted": success
+                })
+                
+        except Exception as e:
+            logger.error(f"Memory cache error: {e}")
+            return jsonify({"error": str(e)}), 500
 
     return app
 

@@ -4,439 +4,443 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Settings - Receipt Processor</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-      .settings-container {
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 20px;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      }
-      
-      .settings-card {
-        background: white;
-        border-radius: 12px;
-        padding: 30px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        margin-bottom: 20px;
-      }
-      
-      .settings-title {
-        color: #1f2937;
-        font-size: 2rem;
-        font-weight: 700;
-        margin-bottom: 10px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-      
-      .settings-subtitle {
-        color: #6b7280;
-        margin-bottom: 30px;
-        font-size: 1.1rem;
-      }
-      
-      .form-group {
-        margin-bottom: 25px;
-      }
-      
-      .form-label {
-        display: block;
-        margin-bottom: 8px;
-        font-weight: 600;
-        color: #374151;
-      }
-      
-      .form-select {
-        width: 100%;
-        padding: 12px 16px;
-        border: 2px solid #e5e7eb;
-        border-radius: 8px;
-        font-size: 16px;
-        background: white;
-        transition: border-color 0.2s;
-      }
-      
-      .form-select:focus {
-        outline: none;
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-      }
-      
-      .form-input {
-        width: 100%;
-        padding: 12px 16px;
-        border: 2px solid #e5e7eb;
-        border-radius: 8px;
-        font-size: 16px;
-        transition: border-color 0.2s;
-      }
-      
-      .form-input:focus {
-        outline: none;
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-      }
-      
-      .btn-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        padding: 14px 28px;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: transform 0.2s, box-shadow 0.2s;
-        margin-right: 10px;
-      }
-      
-      .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-      }
-      
-      .btn-primary:disabled {
-        background: #9ca3af;
-        cursor: not-allowed;
-        transform: none;
-        box-shadow: none;
-      }
-      
-      .btn-secondary {
-        background: #f3f4f6;
-        color: #374151;
-        border: 2px solid #e5e7eb;
-        padding: 12px 24px;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-        text-decoration: none;
-        display: inline-block;
-      }
-      
-      .btn-secondary:hover {
-        background: #e5e7eb;
-        color: #1f2937;
-      }
-      
-      .current-config {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 20px;
-        margin-bottom: 25px;
-      }
-      
-      .config-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 10px;
-        font-size: 14px;
-      }
-      
-      .config-label {
-        font-weight: 600;
-        color: #374151;
-      }
-      
-      .config-value {
-        font-family: 'Monaco', 'Consolas', monospace;
-        background: #e5e7eb;
-        padding: 4px 8px;
-        border-radius: 4px;
-        color: #1f2937;
-      }
-      
-      .alert {
-        padding: 16px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        font-weight: 500;
-      }
-      
-      .alert-success {
-        background: #d1fae5;
-        color: #065f46;
-        border: 1px solid #a7f3d0;
-      }
-      
-      .alert-error {
-        background: #fee2e2;
-        color: #991b1b;
-        border: 1px solid #fca5a5;
-      }
-      
-      .alert-warning {
-        background: #fef3c7;
-        color: #92400e;
-        border: 1px solid #fcd34d;
-      }
-      
-      .help-text {
-        font-size: 14px;
-        color: #6b7280;
-        margin-top: 5px;
-      }
-      
-      .environment-description {
-        background: #f9fafb;
-        border-left: 4px solid #3b82f6;
-        padding: 15px;
-        margin: 15px 0;
-        border-radius: 0 8px 8px 0;
-      }
-      
-      .loading {
-        display: none;
-        align-items: center;
-        gap: 10px;
-        color: #6b7280;
-      }
-      
-      .spinner {
-        width: 20px;
-        height: 20px;
-        border: 2px solid #f3f4f6;
-        border-top: 2px solid #3b82f6;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-      }
-      
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
+      .settings-section { margin-bottom: 30px; }
+      .setting-item { margin-bottom: 15px; }
+      .setting-label { font-weight: 600; margin-bottom: 5px; }
+      .setting-description { font-size: 0.9em; color: #666; margin-bottom: 8px; }
+      .memory-status { padding: 10px; border-radius: 8px; margin-bottom: 20px; }
+      .memory-connected { background-color: #d1f2eb; border: 1px solid #a3e4d7; color: #0e6b56; }
+      .memory-disconnected { background-color: #fadbd8; border: 1px solid #f1948a; color: #922b21; }
+      .connection-item { padding: 12px; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 10px; }
+      .connection-active { border-color: #28a745; background-color: #f8f9fa; }
+      .connection-inactive { border-color: #ffc107; background-color: #fffbf0; }
+      .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+      .stat-card { padding: 15px; border: 1px solid #dee2e6; border-radius: 8px; text-align: center; }
+      .stat-number { font-size: 2em; font-weight: bold; color: #007bff; }
+      .stat-label { font-size: 0.9em; color: #666; }
     </style>
   </head>
   <body>
-    <div class="settings-container">
-      <div class="settings-card">
-        <h1 class="settings-title">
-          ⚙️ Environment Settings
-        </h1>
-        <p class="settings-subtitle">
-          Manage your Teller environment configuration and deployment settings.
-        </p>
-        
-        <div id="alert-container"></div>
-        
-        <div class="current-config">
-          <h3 style="margin-top: 0; color: #374151;">Current Configuration</h3>
-          <div class="config-item">
-            <span class="config-label">Teller Environment:</span>
-            <span class="config-value">{{ config.teller_environment }}</span>
-          </div>
-          <div class="config-item">
-            <span class="config-label">Webhook URL:</span>
-            <span class="config-value">{{ config.teller_webhook_url or 'Not Set' }}</span>
-          </div>
-          <div class="config-item">
-            <span class="config-label">Flask Environment:</span>
-            <span class="config-value">{{ config.flask_env }}</span>
-          </div>
-          <div class="config-item">
-            <span class="config-label">Debug Mode:</span>
-            <span class="config-value">{{ 'Enabled' if config.debug else 'Disabled' }}</span>
-          </div>
-        </div>
-        
-        <form id="environment-form">
-          <div class="form-group">
-            <label for="environment" class="form-label">Teller Environment</label>
-            <select id="environment" name="environment" class="form-select" required>
-              <option value="sandbox" {{ 'selected' if config.teller_environment == 'sandbox' else '' }}>
-                Sandbox (Testing)
-              </option>
-              <option value="development" {{ 'selected' if config.teller_environment == 'development' else '' }}>
-                Development (Local)
-              </option>
-              <option value="production" {{ 'selected' if config.teller_environment == 'production' else '' }}>
-                Production (Live)
-              </option>
-            </select>
-            <div class="help-text">Choose the environment for Teller API integration</div>
+    <div class="container mt-4">
+      <div class="row">
+        <div class="col-12">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-cog"></i> Settings & Memory Management</h1>
+            <a href="/" class="btn btn-outline-primary">
+              <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
           </div>
           
-          <div id="environment-description" class="environment-description">
-            <!-- Dynamic content based on selection -->
+          <!-- Memory Status -->
+          <div id="memory-status" class="memory-status">
+            <div class="d-flex align-items-center">
+              <i class="fas fa-brain fa-2x me-3"></i>
+              <div>
+                <h5 class="mb-1">Persistent Memory System</h5>
+                <p class="mb-0">Loading memory status...</p>
+              </div>
+            </div>
           </div>
           
-          <div id="webhook-info" class="form-group">
-            <label class="form-label">Permanent Webhook URL</label>
-            <div class="config-value" style="padding: 12px; background: #f0f9ff; border: 1px solid #0ea5e9; color: #0c4a6e;">
-              https://receipt-processor.onrender.com/teller/webhook
+          <!-- Memory Statistics -->
+          <div class="settings-section">
+            <h3><i class="fas fa-chart-bar"></i> Memory Statistics</h3>
+            <div id="memory-stats" class="stats-grid">
+              <!-- Stats will be loaded here -->
             </div>
-            <div class="help-text">✅ No ngrok needed! This permanent URL works for all environments</div>
           </div>
           
-          <div class="form-group">
-            <button type="submit" id="update-btn" class="btn-primary">
-              Update Configuration
-            </button>
-            <button type="button" id="deploy-btn" class="btn-primary" onclick="deployToRender()">
-              Deploy to Render
-            </button>
-            <div class="loading" id="loading-indicator">
-              <div class="spinner"></div>
-              <span>Updating configuration...</span>
+          <!-- User Settings -->
+          <div class="settings-section">
+            <h3><i class="fas fa-user-cog"></i> User Preferences</h3>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="setting-item">
+                  <div class="setting-label">Auto Process Receipts</div>
+                  <div class="setting-description">Automatically process new receipts as they arrive</div>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="auto_process_receipts">
+                    <label class="form-check-label" for="auto_process_receipts">Enable auto processing</label>
+                  </div>
+                </div>
+                
+                <div class="setting-item">
+                  <div class="setting-label">Processing Frequency</div>
+                  <div class="setting-description">How often to check for new receipts</div>
+                  <select class="form-select" id="processing_frequency">
+                    <option value="hourly">Every Hour</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                  </select>
+                </div>
+                
+                <div class="setting-item">
+                  <div class="setting-label">Default Receipt Category</div>
+                  <div class="setting-description">Default category for new receipts</div>
+                  <input type="text" class="form-control" id="default_receipt_category" placeholder="Business Expense">
+                </div>
+                
+                <div class="setting-item">
+                  <div class="setting-label">Amount Tolerance ($)</div>
+                  <div class="setting-description">Tolerance for matching receipt amounts with bank transactions</div>
+                  <input type="number" class="form-control" id="amount_tolerance" step="0.01" min="0">
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <div class="setting-item">
+                  <div class="setting-label">Date Tolerance (days)</div>
+                  <div class="setting-description">Number of days to search for matching bank transactions</div>
+                  <input type="number" class="form-control" id="date_tolerance_days" min="1" max="30">
+                </div>
+                
+                <div class="setting-item">
+                  <div class="setting-label">Preferred Export Format</div>
+                  <div class="setting-description">Default format for exporting data</div>
+                  <select class="form-select" id="preferred_export_format">
+                    <option value="google_sheets">Google Sheets</option>
+                    <option value="csv">CSV</option>
+                    <option value="excel">Excel</option>
+                  </select>
+                </div>
+                
+                <div class="setting-item">
+                  <div class="setting-label">Email Notifications</div>
+                  <div class="setting-description">Receive email notifications for processing updates</div>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="email_notifications">
+                    <label class="form-check-label" for="email_notifications">Enable notifications</label>
+                  </div>
+                </div>
+                
+                <div class="setting-item">
+                  <div class="setting-label">Theme</div>
+                  <div class="setting-description">Application theme preference</div>
+                  <select class="form-select" id="theme">
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                  </select>
+                </div>
+              </div>
             </div>
-            <div class="loading" id="deploy-loading-indicator">
-              <div class="spinner"></div>
-              <span>Deploying to Render...</span>
+            
+            <div class="mt-3">
+              <button class="btn btn-primary" onclick="saveUserSettings()">
+                <i class="fas fa-save"></i> Save User Settings
+              </button>
+              <button class="btn btn-outline-secondary ms-2" onclick="loadUserSettings()">
+                <i class="fas fa-refresh"></i> Reload Settings
+              </button>
             </div>
           </div>
-        </form>
-        
-        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-          <a href="/" class="btn-secondary">← Back to Dashboard</a>
+          
+          <!-- System Settings -->
+          <div class="settings-section">
+            <h3><i class="fas fa-server"></i> System Configuration</h3>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="setting-item">
+                  <div class="setting-label">Max Concurrent Processing</div>
+                  <div class="setting-description">Maximum number of simultaneous processing jobs</div>
+                  <input type="number" class="form-control" id="max_concurrent_processing" min="1" max="10">
+                </div>
+                
+                <div class="setting-item">
+                  <div class="setting-label">Processing Batch Size</div>
+                  <div class="setting-description">Number of emails to process in each batch</div>
+                  <input type="number" class="form-control" id="processing_batch_size" min="10" max="200">
+                </div>
+                
+                <div class="setting-item">
+                  <div class="setting-label">Default Processing Days</div>
+                  <div class="setting-description">Default number of days to look back for receipts</div>
+                  <input type="number" class="form-control" id="default_processing_days" min="1" max="365">
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <div class="setting-item">
+                  <div class="setting-label">Auto Backup</div>
+                  <div class="setting-description">Automatically backup settings and data</div>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="auto_backup_enabled">
+                    <label class="form-check-label" for="auto_backup_enabled">Enable auto backup</label>
+                  </div>
+                </div>
+                
+                <div class="setting-item">
+                  <div class="setting-label">Data Retention (days)</div>
+                  <div class="setting-description">How long to keep old data before automatic cleanup</div>
+                  <input type="number" class="form-control" id="data_retention_days" min="30" max="3650">
+                </div>
+                
+                <div class="setting-item">
+                  <div class="setting-label">Maintenance Mode</div>
+                  <div class="setting-description">Put system in maintenance mode</div>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="maintenance_mode">
+                    <label class="form-check-label" for="maintenance_mode">Enable maintenance mode</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-3">
+              <button class="btn btn-success" onclick="saveSystemSettings()">
+                <i class="fas fa-save"></i> Save System Settings
+              </button>
+              <button class="btn btn-outline-secondary ms-2" onclick="loadSystemSettings()">
+                <i class="fas fa-refresh"></i> Reload Settings
+              </button>
+            </div>
+          </div>
+          
+          <!-- Bank Connections -->
+          <div class="settings-section">
+            <h3><i class="fas fa-university"></i> Remembered Bank Connections</h3>
+            <div id="bank-connections">
+              <!-- Connections will be loaded here -->
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-      const environmentSelect = document.getElementById('environment');
-      const webhookGroup = document.getElementById('webhook-group');
-      const environmentDescription = document.getElementById('environment-description');
-      const form = document.getElementById('environment-form');
-      const updateBtn = document.getElementById('update-btn');
-      const deployBtn = document.getElementById('deploy-btn');
-      const loadingIndicator = document.getElementById('loading-indicator');
-      const deployLoadingIndicator = document.getElementById('deploy-loading-indicator');
-      const alertContainer = document.getElementById('alert-container');
-
-      const environmentDescriptions = {
-        sandbox: {
-          title: '🧪 Sandbox Environment',
-          description: 'Uses test data and fake transactions. Perfect for initial development and testing.',
-          features: ['✅ Test transactions', '✅ No real bank data', '✅ Unlimited testing', '✅ Permanent webhook URL']
-        },
-        development: {
-          title: '🛠️ Development Environment',
-          description: 'Real banking data with development-tier Teller API. Perfect for testing with live data.',
-          features: ['✅ Real bank connections', '✅ Live transaction data', '✅ Permanent webhook URL']
-        },
-        production: {
-          title: '🚀 Production Environment',
-          description: 'Live environment with real bank data and transactions. Enterprise-grade security.',
-          features: ['✅ Real bank accounts', '✅ Live transactions', '✅ Production security', '✅ Permanent webhook URL']
-        }
-      };
-
-      function updateEnvironmentDescription() {
-        const selected = environmentSelect.value;
-        const desc = environmentDescriptions[selected];
+      // Load initial data
+      document.addEventListener('DOMContentLoaded', function() {
+        loadMemoryStats();
+        loadUserSettings();
+        loadSystemSettings();
+        loadBankConnections();
         
-        environmentDescription.innerHTML = `
-          <h4 style="margin-top: 0; color: #1f2937;">${desc.title}</h4>
-          <p style="margin-bottom: 10px; color: #4b5563;">${desc.description}</p>
-          <ul style="margin: 0; padding-left: 20px; color: #6b7280;">
-            ${desc.features.map(feature => `<li>${feature}</li>`).join('')}
-          </ul>
-        `;
-        
-        // Webhook info is always visible since we use permanent URLs
-        // No need to toggle webhook input anymore
-      }
-
-      function showAlert(message, type = 'success') {
-        const alert = document.createElement('div');
-        alert.className = `alert alert-${type}`;
-        alert.textContent = message;
-        
-        alertContainer.innerHTML = '';
-        alertContainer.appendChild(alert);
-        
-        // Auto-remove after 5 seconds
-        setTimeout(() => {
-          alert.remove();
-        }, 5000);
-      }
-
-      environmentSelect.addEventListener('change', updateEnvironmentDescription);
-
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        updateBtn.style.display = 'none';
-        loadingIndicator.style.display = 'flex';
-        
-        const formData = new FormData(form);
-        const data = {
-          environment: formData.get('environment'),
-          webhook_url: formData.get('webhook_url')
-        };
-        
-        try {
-          const response = await fetch('/api/update-environment', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(data)
-          });
-          
-          const result = await response.json();
-          
-          if (result.success) {
-            showAlert(result.message, 'success');
-            
-            // Update current config display
-            setTimeout(() => {
-              location.reload();
-            }, 2000);
-          } else {
-            showAlert(result.error || 'Failed to update configuration', 'error');
-          }
-          
-        } catch (error) {
-          console.error('Error:', error);
-          showAlert('Network error: ' + error.message, 'error');
-        } finally {
-          updateBtn.style.display = 'inline-block';
-          loadingIndicator.style.display = 'none';
-        }
+        // Auto-refresh every 30 seconds
+        setInterval(loadMemoryStats, 30000);
       });
-
-      // Deploy to Render function
-      window.deployToRender = async function() {
-        deployBtn.style.display = 'none';
-        deployLoadingIndicator.style.display = 'flex';
-        
+      
+      async function loadMemoryStats() {
         try {
-          const response = await fetch('/api/deploy-environment', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              message: 'Deploy environment configuration changes from settings UI'
-            })
-          });
+          const response = await fetch('/api/memory/stats');
+          const data = await response.json();
           
-          const result = await response.json();
+          const statusDiv = document.getElementById('memory-status');
+          const statsDiv = document.getElementById('memory-stats');
           
-          if (result.success) {
-            showAlert('🚀 ' + result.message, 'success');
+          if (data.connected) {
+            statusDiv.className = 'memory-status memory-connected';
+            statusDiv.innerHTML = `
+              <div class="d-flex align-items-center">
+                <i class="fas fa-brain fa-2x me-3"></i>
+                <div>
+                  <h5 class="mb-1">Persistent Memory System - Connected</h5>
+                  <p class="mb-0">Database: ${data.database} | Last updated: ${new Date(data.last_updated).toLocaleString()}</p>
+                </div>
+              </div>
+            `;
+            
+            statsDiv.innerHTML = `
+              <div class="stat-card">
+                <div class="stat-number">${data.collections.user_settings}</div>
+                <div class="stat-label">User Settings</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number">${data.collections.active_bank_connections}</div>
+                <div class="stat-label">Bank Connections</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number">${data.current_system.receipts_processed}</div>
+                <div class="stat-label">Receipts Processed</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number">${data.collections.cache_entries}</div>
+                <div class="stat-label">Cache Entries</div>
+              </div>
+            `;
           } else {
-            showAlert(result.error || 'Deployment failed', 'error');
+            statusDiv.className = 'memory-status memory-disconnected';
+            statusDiv.innerHTML = `
+              <div class="d-flex align-items-center">
+                <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                <div>
+                  <h5 class="mb-1">Persistent Memory System - Disconnected</h5>
+                  <p class="mb-0">Error: ${data.error || 'Unknown connection error'}</p>
+                </div>
+              </div>
+            `;
           }
           
         } catch (error) {
-          console.error('Deploy error:', error);
-          showAlert('Network error: ' + error.message, 'error');
-        } finally {
-          deployBtn.style.display = 'inline-block';
-          deployLoadingIndicator.style.display = 'none';
+          console.error('Failed to load memory stats:', error);
         }
       }
-
-      // Initialize on page load
-      updateEnvironmentDescription();
+      
+      async function loadUserSettings() {
+        try {
+          const response = await fetch('/api/memory/user-settings?user_id=default');
+          const data = await response.json();
+          
+          if (data.success) {
+            const settings = data.settings;
+            
+            document.getElementById('auto_process_receipts').checked = settings.auto_process_receipts;
+            document.getElementById('processing_frequency').value = settings.processing_frequency;
+            document.getElementById('default_receipt_category').value = settings.default_receipt_category;
+            document.getElementById('amount_tolerance').value = settings.amount_tolerance;
+            document.getElementById('date_tolerance_days').value = settings.date_tolerance_days;
+            document.getElementById('preferred_export_format').value = settings.preferred_export_format;
+            document.getElementById('email_notifications').checked = settings.email_notifications;
+            document.getElementById('theme').value = settings.theme;
+          }
+          
+        } catch (error) {
+          console.error('Failed to load user settings:', error);
+        }
+      }
+      
+      async function saveUserSettings() {
+        try {
+          const settings = {
+            auto_process_receipts: document.getElementById('auto_process_receipts').checked,
+            processing_frequency: document.getElementById('processing_frequency').value,
+            default_receipt_category: document.getElementById('default_receipt_category').value,
+            amount_tolerance: parseFloat(document.getElementById('amount_tolerance').value),
+            date_tolerance_days: parseInt(document.getElementById('date_tolerance_days').value),
+            preferred_export_format: document.getElementById('preferred_export_format').value,
+            email_notifications: document.getElementById('email_notifications').checked,
+            theme: document.getElementById('theme').value
+          };
+          
+          const response = await fetch('/api/memory/user-settings?user_id=default', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(settings)
+          });
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            alert('✅ User settings saved successfully!');
+          } else {
+            alert('❌ Failed to save user settings: ' + data.error);
+          }
+          
+        } catch (error) {
+          console.error('Failed to save user settings:', error);
+          alert('❌ Failed to save user settings');
+        }
+      }
+      
+      async function loadSystemSettings() {
+        try {
+          const response = await fetch('/api/memory/system-settings');
+          const data = await response.json();
+          
+          if (data.success) {
+            const settings = data.settings;
+            
+            document.getElementById('max_concurrent_processing').value = settings.max_concurrent_processing;
+            document.getElementById('processing_batch_size').value = settings.processing_batch_size;
+            document.getElementById('default_processing_days').value = settings.default_processing_days;
+            document.getElementById('auto_backup_enabled').checked = settings.auto_backup_enabled;
+            document.getElementById('data_retention_days').value = settings.data_retention_days;
+            document.getElementById('maintenance_mode').checked = settings.maintenance_mode;
+          }
+          
+        } catch (error) {
+          console.error('Failed to load system settings:', error);
+        }
+      }
+      
+      async function saveSystemSettings() {
+        try {
+          const settings = {
+            max_concurrent_processing: parseInt(document.getElementById('max_concurrent_processing').value),
+            processing_batch_size: parseInt(document.getElementById('processing_batch_size').value),
+            default_processing_days: parseInt(document.getElementById('default_processing_days').value),
+            auto_backup_enabled: document.getElementById('auto_backup_enabled').checked,
+            data_retention_days: parseInt(document.getElementById('data_retention_days').value),
+            maintenance_mode: document.getElementById('maintenance_mode').checked
+          };
+          
+          const response = await fetch('/api/memory/system-settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(settings)
+          });
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            alert('✅ System settings saved successfully!');
+          } else {
+            alert('❌ Failed to save system settings: ' + data.error);
+          }
+          
+        } catch (error) {
+          console.error('Failed to save system settings:', error);
+          alert('❌ Failed to save system settings');
+        }
+      }
+      
+      async function loadBankConnections() {
+        try {
+          const response = await fetch('/api/memory/connections');
+          const data = await response.json();
+          
+          const connectionsDiv = document.getElementById('bank-connections');
+          
+          if (data.success && data.connections.length > 0) {
+            connectionsDiv.innerHTML = data.connections.map(conn => `
+              <div class="connection-item ${conn.status === 'active' ? 'connection-active' : 'connection-inactive'}">
+                <div class="row align-items-center">
+                  <div class="col-md-6">
+                    <h6 class="mb-1">
+                      <i class="fas fa-university"></i> 
+                      User: ${conn.user_id}
+                    </h6>
+                    <small class="text-muted">
+                      Connected: ${new Date(conn.connected_at).toLocaleString()}
+                    </small>
+                  </div>
+                  <div class="col-md-3">
+                    <span class="badge ${conn.status === 'active' ? 'bg-success' : 'bg-warning'}">
+                      ${conn.status.toUpperCase()}
+                    </span>
+                    <br>
+                    <small class="text-muted">${conn.environment}</small>
+                  </div>
+                  <div class="col-md-3">
+                    ${conn.last_sync_job ? `
+                      <small>
+                        Last Sync: ${conn.last_sync_job.total_transactions} transactions<br>
+                        ${new Date(conn.last_sync_job.started_at).toLocaleString()}
+                      </small>
+                    ` : '<small class="text-muted">No sync data</small>'}
+                  </div>
+                </div>
+              </div>
+            `).join('');
+          } else {
+            connectionsDiv.innerHTML = `
+              <div class="text-center py-5 text-muted">
+                <i class="fas fa-university fa-3x mb-3 opacity-50"></i>
+                <h6>No Bank Connections Remembered</h6>
+                <p>Connect your bank accounts and they will be remembered across deployments</p>
+                <a href="/connect" class="btn btn-primary">
+                  <i class="fas fa-plus"></i> Connect Bank Account
+                </a>
+              </div>
+            `;
+          }
+          
+        } catch (error) {
+          console.error('Failed to load bank connections:', error);
+        }
+      }
     </script>
   </body>
 </html> 
