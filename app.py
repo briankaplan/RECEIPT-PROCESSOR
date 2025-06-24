@@ -922,6 +922,8 @@ def create_app():
                 }
             })
             
+            # Import ObjectId locally to avoid scope issues
+            from bson import ObjectId
             mongo_client.db.processing_jobs.update_one(
                 {"_id": ObjectId(job_id)},
                 {"$set": processing_results}
