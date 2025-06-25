@@ -22,7 +22,7 @@ services:
       - key: DEBUG
         value: "false"
       - key: SECRET_KEY
-        value: receipt_processor_super_secret_key_change_in_production_2024
+        sync: false  # Set in Render dashboard
       - key: UPLOAD_FOLDER
         value: uploads
       - key: MAX_CONTENT_LENGTH
@@ -32,9 +32,9 @@ services:
       
       # MongoDB Database
       - key: MONGO_URI
-        value: "mongodb+srv://kaplanbrian:tixvob-7Nefza-pijtaq@expense.1q8c63f.mongodb.net/?retryWrites=true&w=majority&appName=Expense"
+        sync: false  # Set in Render dashboard
       - key: MONGODB_URI
-        value: "mongodb+srv://kaplanbrian:tixvob-7Nefza-pijtaq@expense.1q8c63f.mongodb.net/?retryWrites=true&w=majority&appName=Expense"
+        sync: false  # Set in Render dashboard
       - key: MONGODB_DATABASE
         value: expense
       - key: MONGODB_COLLECTION
@@ -58,7 +58,7 @@ services:
       
       # Teller Banking API
       - key: TELLER_APPLICATION_ID
-        value: app_pbvpiocruhfnvkhf1k000
+        sync: false  # Set in Render dashboard
       - key: TELLER_ENVIRONMENT
         value: development
       - key: TELLER_API_URL
@@ -68,31 +68,41 @@ services:
       - key: TELLER_WEBHOOK_URL
         value: https://receipt-processor.onrender.com/teller/webhook
       - key: TELLER_SIGNING_SECRET
-        value: q7xdfvnwf6nbajjghgzbnzaut4tm4sck
+        sync: false  # Set in Render dashboard
       - key: TELLER_SIGNING_KEY
-        value: "cXLqnm451Bi1sMtKTPWOwdFz3gMtNYPn2hVkgXxy9gc="
+        sync: false  # Set in Render dashboard
       - key: TELLER_CERT_PATH
         value: /etc/secrets/teller_certificate.b64
       - key: TELLER_KEY_PATH
         value: /etc/secrets/teller_private_key.b64
       
-      # AI Services
+      # AI Services - HUGGINGFACE ONLY (NO OPENAI)
       - key: HUGGINGFACE_API_KEY
-        value: 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
-      - key: OPENAI_API_KEY
-        value: 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
+        sync: false  # Set in Render dashboard
       
-      # Cloudflare R2 Storage
+      # Cost Protection Limits (RECOMMENDED FOR MONTHLY PLAN)
+      - key: HUGGINGFACE_DAILY_LIMIT
+        value: "200"  # Conservative daily limit
+      - key: HUGGINGFACE_MONTHLY_LIMIT
+        value: "5000"  # Monthly safety limit
+      - key: AI_REQUEST_TIMEOUT
+        value: "15"  # Shorter timeouts
+      - key: AI_RETRY_ATTEMPTS
+        value: "1"  # Fewer retries
+      - key: FALLBACK_TO_RULES_THRESHOLD
+        value: "0.8"  # Fall back to rules at 80% usage
+      
+      # Cloudflare R2 Storage - SET IN RENDER DASHBOARD
       - key: R2_ENDPOINT
-        value: https://33950783df90825d4b885322a8ea2f2f.r2.cloudflarestorage.com
+        sync: false  # Set in Render dashboard
       - key: R2_ACCESS_KEY
-        value: 154b6375ad63f0852482f4551047785c
+        sync: false  # Set in Render dashboard
       - key: R2_SECRET_KEY
-        value: 1f77f1dd75b20bbd913e0dab79057e10b96f6ca69197c6476165880dfba692a5
+        sync: false  # Set in Render dashboard
       - key: R2_BUCKET
         value: expensesbk
       - key: R2_PUBLIC_URL
-        value: https://pub-33950783df90825d4b885322a8ea2f2f.r2.dev
+        sync: false  # Set in Render dashboard
       
       # Gmail API Configuration - Account 1 (Personal)
       - key: GMAIL_ACCOUNT_1_EMAIL
@@ -138,9 +148,9 @@ services:
       - key: GOOGLE_APPLICATION_CREDENTIALS
         value: /etc/secrets/service_account.b64
       - key: GOOGLE_VISION_API_KEY
-        value: AIzaSyBZ9qhpU4qn0QzUPLs4tZfKII52BEOELzc
+        sync: false  # Set in Render dashboard
       - key: GOOGLE_SHEETS_ID
-        value: 1Pa4prgHYiYnxSD1qw88HT-cnwhG4u74uCIN4v8rS18Y
+        sync: false  # Set in Render dashboard
       - key: GOOGLE_SHEETS_NAME
         value: "Receipt Dashboard"
 

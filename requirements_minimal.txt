@@ -28,15 +28,32 @@ itsdangerous==2.2.0
 click==8.1.8
 blinker==1.9.0
 
-# Image processing and OCR (optional but imported by app.py)
+# Image processing and OCR (CRITICAL for camera scanner)
 Pillow==11.0.0
 pytesseract==0.3.13
 
-# PDF processing (optional but imported by app.py)
+# PDF processing (CRITICAL for receipt processing)
 PyPDF2==3.0.1
 
 # HTML parsing for email receipt detection
 beautifulsoup4==4.12.2
+
+# Email processing (needed for enhanced email scanning)
+lxml==5.4.0
+
+# Enhanced file processing 
+python-magic==0.4.27
+
+# Data processing and analysis
+pandas==2.3.0
+
+# Additional HTTP and async support
+aiohttp==3.12.13
+aiofiles==23.2.1
+
+# Computer vision for ultra-fast receipt scanner
+opencv-python==4.10.0.84
+numpy==1.26.4
 
 # AI Services (FREE & POWERFUL)
 # Hugging Face API only - no OpenAI needed!

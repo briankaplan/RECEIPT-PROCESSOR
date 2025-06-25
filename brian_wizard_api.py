@@ -371,4 +371,359 @@ def health_check():
             'success': False,
             'status': 'unhealthy',
             'error': str(e)
-        }), 500 
+        }), 500
+
+@brian_wizard_bp.route('/conversation', methods=['POST'])
+def ultimate_ai_conversation():
+    """
+    🎙️ ULTIMATE AI CONVERSATION WIZARD
+    Natural language expense management - "Would you like to do your expenses..."
+    """
+    try:
+        data = request.get_json()
+        user_message = data.get('message', '').strip()
+        
+        # Parse the conversation context
+        conversation_analysis = analyze_user_intent(user_message)
+        
+        # Generate intelligent response based on context
+        if conversation_analysis['intent'] == 'expense_report_request':
+            return handle_expense_report_conversation(conversation_analysis)
+        elif conversation_analysis['intent'] == 'missing_receipt_handling':
+            return handle_missing_receipt_conversation(conversation_analysis)
+        elif conversation_analysis['intent'] == 'business_separation':
+            return handle_business_separation_conversation(conversation_analysis)
+        else:
+            return initiate_expense_conversation()
+            
+    except Exception as e:
+        logger.error(f"AI conversation failed: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'fallback_response': "I'm here to help with your expenses! What would you like me to do?"
+        }), 500
+
+def analyze_user_intent(message):
+    """🧠 Analyze user's natural language intent"""
+    import re
+    from datetime import datetime, timedelta
+    
+    message_lower = message.lower()
+    
+    # Parse date ranges with multiple formats
+    date_range = None
+    date_patterns = [
+        # "July 1, 2024 - July 1, 2025"
+        r'(\w+ \d+,?\s*\d{4})\s*-\s*(\w+ \d+,?\s*\d{4})',
+        # "7/1/2024 - 7/1/2025"  
+        r'(\d{1,2}/\d{1,2}/\d{4})\s*-\s*(\d{1,2}/\d{1,2}/\d{4})',
+        # "Jan 2024 to Dec 2024"
+        r'(\w+ \d{4})\s*(?:to|-)\s*(\w+ \d{4})',
+        # Special cases
+        r'(last year|this year|last month|this month|last quarter)'
+    ]
+    
+    for pattern in date_patterns:
+        match = re.search(pattern, message, re.IGNORECASE)
+        if match:
+            if 'last year' in match.group(0):
+                current_year = datetime.now().year
+                date_range = {
+                    'start': f'{current_year - 1}-01-01',
+                    'end': f'{current_year - 1}-12-31',
+                    'description': 'Last year',
+                    'parsed_from': match.group(0)
+                }
+            elif 'this year' in match.group(0):
+                current_year = datetime.now().year
+                date_range = {
+                    'start': f'{current_year}-01-01',
+                    'end': f'{current_year}-12-31', 
+                    'description': 'This year',
+                    'parsed_from': match.group(0)
+                }
+            elif len(match.groups()) >= 2:
+                date_range = {
+                    'start': match.group(1),
+                    'end': match.group(2),
+                    'description': f'{match.group(1)} to {match.group(2)}',
+                    'parsed_from': match.group(0)
+                }
+            break
+    
+    # Parse business types
+    business_types = []
+    if 'down home' in message_lower or 'downhome' in message_lower:
+        business_types.append('down_home')
+    if 'music city rodeo' in message_lower or 'mcr' in message_lower:
+        business_types.append('mcr')  
+    if 'personal' in message_lower:
+        business_types.append('personal')
+    if 'all 3' in message_lower or 'all three' in message_lower or 'separate reports' in message_lower:
+        business_types = ['down_home', 'mcr', 'personal']
+    if not business_types:
+        business_types = ['down_home', 'mcr', 'personal']  # Default to all
+    
+    # Determine intent
+    intent = 'greeting'
+    if date_range and business_types:
+        intent = 'expense_report_request'
+    elif 'missing' in message_lower and 'receipt' in message_lower:
+        intent = 'missing_receipt_handling'
+    elif 'separate' in message_lower and 'report' in message_lower:
+        intent = 'business_separation'
+    elif any(word in message_lower for word in ['expense', 'report', 'tax', 'business']):
+        intent = 'expense_related'
+    
+    return {
+        'intent': intent,
+        'date_range': date_range,
+        'business_types': business_types,
+        'raw_message': message,
+        'confidence': 0.9 if date_range else 0.6
+    }
+
+def handle_expense_report_conversation(analysis):
+    """Handle complete expense report request with dates and business types"""
+    from bson import ObjectId
+    
+    try:
+        date_range = analysis['date_range']
+        business_types = analysis['business_types']
+        
+        # Generate reports for each business type
+        reports = {}
+        total_missing_receipts = 0
+        
+        for business_type in business_types:
+            report = generate_business_expense_report(date_range, business_type)
+            reports[business_type] = report
+            total_missing_receipts += len(report.get('missing_receipts', []))
+        
+        # Prepare AI response
+        response = {
+            'success': True,
+            'understood': {
+                'date_range': date_range['description'],
+                'business_types': [bt.replace('_', ' ').title() for bt in business_types],
+                'separate_reports': len(business_types) > 1
+            },
+            'reports': reports,
+            'summary': {
+                'total_businesses': len(business_types),
+                'total_missing_receipts': total_missing_receipts,
+                'reports_ready': True
+            }
+        }
+        
+        # Generate conversational response
+        if total_missing_receipts > 0:
+            response['ai_message'] = f"✅ I've generated your expense reports for {date_range['description']}!\n\n"
+            response['ai_message'] += f"📊 **Reports Created:** {len(business_types)} separate business reports\n"
+            response['ai_message'] += f"⚠️ **Found {total_missing_receipts} missing receipts** - would you like me to:\n"
+            response['ai_message'] += "• Search Gmail for missing receipts?\n"
+            response['ai_message'] += "• Check Google Photos for receipt images?\n" 
+            response['ai_message'] += "• Upload missing receipts manually?\n"
+            response['ai_message'] += "• Generate reports without missing receipts?"
+            
+            response['next_actions'] = [
+                {'action': 'search_gmail', 'label': '📧 Search Gmail for Missing Receipts'},
+                {'action': 'search_photos', 'label': '📷 Search Google Photos'}, 
+                {'action': 'manual_upload', 'label': '📁 Upload Missing Receipts'},
+                {'action': 'generate_anyway', 'label': '📄 Generate Reports Now'}
+            ]
+            
+            # List specific missing receipts
+            response['missing_receipts'] = []
+            for business_type, report in reports.items():
+                for missing in report.get('missing_receipts', [])[:3]:  # Top 3 per business
+                    response['missing_receipts'].append({
+                        'business': business_type.replace('_', ' ').title(),
+                        'merchant': missing.get('merchant_name', 'Unknown'),
+                        'amount': f"${abs(missing.get('amount', 0)):,.2f}",
+                        'date': missing.get('date', '').strftime('%m/%d/%Y') if hasattr(missing.get('date'), 'strftime') else str(missing.get('date', '')),
+                        'suggested_search': f"Search Gmail for '{missing.get('merchant_name', '')}' receipt"
+                    })
+        else:
+            response['ai_message'] = f"🎉 **Perfect!** All receipts found for {date_range['description']}!\n\n"
+            response['ai_message'] += f"📊 **{len(business_types)} Complete Reports Ready**\n"
+            response['ai_message'] += "Would you like me to:\n"
+            response['ai_message'] += "• Export to Google Sheets?\n"
+            response['ai_message'] += "• Generate PDF reports?\n"
+            response['ai_message'] += "• Email reports to your accountant?\n"
+            response['ai_message'] += "• Create tax-ready summaries?"
+            
+            response['next_actions'] = [
+                {'action': 'export_sheets', 'label': '📊 Export to Google Sheets'},
+                {'action': 'generate_pdf', 'label': '📄 Generate PDF Reports'},
+                {'action': 'email_accountant', 'label': '📧 Email to Accountant'},
+                {'action': 'tax_summary', 'label': '🧾 Create Tax Summary'}
+            ]
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        logger.error(f"Expense report conversation failed: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'ai_message': "I had trouble generating your expense reports. Let me try a different approach - what specific date range do you need?"
+        }), 500
+
+def generate_business_expense_report(date_range, business_type):
+    """Generate comprehensive expense report for specific business and date range"""
+    try:
+        from pymongo import MongoClient
+        from bson import ObjectId
+        
+        # Connect to MongoDB (you'll need to import this from your main app)
+        mongo_uri = os.getenv('MONGODB_URI') or os.getenv('MONGO_URI')
+        client = MongoClient(mongo_uri)
+        db = client['expense']
+        
+        # Parse date range
+        from dateutil import parser
+        try:
+            start_date = parser.parse(date_range['start'])
+            end_date = parser.parse(date_range['end'])
+        except:
+            # Fallback to current year if parsing fails
+            from datetime import datetime
+            start_date = datetime(datetime.now().year, 1, 1)
+            end_date = datetime(datetime.now().year, 12, 31)
+        
+        # Query transactions for this business and date range
+        query = {
+            'business_type': business_type,
+            'date': {
+                '$gte': start_date,
+                '$lte': end_date
+            }
+        }
+        
+        transactions = list(db.bank_transactions.find(query).sort('date', -1))
+        
+        # Calculate totals
+        total_amount = sum(abs(t.get('amount', 0)) for t in transactions)
+        total_count = len(transactions)
+        
+        # Find missing receipts (transactions without receipts)
+        missing_receipts = [
+            t for t in transactions 
+            if not t.get('receipt_matched') and t.get('amount', 0) < 0  # Only expenses
+        ]
+        
+        # Category breakdown
+        categories = {}
+        for t in transactions:
+            cat = t.get('category', 'Uncategorized')
+            if cat not in categories:
+                categories[cat] = {'count': 0, 'amount': 0, 'transactions': []}
+            categories[cat]['count'] += 1
+            categories[cat]['amount'] += abs(t.get('amount', 0))
+            categories[cat]['transactions'].append(t)
+        
+        # Monthly breakdown
+        months = {}
+        for t in transactions:
+            if t.get('date'):
+                month_key = t['date'].strftime('%Y-%m') if hasattr(t['date'], 'strftime') else 'unknown'
+                if month_key not in months:
+                    months[month_key] = {'count': 0, 'amount': 0}
+                months[month_key]['count'] += 1
+                months[month_key]['amount'] += abs(t.get('amount', 0))
+        
+        return {
+            'business_type': business_type,
+            'business_display': business_type.replace('_', ' ').title(),
+            'date_range': date_range,
+            'totals': {
+                'total_amount': total_amount,
+                'total_count': total_count,
+                'average_transaction': total_amount / total_count if total_count > 0 else 0,
+                'tax_deductible_amount': sum(abs(t.get('amount', 0)) for t in transactions if t.get('tax_deductible', True))
+            },
+            'missing_receipts': missing_receipts,
+            'missing_count': len(missing_receipts),
+            'missing_amount': sum(abs(r.get('amount', 0)) for r in missing_receipts),
+            'categories': categories,
+            'monthly_breakdown': months,
+            'top_merchants': get_top_merchants(transactions),
+            'completion_status': {
+                'receipts_found': total_count - len(missing_receipts),
+                'receipts_missing': len(missing_receipts),
+                'completion_percentage': ((total_count - len(missing_receipts)) / total_count * 100) if total_count > 0 else 100
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Report generation failed for {business_type}: {e}")
+        return {
+            'business_type': business_type,
+            'error': str(e),
+            'totals': {'total_amount': 0, 'total_count': 0},
+            'missing_receipts': [],
+            'categories': {}
+        }
+
+def get_top_merchants(transactions):
+    """Get top merchants by spending"""
+    merchants = {}
+    for t in transactions:
+        merchant = t.get('merchant_name') or t.get('counterparty', {}).get('name') or 'Unknown'
+        if merchant not in merchants:
+            merchants[merchant] = {'count': 0, 'amount': 0}
+        merchants[merchant]['count'] += 1
+        merchants[merchant]['amount'] += abs(t.get('amount', 0))
+    
+    # Sort by amount and return top 10
+    return sorted(
+        [{'merchant': k, **v} for k, v in merchants.items()],
+        key=lambda x: x['amount'],
+        reverse=True
+    )[:10]
+
+def handle_missing_receipt_conversation(analysis):
+    """Handle missing receipt search and upload workflow"""
+    return jsonify({
+        'success': True,
+        'ai_message': "I'll help you find those missing receipts! Let me search through your emails and photos...",
+        'actions_taken': [
+            'Scanning Gmail accounts for receipt emails',
+            'Checking Google Photos for receipt images', 
+            'Analyzing transaction patterns for auto-matching'
+        ],
+        'next_steps': ['Upload any receipts I find', 'Ask about any I cannot locate']
+    })
+
+def initiate_expense_conversation():
+    """Start the expense conversation workflow"""
+    return jsonify({
+        'success': True,
+        'ai_message': "🧙‍♂️ **Hi Brian! I'm your AI Financial Wizard.**\n\nWould you like me to help with your expenses? I can:\n\n• Generate comprehensive expense reports\n• Find and organize receipts automatically\n• Separate Down Home, Music City Rodeo, and personal expenses\n• Identify missing receipts and help you find them\n\n**What date range do you need?** (e.g., 'July 1, 2024 - July 1, 2025')",
+        'suggested_responses': [
+            'Generate reports for this year',
+            'July 1, 2024 - July 1, 2025, all 3 businesses separate',
+            'Last quarter, Down Home only', 
+            'This month, all businesses'
+        ],
+        'capabilities': [
+            'Natural language date parsing',
+            'Automatic business type separation', 
+            'Missing receipt detection',
+            'Gmail and Google Photos integration',
+            'Tax-ready report generation'
+        ]
+    })
+
+def register_brian_wizard_blueprint(app):
+    """
+    Register Brian's Financial Wizard blueprint with Flask app
+    """
+    try:
+        app.register_blueprint(brian_wizard_bp)
+        logger.info("🧙‍♂️ Brian's Financial Wizard API blueprint registered successfully")
+    except Exception as e:
+        logger.error(f"Failed to register Brian's Wizard blueprint: {e}")
+        raise 

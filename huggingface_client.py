@@ -3,8 +3,9 @@ import logging
 import requests
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -26,56 +27,110 @@ class ReceiptAnalysis:
     recommendations: List[str]
     confidence_score: float
 
+@dataclass
+class UsageTracker:
+    """Track API usage to prevent unexpected costs - MONTHLY PLAN PROTECTION"""
+    daily_calls: int = 0
+    monthly_calls: int = 0
+    last_reset: datetime = None
+    last_monthly_reset: datetime = None
+    total_calls: int = 0
+    
+    def should_limit_daily(self, daily_limit: int) -> bool:
+        """Check if we should limit daily API calls"""
+        now = datetime.now()
+        if self.last_reset is None or (now - self.last_reset).days >= 1:
+            self.daily_calls = 0
+            self.last_reset = now
+        
+        return self.daily_calls >= daily_limit
+    
+    def should_limit_monthly(self, monthly_limit: int) -> bool:
+        """Check if we should limit monthly API calls - CRITICAL for monthly plan"""
+        now = datetime.now()
+        if self.last_monthly_reset is None or (now.year != self.last_monthly_reset.year or now.month != self.last_monthly_reset.month):
+            self.monthly_calls = 0
+            self.last_monthly_reset = now
+        
+        return self.monthly_calls >= monthly_limit
+    
+    def record_call(self):
+        """Record an API call"""
+        self.daily_calls += 1
+        self.monthly_calls += 1
+        self.total_calls += 1
+    
+    def get_usage_percentage(self, daily_limit: int, monthly_limit: int) -> dict:
+        """Get usage percentages for monitoring"""
+        return {
+            'daily_percentage': (self.daily_calls / daily_limit) * 100 if daily_limit > 0 else 0,
+            'monthly_percentage': (self.monthly_calls / monthly_limit) * 100 if monthly_limit > 0 else 0
+        }
+
 class HuggingFaceClient:
-    """Hugging Face AI client for intelligent receipt analysis and categorization"""
+    """Hugging Face AI client with AGGRESSIVE cost protection for monthly plans"""
     
     def __init__(self):
         self.api_key = os.getenv('HUGGINGFACE_API_KEY')
         self.base_url = "https://api-inference.huggingface.co/models"
         self.headers = {}
         
+        # AGGRESSIVE rate limiting and cost protection for monthly plan
+        from config import Config
+        self.daily_limit = getattr(Config, 'HUGGINGFACE_DAILY_LIMIT', 200)  # Much lower daily limit
+        self.monthly_limit = getattr(Config, 'HUGGINGFACE_MONTHLY_LIMIT', 5000)  # Monthly safety limit
+        self.request_timeout = getattr(Config, 'AI_REQUEST_TIMEOUT', 15)  # Shorter timeouts
+        self.retry_attempts = getattr(Config, 'AI_RETRY_ATTEMPTS', 1)  # Fewer retries
+        self.retry_delay = getattr(Config, 'AI_RETRY_DELAY', 2.0)
+        self.batch_delay = getattr(Config, 'AI_BATCH_DELAY', 1.0)  # Delay between calls
+        self.fallback_threshold = getattr(Config, 'FALLBACK_TO_RULES_THRESHOLD', 0.8)  # Early fallback
+        
+        # Usage tracking with monthly limits
+        self.usage_tracker = UsageTracker()
+        
         if self.api_key:
             self.headers["Authorization"] = f"Bearer {self.api_key}"
-            logger.info("Hugging Face API client initialized")
+            logger.info("🛡️ HuggingFace client initialized with AGGRESSIVE cost protection for monthly plan")
         else:
-            logger.warning("No Hugging Face API key found")
+            logger.warning("No Hugging Face API key found - using rule-based only")
     
     def is_connected(self) -> bool:
         """Check if Hugging Face API is available"""
         return bool(self.api_key)
     
     def categorize_expense(self, receipt_data: Dict) -> ExpenseCategory:
-        """Categorize expense using AI analysis"""
+        """Categorize expense with COST PROTECTION - falls back to rules early"""
         if not self.is_connected():
             return self._fallback_categorization(receipt_data)
         
+        # Cost protection check - use rules if approaching limits
+        if not self._should_use_ai():
+            logger.info("💰 Using rule-based categorization to protect monthly plan costs")
+            return self._fallback_categorization(receipt_data)
+        
+        # Only use AI if well within limits
         try:
-            # Prepare text for analysis
             merchant = receipt_data.get('merchant', 'Unknown')
-            amount = receipt_data.get('total_amount', 0)
+            amount = receipt_data.get('total_amount', 0.0)
             items = receipt_data.get('items', [])
             raw_text = receipt_data.get('raw_text', '')
             
-            # Create context for AI analysis
             context = self._build_context(merchant, amount, items, raw_text)
             
-            # Use text classification model for expense categorization
+            # Try ONE AI model only (not multiple) to save costs
             category_result = self._classify_expense_category(context)
-            
-            # Determine business purpose and tax implications
             business_analysis = self._analyze_business_purpose(context, category_result)
             
             return ExpenseCategory(
-                category=category_result.get('category', 'Other'),
+                category=category_result.get('category', 'Other Business Expenses'),
                 subcategory=category_result.get('subcategory', 'General'),
-                confidence=category_result.get('confidence', 0.5),
-                business_purpose=business_analysis.get('purpose', 'Personal expense'),
-                tax_deductible=business_analysis.get('tax_deductible', False),
-                description=business_analysis.get('description', f'Purchase from {merchant}')
+                confidence=category_result.get('confidence', 0.8),
+                business_purpose=business_analysis.get('purpose', 'Business expense'),
+                tax_deductible=business_analysis.get('tax_deductible', True)
             )
             
         except Exception as e:
-            logger.error(f"Error in AI categorization: {str(e)}")
+            logger.error(f"AI categorization failed: {e}")
             return self._fallback_categorization(receipt_data)
     
     def analyze_receipt_intelligence(self, receipt_data: Dict) -> ReceiptAnalysis:
@@ -145,7 +200,7 @@ class HuggingFaceClient:
         return context
     
     def _classify_expense_category(self, context: str) -> Dict:
-        """Classify expense using PREMIUM Hugging Face models"""
+        """Classify expense using PREMIUM Hugging Face models with cost protection"""
         try:
             # Define expense categories
             categories = [
@@ -156,9 +211,8 @@ class HuggingFaceClient:
             ]
             
             # Method 1: Try Llama-3.1-8B-Instruct (LATEST META MODEL!)
-            try:
-                model_url = f"{self.base_url}/meta-llama/Meta-Llama-3.1-8B-Instruct"
-                llama_prompt = f"""[INST] Classify this expense receipt into one category:
+            model_url = f"{self.base_url}/meta-llama/Meta-Llama-3.1-8B-Instruct"
+            llama_prompt = f"""[INST] Classify this expense receipt into one category:
 
 Context: {context}
 
@@ -166,86 +220,49 @@ Categories: {', '.join(categories)}
 
 Return only the category name. [/INST]"""
 
-                payload = {
-                    "inputs": llama_prompt,
-                    "parameters": {
-                        "max_new_tokens": 20,
-                        "temperature": 0.1,
-                        "do_sample": False
-                    }
+            payload = {
+                "inputs": llama_prompt,
+                "parameters": {
+                    "max_new_tokens": 20,
+                    "temperature": 0.1,
+                    "do_sample": False
                 }
-                
-                response = requests.post(model_url, headers=self.headers, json=payload, timeout=25)
-                
-                if response.status_code == 200:
-                    result = response.json()
-                    if isinstance(result, list) and len(result) > 0:
-                        generated_text = result[0].get('generated_text', '').strip()
-                        for category in categories:
-                            if category.lower() in generated_text.lower():
-                                logger.info(f"🦙 Llama-3.1 classified: {category}")
-                                return {
-                                    'category': category,
-                                    'subcategory': self._get_subcategory(category),
-                                    'confidence': 0.9
-                                }
-            except Exception as e:
-                logger.debug(f"Llama-3.1 failed: {e}")
+            }
             
-            # Method 2: DeBERTa-v3-Large-MNLI (Microsoft's BEST!)
-            try:
-                model_url = f"{self.base_url}/microsoft/deberta-v3-large-mnli"
-                
-                payload = {
-                    "inputs": context,
-                    "parameters": {
-                        "candidate_labels": categories,
-                        "multi_label": False
-                    }
-                }
-                
-                response = requests.post(model_url, headers=self.headers, json=payload, timeout=20)
-                
-                if response.status_code == 200:
-                    result = response.json()
-                    if isinstance(result, dict) and 'labels' in result:
-                        confidence = result['scores'][0] if 'scores' in result else 0.8
-                        logger.info(f"🔥 DeBERTa-v3 classified: {result['labels'][0]} (confidence: {confidence:.2f})")
+            result = self._make_request_with_limits(model_url, payload)
+            if result and isinstance(result, list) and len(result) > 0:
+                generated_text = result[0].get('generated_text', '').strip()
+                for category in categories:
+                    if category.lower() in generated_text.lower():
+                        logger.info(f"🦙 Llama-3.1 classified: {category}")
                         return {
-                            'category': result['labels'][0],
-                            'subcategory': self._get_subcategory(result['labels'][0]),
-                            'confidence': confidence
+                            'category': category,
+                            'subcategory': self._get_subcategory(category),
+                            'confidence': 0.9
                         }
-            except Exception as e:
-                logger.debug(f"DeBERTa failed: {e}")
             
-            # Method 3: BART-Large-MNLI (Reliable fallback)
-            try:
-                model_url = f"{self.base_url}/facebook/bart-large-mnli"
-                
-                payload = {
-                    "inputs": context,
-                    "parameters": {
-                        "candidate_labels": categories
-                    }
+            # Method 2: DeBERTa-v3-Large-MNLI (Microsoft's BEST!) - Only if first failed
+            model_url = f"{self.base_url}/microsoft/deberta-v3-large-mnli"
+            payload = {
+                "inputs": context,
+                "parameters": {
+                    "candidate_labels": categories,
+                    "multi_label": False
                 }
-                
-                response = requests.post(model_url, headers=self.headers, json=payload, timeout=15)
-                
-                if response.status_code == 200:
-                    result = response.json()
-                    if isinstance(result, dict) and 'labels' in result:
-                        confidence = result['scores'][0] if 'scores' in result else 0.7
-                        logger.info(f"🚀 BART-Large classified: {result['labels'][0]} (confidence: {confidence:.2f})")
-                        return {
-                            'category': result['labels'][0],
-                            'subcategory': self._get_subcategory(result['labels'][0]),
-                            'confidence': confidence
-                        }
-            except Exception as e:
-                logger.debug(f"BART failed: {e}")
+            }
             
-            # Fallback classification
+            result = self._make_request_with_limits(model_url, payload)
+            if result and isinstance(result, dict) and 'labels' in result:
+                confidence = result['scores'][0] if 'scores' in result else 0.8
+                logger.info(f"🔥 DeBERTa-v3 classified: {result['labels'][0]} (confidence: {confidence:.2f})")
+                return {
+                    'category': result['labels'][0],
+                    'subcategory': self._get_subcategory(result['labels'][0]),
+                    'confidence': confidence
+                }
+            
+            # Fallback to rule-based classification if API limits reached
+            logger.info("Using rule-based fallback due to API limits")
             return self._rule_based_classification(context)
             
         except Exception as e:
@@ -704,4 +721,95 @@ Is this business or personal? What's the likely business purpose? [/INST]"""
                 "Camera Image Processing",
                 "Receipt Analysis"
             ]
+        }
+
+    def _should_use_ai(self) -> bool:
+        """Determine if we should use AI or fall back to rules - COST PROTECTION"""
+        # Check monthly limits first (most important)
+        if self.usage_tracker.should_limit_monthly(self.monthly_limit):
+            logger.warning(f"🚫 Monthly HuggingFace limit reached ({self.monthly_limit}). Using rule-based processing.")
+            return False
+        
+        # Check daily limits
+        if self.usage_tracker.should_limit_daily(self.daily_limit):
+            logger.warning(f"🚫 Daily HuggingFace limit reached ({self.daily_limit}). Using rule-based processing.")
+            return False
+        
+        # Check if we're approaching limits (fallback early to save costs)
+        usage_stats = self.usage_tracker.get_usage_percentage(self.daily_limit, self.monthly_limit)
+        if usage_stats['daily_percentage'] >= (self.fallback_threshold * 100):
+            logger.info(f"💰 Daily usage at {usage_stats['daily_percentage']:.1f}% - switching to rule-based to save costs")
+            return False
+        
+        if usage_stats['monthly_percentage'] >= (self.fallback_threshold * 100):
+            logger.info(f"💰 Monthly usage at {usage_stats['monthly_percentage']:.1f}% - switching to rule-based to save costs")
+            return False
+        
+        return True
+
+    def _make_request_with_limits(self, url: str, payload: dict, timeout: int = None) -> Optional[dict]:
+        """Make API request with AGGRESSIVE cost protection"""
+        # Cost protection check first
+        if not self._should_use_ai():
+            return None
+        
+        timeout = timeout or self.request_timeout
+        
+        # Add delay between requests to be respectful and avoid rate limits
+        if self.batch_delay > 0:
+            time.sleep(self.batch_delay)
+        
+        for attempt in range(self.retry_attempts + 1):
+            try:
+                # Record the call attempt
+                self.usage_tracker.record_call()
+                
+                usage_stats = self.usage_tracker.get_usage_percentage(self.daily_limit, self.monthly_limit)
+                logger.info(f"🤖 HuggingFace call #{self.usage_tracker.daily_calls}/{self.daily_limit} daily, #{self.usage_tracker.monthly_calls}/{self.monthly_limit} monthly ({usage_stats['monthly_percentage']:.1f}% monthly used)")
+                
+                response = requests.post(url, headers=self.headers, json=payload, timeout=timeout)
+                
+                if response.status_code == 200:
+                    return response.json()
+                elif response.status_code == 429:  # Rate limited
+                    logger.warning(f"Rate limited by HuggingFace. Waiting {self.retry_delay * (attempt + 1)}s...")
+                    time.sleep(self.retry_delay * (attempt + 1))
+                    continue
+                else:
+                    logger.warning(f"HuggingFace API error {response.status_code}: {response.text}")
+                    return None
+                    
+            except requests.exceptions.Timeout:
+                logger.warning(f"HuggingFace API timeout on attempt {attempt + 1}")
+                if attempt < self.retry_attempts:
+                    time.sleep(self.retry_delay)
+                    continue
+                return None
+            except Exception as e:
+                logger.error(f"HuggingFace API error on attempt {attempt + 1}: {e}")
+                if attempt < self.retry_attempts:
+                    time.sleep(self.retry_delay)
+                    continue
+                return None
+        
+        return None
+
+    def get_usage_stats(self) -> Dict:
+        """Get API usage statistics for cost monitoring - MONTHLY TRACKING"""
+        usage_percentages = self.usage_tracker.get_usage_percentage(self.daily_limit, self.monthly_limit)
+        
+        return {
+            'daily_calls': self.usage_tracker.daily_calls,
+            'daily_limit': self.daily_limit,
+            'monthly_calls': self.usage_tracker.monthly_calls,
+            'monthly_limit': self.monthly_limit,
+            'total_calls': self.usage_tracker.total_calls,
+            'daily_calls_remaining': max(0, self.daily_limit - self.usage_tracker.daily_calls),
+            'monthly_calls_remaining': max(0, self.monthly_limit - self.usage_tracker.monthly_calls),
+            'daily_percentage_used': usage_percentages['daily_percentage'],
+            'monthly_percentage_used': usage_percentages['monthly_percentage'],
+            'cost_protection_active': not self._should_use_ai(),
+            'fallback_threshold': self.fallback_threshold * 100,
+            'last_reset': self.usage_tracker.last_reset.isoformat() if self.usage_tracker.last_reset else None,
+            'last_monthly_reset': self.usage_tracker.last_monthly_reset.isoformat() if self.usage_tracker.last_monthly_reset else None
         }

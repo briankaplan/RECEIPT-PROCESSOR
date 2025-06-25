@@ -101,6 +101,38 @@ class Config:
     AI_ENABLED = bool(os.environ.get('HUGGINGFACE_API_KEY'))
     AI_CONFIDENCE_THRESHOLD = 0.7
     
+    # Rate Limiting and Cost Protection
+    # AI API Rate Limits (to prevent unexpected charges)
+    HUGGINGFACE_DAILY_LIMIT = int(os.environ.get('HUGGINGFACE_DAILY_LIMIT', 200))  # MUCH LOWER: Max 200 calls/day for monthly plan
+    HUGGINGFACE_MONTHLY_LIMIT = int(os.environ.get('HUGGINGFACE_MONTHLY_LIMIT', 5000))  # Max 5000 calls/month safety
+    # NO OPENAI - REMOVED COMPLETELY
+    AI_REQUEST_TIMEOUT = int(os.environ.get('AI_REQUEST_TIMEOUT', 15))  # Shorter timeout: 15 seconds
+    AI_RETRY_ATTEMPTS = int(os.environ.get('AI_RETRY_ATTEMPTS', 1))  # Only 1 retry to save calls
+    AI_RETRY_DELAY = float(os.environ.get('AI_RETRY_DELAY', 2.0))  # Longer delay between retries
+    
+    # Processing Limits (to prevent resource abuse and costs)
+    MAX_RECEIPTS_PER_SESSION = int(os.environ.get('MAX_RECEIPTS_PER_SESSION', 50))  # MUCH LOWER: 50 receipts max
+    MAX_FILE_SIZE_MB = int(os.environ.get('MAX_FILE_SIZE_MB', 10))  # Smaller files: 10MB max
+    MAX_BATCH_SIZE = int(os.environ.get('MAX_BATCH_SIZE', 5))  # Smaller batches: 5 files max
+    
+    # Conservative AI Usage
+    AI_BATCH_DELAY = float(os.environ.get('AI_BATCH_DELAY', 1.0))  # 1 second delay between AI calls
+    FALLBACK_TO_RULES_THRESHOLD = float(os.environ.get('FALLBACK_TO_RULES_THRESHOLD', 0.8))  # Fall back to rules at 80% usage
+    
+    # API Rate Limiting
+    GMAIL_API_RATE_LIMIT = int(os.environ.get('GMAIL_API_RATE_LIMIT', 100))  # Max 100 requests/minute
+    TELLER_API_RATE_LIMIT = int(os.environ.get('TELLER_API_RATE_LIMIT', 60))  # Max 60 requests/minute
+    R2_UPLOAD_RATE_LIMIT = int(os.environ.get('R2_UPLOAD_RATE_LIMIT', 30))  # Max 30 uploads/minute
+    
+    # Security Settings
+    SESSION_TIMEOUT_HOURS = int(os.environ.get('SESSION_TIMEOUT_HOURS', 8))  # Auto-logout after 8 hours
+    MAX_LOGIN_ATTEMPTS = int(os.environ.get('MAX_LOGIN_ATTEMPTS', 5))  # Block after 5 failed attempts
+    IP_RATE_LIMIT_PER_HOUR = int(os.environ.get('IP_RATE_LIMIT_PER_HOUR', 1000))  # Max 1000 requests per IP per hour
+    
+    # Cost Monitoring Flags
+    COST_MONITORING_ENABLED = os.environ.get('COST_MONITORING_ENABLED', 'true').lower() == 'true'
+    USAGE_ALERTS_ENABLED = os.environ.get('USAGE_ALERTS_ENABLED', 'true').lower() == 'true'
+    
     @staticmethod
     def init_app(app):
         """Initialize app with configuration"""
