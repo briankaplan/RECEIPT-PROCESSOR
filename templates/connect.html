@@ -555,6 +555,14 @@
             justify-content: center;
             z-index: 10000;
             backdrop-filter: blur(10px);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .processing-overlay.show {
+            opacity: 1;
+            visibility: visible;
         }
 
         .processing-content {
@@ -564,18 +572,78 @@
             text-align: center;
             border: 1px solid var(--border-subtle);
             max-width: 400px;
+            position: relative;
         }
 
-        .processing-icon {
-            font-size: 4rem;
-            color: var(--primary-orange);
+        .processing-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--border-subtle);
+            border-top: 4px solid var(--primary-orange);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1.5rem;
+        }
+
+        .processing-text {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .processing-detail {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Sync Progress Indicators */
+        .sync-progress {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--border-subtle);
+            border-radius: 4px;
+            overflow: hidden;
             margin-bottom: 1rem;
-            animation: pulse 2s infinite;
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-orange), var(--accent-orange));
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.5s ease-in-out;
+        }
+
+        .progress-stats {
+            display: flex;
+            justify-content: space-around;
+            gap: 1rem;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .stat-item i {
+            color: var(--primary-orange);
+            font-size: 1rem;
+        }
+
+        .stat-item span {
+            font-weight: 600;
+            color: var(--text-primary);
         }
 
         .notification {
@@ -802,62 +870,6 @@
 
         .upload-instructions li {
             margin-bottom: 8px;
-        }
-
-        /* Processing Animation */
-        .processing-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-        }
-
-        .processing-overlay.show {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .processing-content {
-            background: var(--bg-card);
-            border-radius: var(--border-radius-large);
-            padding: 40px;
-            text-align: center;
-            max-width: 400px;
-        }
-
-        .processing-spinner {
-            width: 60px;
-            height: 60px;
-            border: 4px solid var(--border-light);
-            border-top: 4px solid var(--accent-blue);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 24px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .processing-text {
-            font-size: 18px;
-            font-weight: var(--font-weight-semibold);
-            margin-bottom: 8px;
-        }
-
-        .processing-detail {
-            font-size: 14px;
-            color: var(--text-secondary);
         }
     </style>
 </head>
@@ -1192,9 +1204,11 @@
             }
         }
 
-        // Sync transactions
+        // Sync transactions with real-time progress
         async function syncTransactions(userId) {
             try {
+                showProcessing('🔄 Starting Bank Sync...', 'Initializing connection to Teller API');
+                
                 const response = await fetch('/api/sync-bank-transactions', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1208,14 +1222,21 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    console.log(`📊 Synced ${result.transactions_synced || 0} transactions`);
+                    const transactionCount = result.transactions_synced || 0;
+                    const accountCount = result.accounts_synced || 0;
+                    
+                    showNotification(`✅ Sync Complete! ${transactionCount} transactions from ${accountCount} accounts`, 'success');
+                    console.log(`📊 Synced ${transactionCount} transactions from ${accountCount} accounts`);
                     return result;
                 } else {
                     throw new Error(result.error || 'Sync failed');
                 }
             } catch (error) {
                 console.error('Transaction sync failed:', error);
+                showNotification(`❌ Sync failed: ${error.message}`, 'error');
                 throw error;
+            } finally {
+                hideProcessing();
             }
         }
 
@@ -1292,11 +1313,21 @@
             }
         }
 
-        // Sync existing account
+        // Sync existing account with enhanced progress
         async function syncExistingAccount() {
-            showProcessing('Syncing Transactions...', 'Checking for new transactions');
+            showProcessing('🔄 Starting Bank Sync...', 'Loading certificates and connecting to Teller API');
             
             try {
+                // First, check certificate status
+                updateProcessingDetail('🔐 Verifying certificates...');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                updateProcessingDetail('🏦 Connecting to Teller API...');
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                updateProcessingDetail('📊 Fetching account information...');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
                 const response = await fetch('/api/sync-bank-transactions', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1304,25 +1335,44 @@
                 });
 
                 const result = await response.json();
-                hideProcessing();
                 
                 if (result.success) {
-                    showNotification(`✅ Synced ${result.transactions_synced || 0} new transactions`, 'success');
+                    const transactionCount = result.transactions_synced || 0;
+                    const accountCount = result.accounts_synced || 0;
+                    
+                    updateProcessingDetail(`✅ Sync Complete! Processed ${transactionCount} transactions from ${accountCount} accounts`);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                    showNotification(`✅ Successfully synced ${transactionCount} transactions from ${accountCount} accounts`, 'success');
                     loadConnectionStats();
                 } else {
+                    updateProcessingDetail(`❌ Sync failed: ${result.error}`);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
                     showNotification('❌ Sync failed: ' + result.error, 'error');
                 }
             } catch (error) {
-                hideProcessing();
+                updateProcessingDetail(`❌ Connection error: ${error.message}`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
                 showNotification('❌ Sync failed: ' + error.message, 'error');
+            } finally {
+                hideProcessing();
             }
         }
 
-        // Sync specific account
+        // Sync specific account with enhanced progress
         async function syncAccount(userId) {
-            showProcessing('Syncing Account...', 'Fetching latest transactions');
+            showProcessing('🔄 Syncing Account...', 'Initializing connection');
             
             try {
+                updateProcessingDetail('🔐 Loading certificates...');
+                await new Promise(resolve => setTimeout(resolve, 800));
+                
+                updateProcessingDetail('🏦 Connecting to Teller API...');
+                await new Promise(resolve => setTimeout(resolve, 1200));
+                
+                updateProcessingDetail('📊 Fetching account transactions...');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
                 const response = await fetch('/api/sync-bank-transactions', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1333,31 +1383,106 @@
                 });
 
                 const result = await response.json();
-                hideProcessing();
                 
                 if (result.success) {
-                    showNotification(`✅ Synced ${result.transactions_synced || 0} transactions`, 'success');
+                    const transactionCount = result.transactions_synced || 0;
+                    const accountCount = result.accounts_synced || 0;
+                    
+                    updateProcessingDetail(`✅ Account sync complete! ${transactionCount} transactions processed`);
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    
+                    showNotification(`✅ Synced ${transactionCount} transactions from ${accountCount} accounts`, 'success');
                     loadConnectionStats();
                     loadConnectedAccounts();
                 } else {
+                    updateProcessingDetail(`❌ Account sync failed: ${result.error}`);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
                     showNotification('❌ Sync failed: ' + result.error, 'error');
                 }
             } catch (error) {
-                hideProcessing();
+                updateProcessingDetail(`❌ Connection error: ${error.message}`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
                 showNotification('❌ Sync failed: ' + error.message, 'error');
+            } finally {
+                hideProcessing();
             }
         }
 
-        // Show processing overlay
+        // Show processing overlay with enhanced styling
         function showProcessing(title, detail) {
-            document.getElementById('processing-text').textContent = title;
-            document.getElementById('processing-detail').textContent = detail;
-            document.getElementById('processing-overlay').classList.add('show');
+            const overlay = document.getElementById('processing-overlay');
+            const titleEl = document.getElementById('processing-text');
+            const detailEl = document.getElementById('processing-detail');
+            
+            titleEl.innerHTML = title;
+            detailEl.innerHTML = detail;
+            
+            // Add progress animation if not already present
+            if (!overlay.querySelector('.sync-progress')) {
+                overlay.querySelector('.processing-content').innerHTML += `
+                    <div class="sync-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill"></div>
+                        </div>
+                        <div class="progress-stats">
+                            <span class="stat-item">
+                                <i class="fas fa-university"></i>
+                                <span id="accounts-processed">0</span> accounts
+                            </span>
+                            <span class="stat-item">
+                                <i class="fas fa-exchange-alt"></i>
+                                <span id="transactions-processed">0</span> transactions
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            overlay.classList.add('show');
+            
+            // Start progress animation
+            startProgressAnimation();
+        }
+
+        // Update processing detail with animation
+        function updateProcessingDetail(detail) {
+            const detailEl = document.getElementById('processing-detail');
+            if (detailEl) {
+                detailEl.innerHTML = detail;
+            }
+        }
+
+        // Start progress animation
+        function startProgressAnimation() {
+            const progressFill = document.querySelector('.progress-fill');
+            if (progressFill) {
+                progressFill.style.width = '0%';
+                progressFill.style.transition = 'width 0.5s ease-in-out';
+                
+                // Simulate progress
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += Math.random() * 15;
+                    if (progress > 90) progress = 90;
+                    progressFill.style.width = progress + '%';
+                    
+                    if (progress >= 90) {
+                        clearInterval(interval);
+                    }
+                }, 500);
+            }
         }
 
         // Hide processing overlay
         function hideProcessing() {
-            document.getElementById('processing-overlay').classList.remove('show');
+            const overlay = document.getElementById('processing-overlay');
+            overlay.classList.remove('show');
+            
+            // Remove progress elements
+            const progressEl = overlay.querySelector('.sync-progress');
+            if (progressEl) {
+                progressEl.remove();
+            }
         }
 
         // Show notification

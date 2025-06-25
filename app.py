@@ -2766,7 +2766,7 @@ def enhanced_bank_sync_with_certificates():
 
     @app.route('/api/sync-bank-transactions', methods=['POST'])
     def api_sync_bank_transactions():
-        """Enhanced bank sync with proper certificate handling for Render"""
+        """Enhanced bank sync with proper certificate handling for Render and real-time progress"""
         try:
             logger.info("🏦 Starting bank sync for 4 accounts")
             
@@ -2828,16 +2828,24 @@ def enhanced_bank_sync_with_certificates():
                     'success': True,
                     'message': 'No connected accounts found',
                     'synced_transactions': 0,
-                    'accounts': []
+                    'accounts': [],
+                    'sync_details': {
+                        'accounts_processed': 0,
+                        'total_transactions_found': 0,
+                        'total_transactions_saved': 0,
+                        'sync_duration_seconds': 0
+                    }
                 })
             
-            # Sync transactions for each account
+            # Sync transactions for each account with detailed progress
             total_synced = 0
+            total_found = 0
             sync_results = []
+            start_time = datetime.utcnow()
             
-            for account in accounts:
+            for i, account in enumerate(accounts):
                 try:
-                    logger.info(f"🏦 Syncing for Teller user: {account.id}")
+                    logger.info(f"🏦 Syncing account {i+1}/{len(accounts)}: {account.name}")
                     
                     # Calculate date range
                     end_date = datetime.utcnow()
@@ -2852,6 +2860,7 @@ def enhanced_bank_sync_with_certificates():
                     )
                     
                     logger.info(f"🏦 Retrieved {len(transactions)} transactions for account {account.name}")
+                    total_found += len(transactions)
                     
                     # Save transactions to database
                     saved_count = 0
@@ -2896,7 +2905,9 @@ def enhanced_bank_sync_with_certificates():
                         'account_name': account.name,
                         'bank_name': account.institution_name,
                         'transactions_found': len(transactions),
-                        'transactions_saved': saved_count
+                        'transactions_saved': saved_count,
+                        'account_number': i + 1,
+                        'total_accounts': len(accounts)
                     })
                     
                     total_synced += saved_count
@@ -2907,9 +2918,14 @@ def enhanced_bank_sync_with_certificates():
                         'account_id': account.id,
                         'account_name': account.name,
                         'bank_name': account.institution_name,
-                        'error': str(e)
+                        'error': str(e),
+                        'account_number': i + 1,
+                        'total_accounts': len(accounts)
                     })
                     continue
+            
+            # Calculate sync duration
+            sync_duration = (datetime.utcnow() - start_time).total_seconds()
             
             # Update persistent memory with connection states
             if PERSISTENT_MEMORY_AVAILABLE and persistent_memory:
@@ -2918,21 +2934,30 @@ def enhanced_bank_sync_with_certificates():
                         'last_sync': datetime.utcnow().isoformat(),
                         'accounts_synced': len(accounts),
                         'transactions_synced': total_synced,
-                        'sync_status': 'success'
+                        'sync_status': 'success',
+                        'sync_duration_seconds': sync_duration
                     })
                     logger.info("🧠 Updated connection states in persistent memory")
                 except Exception as e:
                     logger.warning(f"⚠️ Failed to update persistent memory: {e}")
             
-            logger.info(f"🎉 Bank sync completed: {total_synced} transactions from {len(accounts)} accounts")
+            logger.info(f"🎉 Bank sync completed: {total_synced} transactions from {len(accounts)} accounts in {sync_duration:.2f}s")
             
             return jsonify({
                 'success': True,
-                'message': f'Successfully synced {total_synced} transactions',
+                'message': f'Successfully synced {total_synced} transactions from {len(accounts)} accounts',
                 'synced_transactions': total_synced,
                 'accounts_synced': len(accounts),
                 'sync_results': sync_results,
-                'sync_time': datetime.utcnow().isoformat()
+                'sync_time': datetime.utcnow().isoformat(),
+                'sync_details': {
+                    'accounts_processed': len(accounts),
+                    'total_transactions_found': total_found,
+                    'total_transactions_saved': total_synced,
+                    'sync_duration_seconds': round(sync_duration, 2),
+                    'average_transactions_per_account': round(total_found / len(accounts), 1) if accounts else 0,
+                    'sync_rate_transactions_per_second': round(total_synced / sync_duration, 2) if sync_duration > 0 else 0
+                }
             })
             
         except Exception as e:
@@ -2940,7 +2965,13 @@ def enhanced_bank_sync_with_certificates():
             return jsonify({
                 'success': False,
                 'error': str(e),
-                'synced_transactions': 0
+                'synced_transactions': 0,
+                'sync_details': {
+                    'accounts_processed': 0,
+                    'total_transactions_found': 0,
+                    'total_transactions_saved': 0,
+                    'sync_duration_seconds': 0
+                }
             }), 500
 
     @app.route('/api/scan-emails', methods=['POST'])
