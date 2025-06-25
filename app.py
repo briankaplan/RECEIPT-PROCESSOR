@@ -967,6 +967,18 @@ def create_app():
             logger.error(f"Connect page error: {e}")
             return f"Connect error: {e}", 500
     
+    @app.route('/connect-teller')
+    def connect_teller():
+        """Connect Teller banks page (alias for /connect)"""
+        try:
+            connect_url = teller_client.get_connect_url("user_12345")
+            return render_template('connect.html', 
+                                 connect_url=connect_url,
+                                 config=Config)
+        except Exception as e:
+            logger.error(f"Connect Teller page error: {e}")
+            return f"Connect Teller error: {e}", 500
+    
     @app.route('/settings')
     def settings():
         """Settings page"""
@@ -5122,6 +5134,107 @@ def create_app():
                 'status': 'error',
                 'message': f'Processing failed: {str(e)}'
             }), 500
+
+    @app.route('/api/hf-receipt-processing', methods=['POST'])
+    def api_hf_receipt_processing():
+        """Process receipt using HuggingFace cloud models"""
+        try:
+            # Import HuggingFace processor
+            from huggingface_receipt_processor import create_huggingface_processor
+            
+            if 'file' not in request.files:
+                return jsonify({"error": "No file provided"}), 400
+            
+            file = request.files['file']
+            if file.filename == '':
+                return jsonify({"error": "No file selected"}), 400
+            
+            # Get optional parameters
+            model_name = request.form.get('model', 'paligemma')
+            api_token = request.form.get('api_token')  # Optional override
+            
+            # Create unique filename
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"hf_receipt_{timestamp}_{file.filename}"
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            
+            # Save uploaded file
+            file.save(filepath)
+            
+            logger.info(f"🤗 Processing receipt with HuggingFace: {filename}")
+            logger.info(f"   Model: {model_name}")
+            
+            # Initialize HuggingFace processor
+            hf_processor = create_huggingface_processor(
+                api_token=api_token,
+                model_preference=model_name
+            )
+            
+            # Process with HuggingFace cloud models
+            start_time = datetime.now()
+            result = hf_processor.process_receipt_image(filepath, model_name)
+            processing_time = (datetime.now() - start_time).total_seconds()
+            
+            # Add processing metadata
+            result['upload_metadata'] = {
+                'filename': filename,
+                'file_size': os.path.getsize(filepath),
+                'total_processing_time': round(processing_time, 3),
+                'timestamp': datetime.now().isoformat(),
+                'endpoint': 'hf-receipt-processing'
+            }
+            
+            # Save to MongoDB if processing was successful
+            if result['status'] == 'success' and mongo_client.db:
+                try:
+                    receipt_doc = {
+                        'filename': filename,
+                        'processing_method': 'huggingface_cloud',
+                        'model_used': result.get('model_used'),
+                        'confidence_score': result.get('confidence_score'),
+                        'extracted_data': result.get('extracted_data'),
+                        'raw_response': result.get('raw_response', ''),
+                        'processing_metadata': result.get('processing_metadata'),
+                        'upload_metadata': result.get('upload_metadata'),
+                        'timestamp': datetime.now(),
+                        'cloud_inference': True
+                    }
+                    
+                    collection = mongo_client.db.receipts
+                    insert_result = collection.insert_one(receipt_doc)
+                    result['database_id'] = str(insert_result.inserted_id)
+                    
+                    logger.info(f"✅ HuggingFace receipt saved to MongoDB: {insert_result.inserted_id}")
+                    
+                except Exception as db_error:
+                    logger.error(f"❌ Failed to save HF receipt to MongoDB: {str(db_error)}")
+                    result['database_error'] = str(db_error)
+            
+            # Log processing result
+            if result['status'] == 'success':
+                logger.info(f"✅ HuggingFace processing successful: {filename}")
+                logger.info(f"   Model: {result.get('model_used')}")
+                logger.info(f"   Confidence: {result.get('confidence_score')}")
+                logger.info(f"   Merchant: {result.get('extracted_data', {}).get('merchant', 'Unknown')}")
+            else:
+                logger.error(f"❌ HuggingFace processing failed: {result.get('error_message')}")
+            
+            # Clean up uploaded file
+            try:
+                os.remove(filepath)
+            except:
+                pass
+            
+            return jsonify(result)
+            
+        except ImportError:
+            return jsonify({
+                "error": "HuggingFace processor not available", 
+                "message": "Install dependencies: pip install requests python-dateutil"
+            }), 500
+        except Exception as e:
+            logger.error(f"❌ HuggingFace receipt processing error: {str(e)}")
+            return jsonify({"error": str(e)}), 500
 
     return app
 
