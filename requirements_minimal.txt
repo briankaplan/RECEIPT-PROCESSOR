@@ -16,7 +16,7 @@ google-auth-httplib2==0.2.0
 python-dateutil==2.9.0
 
 # Security and crypto
-cryptography==45.0.4
+cryptography>=42.0.0,<46.0.0
 
 # Configuration
 python-dotenv==1.1.1
@@ -30,7 +30,7 @@ blinker==1.9.0
 
 # Image processing and OCR (optional but imported by app.py)
 Pillow==11.0.0
-pytesseract==0.3.16
+pytesseract==0.3.13
 
 # PDF processing (optional but imported by app.py)
 PyPDF2==4.0.1
@@ -42,6 +42,6 @@ beautifulsoup4==4.12.2
 # Hugging Face API only - no OpenAI needed!
 
 # HTTP utilities
-urllib3==2.3.0
-charset-normalizer==3.4.2
-certifi==2024.8.30 
+urllib3>=2.0.0,<3.0.0
+charset-normalizer>=3.0.0,<4.0.0
+certifi>=2024.1.1 
