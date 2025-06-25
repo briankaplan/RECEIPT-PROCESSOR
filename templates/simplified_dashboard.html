@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simplified FinanceFlow - Clean & Fast</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --success-color: #059669;
+            --warning-color: #d97706;
+            --danger-color: #dc2626;
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --border-radius: 8px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .navbar {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 0;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            color: var(--primary-color) !important;
+            font-size: 1.5rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .status-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .action-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .action-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border-color: var(--primary-color);
+        }
+
+        .action-icon {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .action-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .action-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .status-badge.success {
+            background: #dcfce7;
+            color: var(--success-color);
+        }
+
+        .log-output {
+            background: #f1f5f9;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            color: var(--text-secondary);
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 1rem 1.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--success-color);
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--danger-color);
+        }
+
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <i class="fas fa-chart-line me-2"></i>
+                Simplified FinanceFlow
+            </div>
+            <div class="d-flex align-items-center">
+                <span class="status-badge success">
+                    <i class="fas fa-circle me-1" style="font-size: 0.5rem;"></i>
+                    All Systems Online
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Action Cards -->
+        <div class="action-grid">
+            <div class="action-card" onclick="testBankConnection()">
+                <div class="action-icon">
+                    <i class="fas fa-university"></i>
+                </div>
+                <div class="action-title">Test Bank Connection</div>
+                <div class="action-description">Verify Teller API connection and certificates</div>
+            </div>
+
+            <div class="action-card" onclick="syncBankTransactions()">
+                <div class="action-icon">
+                    <i class="fas fa-sync-alt"></i>
+                </div>
+                <div class="action-title">Sync Bank Data</div>
+                <div class="action-description">Pull latest transactions from connected accounts</div>
+            </div>
+
+            <div class="action-card" onclick="scanGmailAccounts()">
+                <div class="action-icon">
+                    <i class="fas fa-envelope"></i>
+                </div>
+                <div class="action-title">Scan Gmail</div>
+                <div class="action-description">Search all Gmail accounts for receipts</div>
+            </div>
+
+            <div class="action-card" onclick="processReceipt()">
+                <div class="action-icon">
+                    <i class="fas fa-camera"></i>
+                </div>
+                <div class="action-title">Process Receipt</div>
+                <div class="action-description">Upload and process receipt image</div>
+            </div>
+
+            <div class="action-card" onclick="debugCertificates()">
+                <div class="action-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <div class="action-title">Debug Certificates</div>
+                <div class="action-description">Check Teller certificate status and validity</div>
+            </div>
+
+            <div class="action-card" onclick="showGmailAccounts()">
+                <div class="action-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="action-title">Gmail Accounts</div>
+                <div class="action-description">View connected Gmail account status</div>
+            </div>
+        </div>
+
+        <!-- Log Output -->
+        <div class="status-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5><i class="fas fa-terminal me-2"></i>Activity Log</h5>
+                <button class="btn btn-outline-primary btn-sm" onclick="clearLog()">
+                    <i class="fas fa-trash me-1"></i> Clear
+                </button>
+            </div>
+            <div class="log-output" id="log-output">System initialized and ready...</div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        function log(message) {
+            const logOutput = document.getElementById('log-output');
+            const timestamp = new Date().toLocaleTimeString();
+            logOutput.textContent += `\n[${timestamp}] ${message}`;
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : 'exclamation'}-circle me-2"></i>${message}`;
+            
+            document.body.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        async function testBankConnection() {
+            log('Testing bank connection...');
+            try {
+                const response = await fetch('/api/bank/test', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    log(`✅ Bank connection successful - Environment: ${data.environment}`);
+                    showToast('Bank connection test passed!', 'success');
+                } else {
+                    log(`❌ Bank connection failed: ${data.error}`);
+                    showToast(`Connection failed: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Connection test error: ${error.message}`);
+                showToast('Connection test failed', 'error');
+            }
+        }
+
+        async function syncBankTransactions() {
+            log('Starting bank transaction sync...');
+            try {
+                const response = await fetch('/api/bank/sync', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ days_back: 30 })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    log(`✅ Synced ${data.transactions_synced} transactions (${data.new_transactions} new)`);
+                    showToast(`Synced ${data.transactions_synced} transactions!`, 'success');
+                } else {
+                    log(`❌ Sync failed: ${data.error}`);
+                    showToast(`Sync failed: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Sync error: ${error.message}`);
+                showToast('Sync failed', 'error');
+            }
+        }
+
+        async function scanGmailAccounts() {
+            log('Scanning Gmail accounts for receipts...');
+            try {
+                const response = await fetch('/api/gmail/scan', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    log(`✅ Found ${data.total_receipts} receipts across ${data.accounts_scanned} accounts`);
+                    showToast(`Found ${data.total_receipts} receipts!`, 'success');
+                } else {
+                    log(`❌ Gmail scan failed: ${data.error}`);
+                    showToast('Gmail scan failed', 'error');
+                }
+            } catch (error) {
+                log(`❌ Gmail scan error: ${error.message}`);
+                showToast('Gmail scan failed', 'error');
+            }
+        }
+
+        async function processReceipt() {
+            log('Processing receipt image...');
+            try {
+                const response = await fetch('/api/receipt/process', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ image_data: 'mock_image_data' })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    log(`✅ Receipt processed: ${data.merchant} - $${data.amount}`);
+                    showToast(`Receipt processed: ${data.merchant}`, 'success');
+                } else {
+                    log(`❌ Receipt processing failed: ${data.error}`);
+                    showToast('Receipt processing failed', 'error');
+                }
+            } catch (error) {
+                log(`❌ Receipt processing error: ${error.message}`);
+                showToast('Receipt processing failed', 'error');
+            }
+        }
+
+        async function debugCertificates() {
+            log('Checking certificate status...');
+            try {
+                const response = await fetch('/api/debug/certificates');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const debug = data.debug;
+                    log('📋 Certificate Debug Info:');
+                    log(`  • Cert Exists: ${debug.cert_exists ? '✅' : '❌'}`);
+                    log(`  • Key Exists: ${debug.key_exists ? '✅' : '❌'}`);
+                    log(`  • Loadable: ${debug.certificates_loadable ? '✅' : '❌'}`);
+                    log(`  • Environment: ${debug.environment}`);
+                    showToast('Certificate status checked', 'success');
+                } else {
+                    log(`❌ Certificate debug failed: ${data.error}`);
+                    showToast('Certificate debug failed', 'error');
+                }
+            } catch (error) {
+                log(`❌ Certificate debug error: ${error.message}`);
+                showToast('Certificate debug failed', 'error');
+            }
+        }
+
+        async function showGmailAccounts() {
+            log('Loading Gmail account status...');
+            try {
+                const response = await fetch('/api/gmail/accounts');
+                const data = await response.json();
+                
+                if (data.success) {
+                    log('📧 Gmail Account Status:');
+                    data.data.accounts.forEach(account => {
+                        log(`  • ${account.email} (${account.name}) - ${account.status}`);
+                    });
+                    showToast(`${data.data.accounts.length} Gmail accounts connected`, 'success');
+                } else {
+                    log(`❌ Failed to load Gmail accounts: ${data.error}`);
+                    showToast('Failed to load Gmail accounts', 'error');
+                }
+            } catch (error) {
+                log(`❌ Gmail accounts error: ${error.message}`);
+                showToast('Failed to load Gmail accounts', 'error');
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('log-output').textContent = 'Log cleared...';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            log('Simplified FinanceFlow dashboard loaded');
+        });
+    </script>
+</body>
+</html>
