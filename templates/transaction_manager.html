@@ -439,6 +439,9 @@
                 <a href="/" class="neo-btn">
                     <i class="fas fa-home"></i> Home
                 </a>
+                <button class="neo-btn theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Switch Theme">
+                    <i class="fas fa-sun" id="theme-icon"></i>
+                </button>
                 <button class="neo-btn" onclick="refreshAllData()">
                     <i class="fas fa-sync-alt"></i> Refresh
                 </button>
@@ -562,13 +565,7 @@
         let currentFilters = {};
         let allTransactions = [];
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 TransactionPro 2026 Ultimate Manager Initialized');
-            loadTransactions();
-            setupEventListeners();
-            loadStats();
-        });
+        // Initialize (removed - now handled in the theme section)
 
         function setupEventListeners() {
             // Search with debounce
@@ -738,6 +735,48 @@
             console.log('Edit transaction:', id);
             // TODO: Implement edit modal
         }
+
+        // ============================================================================
+        // 🎨 THEME SYSTEM - Light/Dark Mode Toggle
+        // ============================================================================
+        
+        function initializeTheme() {
+            // Check for saved theme preference or default to dark
+            const savedTheme = localStorage.getItem('transactionpro-theme') || 'dark';
+            setTheme(savedTheme);
+        }
+        
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            setTheme(newTheme);
+        }
+        
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('transactionpro-theme', theme);
+            
+            // Update theme icon
+            const themeIcon = document.getElementById('theme-icon');
+            if (themeIcon) {
+                if (theme === 'light') {
+                    themeIcon.className = 'fas fa-moon';
+                    themeIcon.parentElement.setAttribute('title', 'Switch to Dark Mode');
+                } else {
+                    themeIcon.className = 'fas fa-sun';
+                    themeIcon.parentElement.setAttribute('title', 'Switch to Light Mode');
+                }
+            }
+        }
+        
+        // Add theme initialization to existing DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 TransactionPro 2026 Ultimate Manager Initialized');
+            initializeTheme(); // Initialize theme first
+            loadTransactions();
+            setupEventListeners();
+            loadStats();
+        });
     </script>
 </body>
 </html> 
