@@ -145,11 +145,8 @@ class HuggingFaceClient:
         return context
     
     def _classify_expense_category(self, context: str) -> Dict:
-        """Classify expense using Hugging Face model"""
+        """Classify expense using PREMIUM Hugging Face models"""
         try:
-            # Use a general text classification model
-            model_url = f"{self.base_url}/facebook/bart-large-mnli"
-            
             # Define expense categories
             categories = [
                 "Office Supplies", "Travel and Transportation", "Meals and Entertainment",
@@ -158,23 +155,95 @@ class HuggingFaceClient:
                 "Medical and Healthcare", "Personal Expenses", "Other Business Expenses"
             ]
             
-            payload = {
-                "inputs": context,
-                "parameters": {
-                    "candidate_labels": categories
-                }
-            }
-            
-            response = requests.post(model_url, headers=self.headers, json=payload, timeout=30)
-            
-            if response.status_code == 200:
-                result = response.json()
-                if isinstance(result, dict) and 'labels' in result:
-                    return {
-                        'category': result['labels'][0],
-                        'subcategory': self._get_subcategory(result['labels'][0]),
-                        'confidence': result['scores'][0] if 'scores' in result else 0.7
+            # Method 1: Try Llama-3.1-8B-Instruct (LATEST META MODEL!)
+            try:
+                model_url = f"{self.base_url}/meta-llama/Meta-Llama-3.1-8B-Instruct"
+                llama_prompt = f"""[INST] Classify this expense receipt into one category:
+
+Context: {context}
+
+Categories: {', '.join(categories)}
+
+Return only the category name. [/INST]"""
+
+                payload = {
+                    "inputs": llama_prompt,
+                    "parameters": {
+                        "max_new_tokens": 20,
+                        "temperature": 0.1,
+                        "do_sample": False
                     }
+                }
+                
+                response = requests.post(model_url, headers=self.headers, json=payload, timeout=25)
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    if isinstance(result, list) and len(result) > 0:
+                        generated_text = result[0].get('generated_text', '').strip()
+                        for category in categories:
+                            if category.lower() in generated_text.lower():
+                                logger.info(f"🦙 Llama-3.1 classified: {category}")
+                                return {
+                                    'category': category,
+                                    'subcategory': self._get_subcategory(category),
+                                    'confidence': 0.9
+                                }
+            except Exception as e:
+                logger.debug(f"Llama-3.1 failed: {e}")
+            
+            # Method 2: DeBERTa-v3-Large-MNLI (Microsoft's BEST!)
+            try:
+                model_url = f"{self.base_url}/microsoft/deberta-v3-large-mnli"
+                
+                payload = {
+                    "inputs": context,
+                    "parameters": {
+                        "candidate_labels": categories,
+                        "multi_label": False
+                    }
+                }
+                
+                response = requests.post(model_url, headers=self.headers, json=payload, timeout=20)
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    if isinstance(result, dict) and 'labels' in result:
+                        confidence = result['scores'][0] if 'scores' in result else 0.8
+                        logger.info(f"🔥 DeBERTa-v3 classified: {result['labels'][0]} (confidence: {confidence:.2f})")
+                        return {
+                            'category': result['labels'][0],
+                            'subcategory': self._get_subcategory(result['labels'][0]),
+                            'confidence': confidence
+                        }
+            except Exception as e:
+                logger.debug(f"DeBERTa failed: {e}")
+            
+            # Method 3: BART-Large-MNLI (Reliable fallback)
+            try:
+                model_url = f"{self.base_url}/facebook/bart-large-mnli"
+                
+                payload = {
+                    "inputs": context,
+                    "parameters": {
+                        "candidate_labels": categories
+                    }
+                }
+                
+                response = requests.post(model_url, headers=self.headers, json=payload, timeout=15)
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    if isinstance(result, dict) and 'labels' in result:
+                        confidence = result['scores'][0] if 'scores' in result else 0.7
+                        logger.info(f"🚀 BART-Large classified: {result['labels'][0]} (confidence: {confidence:.2f})")
+                        return {
+                            'category': result['labels'][0],
+                            'subcategory': self._get_subcategory(result['labels'][0]),
+                            'confidence': confidence
+                        }
+            except Exception as e:
+                logger.debug(f"BART failed: {e}")
             
             # Fallback classification
             return self._rule_based_classification(context)
@@ -184,37 +253,88 @@ class HuggingFaceClient:
             return self._rule_based_classification(context)
     
     def _analyze_business_purpose(self, context: str, category_result: Dict) -> Dict:
-        """Analyze business purpose and tax implications"""
+        """Analyze business purpose using PREMIUM AI models"""
         try:
-            # Use text generation for business purpose analysis
-            model_url = f"{self.base_url}/microsoft/DialoGPT-medium"
-            
-            prompt = f"Analyze this expense for business purpose: {context[:200]}"
-            
-            payload = {
-                "inputs": prompt,
-                "parameters": {
-                    "max_length": 100,
-                    "temperature": 0.7
-                }
-            }
-            
-            response = requests.post(model_url, headers=self.headers, json=payload, timeout=30)
-            
-            if response.status_code == 200:
-                result = response.json()
-                if isinstance(result, list) and len(result) > 0:
-                    generated_text = result[0].get('generated_text', '')
-                    
-                    # Extract business purpose
-                    business_purpose = self._extract_business_purpose(generated_text, context)
-                    tax_deductible = self._determine_tax_deductibility(category_result.get('category', ''), context)
-                    
-                    return {
-                        'purpose': business_purpose,
-                        'tax_deductible': tax_deductible,
-                        'description': f"{category_result.get('category', 'Expense')} - {business_purpose}"
+            # Method 1: Try Qwen2.5-7B-Instruct (Alibaba's latest!)
+            try:
+                model_url = f"{self.base_url}/Qwen/Qwen2.5-7B-Instruct"
+                qwen_prompt = f"""<|im_start|>system
+You are a business expense analysis expert.<|im_end|>
+<|im_start|>user
+Analyze this expense and determine if it's business-related:
+
+Context: {context[:200]}
+Category: {category_result.get('category', 'Unknown')}
+
+Return: [Business/Personal] - [brief purpose]<|im_end|>
+<|im_start|>assistant"""
+
+                payload = {
+                    "inputs": qwen_prompt,
+                    "parameters": {
+                        "max_new_tokens": 50,
+                        "temperature": 0.1,
+                        "stop": ["<|im_end|>"]
                     }
+                }
+                
+                response = requests.post(model_url, headers=self.headers, json=payload, timeout=20)
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    if isinstance(result, list) and len(result) > 0:
+                        generated_text = result[0].get('generated_text', '').strip()
+                        
+                        # Extract business purpose
+                        business_purpose = self._extract_business_purpose(generated_text, context)
+                        tax_deductible = self._determine_tax_deductibility(category_result.get('category', ''), context)
+                        
+                        logger.info(f"🚀 Qwen2.5 analyzed purpose: {business_purpose}")
+                        return {
+                            'purpose': business_purpose,
+                            'tax_deductible': tax_deductible,
+                            'description': f"{category_result.get('category', 'Expense')} - {business_purpose}"
+                        }
+            except Exception as e:
+                logger.debug(f"Qwen2.5 failed: {e}")
+            
+            # Method 2: Try Llama-3.1-8B-Instruct for business analysis
+            try:
+                model_url = f"{self.base_url}/meta-llama/Meta-Llama-3.1-8B-Instruct"
+                llama_prompt = f"""[INST] Analyze this business expense:
+
+Context: {context[:200]}
+Category: {category_result.get('category', 'Unknown')}
+
+Is this business or personal? What's the likely business purpose? [/INST]"""
+
+                payload = {
+                    "inputs": llama_prompt,
+                    "parameters": {
+                        "max_new_tokens": 60,
+                        "temperature": 0.2
+                    }
+                }
+                
+                response = requests.post(model_url, headers=self.headers, json=payload, timeout=20)
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    if isinstance(result, list) and len(result) > 0:
+                        generated_text = result[0].get('generated_text', '')
+                        
+                        # Extract business purpose
+                        business_purpose = self._extract_business_purpose(generated_text, context)
+                        tax_deductible = self._determine_tax_deductibility(category_result.get('category', ''), context)
+                        
+                        logger.info(f"🦙 Llama-3.1 analyzed purpose: {business_purpose}")
+                        return {
+                            'purpose': business_purpose,
+                            'tax_deductible': tax_deductible,
+                            'description': f"{category_result.get('category', 'Expense')} - {business_purpose}"
+                        }
+            except Exception as e:
+                logger.debug(f"Llama-3.1 analysis failed: {e}")
             
             # Fallback analysis
             return self._rule_based_business_analysis(context, category_result)
