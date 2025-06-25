@@ -523,6 +523,9 @@
     </div>
 
     <script>
+        // Global variable for Teller Connect
+        let tellerConnect = null;
+        
         // Teller Connect Configuration
         const tellerConfig = {
             applicationId: 'app_pbvpiocruhfnvkhf1k000',
@@ -539,7 +542,7 @@
             },
             onFailure: (error) => {
                 console.error('❌ Teller connection failed:', error);
-                showNotification('❌ Bank connection failed: ' + error.message, 'error');
+                showNotification('❌ Bank connection failed: ' + (error?.message || 'Unknown error'), 'error');
                 hideProcessing();
             },
             onExit: (error) => {
@@ -548,16 +551,32 @@
             }
         };
 
-        // Initialize Teller Connect
-        const tellerConnect = TellerConnect(tellerConfig);
-
         // Connect to Chase Bank
         function connectChaseBank() {
             console.log('🏦 Starting Chase bank connection...');
+            
+            if (!tellerConnect) {
+                console.error('❌ Teller Connect not initialized');
+                showNotification('❌ Teller Connect not available. Please refresh the page.', 'error');
+                return;
+            }
+            
+            if (typeof TellerConnect === 'undefined') {
+                console.error('❌ Teller Connect SDK not loaded');
+                showNotification('❌ Teller Connect SDK not loaded. Please check your internet connection and refresh.', 'error');
+                return;
+            }
+            
             showProcessing('Connecting to Chase Bank...', 'Setting up secure connection');
             
-            // Launch Teller Connect
-            tellerConnect.open();
+            try {
+                // Launch Teller Connect
+                tellerConnect.open();
+            } catch (error) {
+                console.error('❌ Failed to open Teller Connect:', error);
+                hideProcessing();
+                showNotification('❌ Failed to open connection dialog: ' + error.message, 'error');
+            }
         }
 
         // Handle successful Teller connection
@@ -909,9 +928,43 @@
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🏦 Bank connection page loaded');
+            
+            // Check if Teller Connect SDK is available
+            if (typeof TellerConnect === 'undefined') {
+                console.error('❌ Teller Connect SDK not loaded - checking again in 2 seconds...');
+                setTimeout(() => {
+                    if (typeof TellerConnect === 'undefined') {
+                        console.error('❌ Teller Connect SDK still not available');
+                        showNotification('❌ Unable to load Teller Connect. Please check your internet connection and refresh.', 'error');
+                    } else {
+                        console.log('✅ Teller Connect SDK loaded successfully (delayed)');
+                        initializeTellerConnect();
+                    }
+                }, 2000);
+            } else {
+                console.log('✅ Teller Connect SDK available immediately');
+                initializeTellerConnect();
+            }
+            
             loadConnectedAccounts();
             loadConnectionStats();
         });
+
+        // Initialize Teller Connect when SDK is ready
+        function initializeTellerConnect() {
+            try {
+                if (typeof TellerConnect !== 'undefined' && TellerConnect.setup) {
+                    tellerConnect = TellerConnect.setup(tellerConfig);
+                    console.log('✅ Teller Connect initialized successfully');
+                } else {
+                    console.error('❌ TellerConnect.setup not available');
+                    throw new Error('TellerConnect.setup method not found');
+                }
+            } catch (error) {
+                console.error('❌ Teller Connect initialization failed:', error);
+                tellerConnect = null;
+            }
+        }
     </script>
 </body>
 </html>
