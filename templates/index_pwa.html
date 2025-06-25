@@ -522,7 +522,7 @@
                             +12%
                         </div>
                     </div>
-                    <div class="stat-value" id="total-transactions">{{ stats.total_transactions if stats else '1,247' }}</div>
+                    <div class="stat-value" id="total-transactions">{{ stats.total_transactions if stats else '0' }}</div>
                     <div class="stat-label">Total Transactions</div>
                 </div>
 
@@ -536,7 +536,7 @@
                             +5.2%
                         </div>
                     </div>
-                    <div class="stat-value" id="match-rate">{{ stats.match_rate if stats else '94.7%' }}</div>
+                    <div class="stat-value" id="match-rate">{{ stats.match_rate if stats else '0%' }}</div>
                     <div class="stat-label">AI Match Rate</div>
                 </div>
 
@@ -550,7 +550,7 @@
                             -8.1%
                         </div>
                     </div>
-                    <div class="stat-value" id="total-spend">{{ stats.total_spend if stats else '$47.2K' }}</div>
+                    <div class="stat-value" id="total-spend">{{ stats.total_spend if stats else '$0' }}</div>
                     <div class="stat-label">Total Spending</div>
                 </div>
 
@@ -564,7 +564,7 @@
                             -3
                         </div>
                     </div>
-                    <div class="stat-value" id="review-needed">{{ stats.review_needed if stats else '7' }}</div>
+                    <div class="stat-value" id="review-needed">{{ stats.review_needed if stats else '0' }}</div>
                     <div class="stat-label">Need Review</div>
                 </div>
 
@@ -578,7 +578,7 @@
                             Live
                         </div>
                     </div>
-                    <div class="stat-value" id="realtime-processed">{{ stats.realtime_processed if stats else '156' }}</div>
+                    <div class="stat-value" id="realtime-processed">{{ stats.realtime_processed if stats else '0' }}</div>
                     <div class="stat-label">Real-Time Processed</div>
                 </div>
             </section>
@@ -2485,14 +2485,13 @@
         function updateStatsReal(stats) {
             if (!stats) return;
             
-            // Update the stats cards with real data
+            // Update the stats cards with real data only (no fallbacks)
             const elements = {
-                'total-transactions': stats.total_transactions || TransactionState.totalTransactions,
-                'match-rate': `${Math.round((stats.match_rate || 0.947) * 100)}%`,
-                'total-spend': `$${((stats.total_spend || 47200) / 1000).toFixed(1)}K`,
-                'split-count': stats.split_count || 23,
-                'review-needed': stats.review_needed || 7,
-                'realtime-processed': stats.realtime_processed || 156
+                'total-transactions': stats.total_transactions || '0',
+                'match-rate': stats.match_rate || '0%',
+                'total-spend': stats.total_spend || '$0',
+                'review-needed': stats.review_needed || 0,
+                'realtime-processed': stats.realtime_processed || 0
             };
             
             Object.entries(elements).forEach(([id, value]) => {
@@ -2505,6 +2504,20 @@
                     }, 150);
                 }
             });
+        }
+
+        // Load real stats from API
+        async function loadRealStats() {
+            try {
+                const response = await fetch('/api/dashboard-stats');
+                const data = await response.json();
+                
+                if (data.success && data.stats) {
+                    updateStatsReal(data.stats);
+                }
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
         }
 
         // Initialize PWA
@@ -2524,6 +2537,9 @@
             updateOnlineStatus();
             window.addEventListener('online', updateOnlineStatus);
             window.addEventListener('offline', updateOnlineStatus);
+
+            // Load real stats on page load
+            loadRealStats();
         });
 
         function updateOnlineStatus() {

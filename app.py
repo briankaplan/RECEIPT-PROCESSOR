@@ -891,28 +891,57 @@ def create_app():
         try:
             import time
             
-            # Get comprehensive stats for the dashboard
+            # Initialize with zero stats - real data loaded via JavaScript
             stats = {
-                'total_transactions': 1247,
-                'match_rate': '94.7%',
-                'total_spend': '$47.2K',
-                'review_needed': 7,
-                'realtime_processed': 156
+                'total_transactions': '0',
+                'match_rate': '0%',
+                'total_spend': '$0',
+                'review_needed': 0,
+                'realtime_processed': 0
             }
             
             # Try to get real stats if MongoDB is connected
             if mongo_client.connected:
                 try:
-                    # Count real transactions
-                    total_transactions = mongo_client.db.teller_transactions.count_documents({})
+                    # Count all transactions (bank + receipts)
+                    bank_transactions = mongo_client.db.bank_transactions.count_documents({})
+                    receipts = mongo_client.db.receipts.count_documents({})
+                    total_transactions = bank_transactions + receipts
+                    
                     if total_transactions > 0:
                         stats['total_transactions'] = f"{total_transactions:,}"
-                    
-                    # Count receipts
-                    total_receipts = mongo_client.db.receipts.count_documents({})
-                    if total_receipts > 0:
-                        match_rate = (total_receipts / max(total_transactions, 1)) * 100
-                        stats['match_rate'] = f"{match_rate:.1f}%"
+                        
+                        # Calculate total spending from bank transactions
+                        pipeline = [
+                            {"$match": {"amount": {"$lt": 0}}},  # Only expenses
+                            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+                        ]
+                        result = list(mongo_client.db.bank_transactions.aggregate(pipeline))
+                        if result:
+                            total_spend = abs(result[0]['total'])
+                            if total_spend > 1000:
+                                stats['total_spend'] = f"${total_spend/1000:.1f}K"
+                            else:
+                                stats['total_spend'] = f"${total_spend:.0f}"
+                        
+                        # Calculate match rate
+                        matched_transactions = mongo_client.db.bank_transactions.count_documents({"receipt_matched": True})
+                        if bank_transactions > 0:
+                            match_rate = (matched_transactions / bank_transactions) * 100
+                            stats['match_rate'] = f"{match_rate:.1f}%"
+                        
+                        # Count items needing review
+                        review_needed = mongo_client.db.bank_transactions.count_documents({"needs_review": True})
+                        stats['review_needed'] = review_needed
+                        
+                        # Count real-time processed (recent transactions)
+                        from datetime import datetime, timedelta
+                        recent_cutoff = datetime.utcnow() - timedelta(hours=24)
+                        realtime_count = mongo_client.db.bank_transactions.count_documents({
+                            "synced_at": {"$gte": recent_cutoff}
+                        })
+                        stats['realtime_processed'] = realtime_count
+                        
                 except Exception as e:
                     logger.warning(f"Failed to get real stats: {e}")
             
@@ -4216,47 +4245,97 @@ def create_app():
 
     @app.route('/api/usage-stats')
     def api_usage_stats():
-        """Get API usage statistics to monitor costs"""
+        """Get API usage statistics with cost protection"""
         try:
-            from huggingface_client import HuggingFaceClient
+            from huggingface_client import get_usage_stats
+            return jsonify(get_usage_stats())
+        except Exception as e:
+            logger.error(f"Usage stats error: {e}")
+            return jsonify({
+                "daily_used": 0,
+                "daily_limit": 200,
+                "monthly_used": 0,
+                "monthly_limit": 5000,
+                "percentage_used": 0,
+                "cost_protection_active": True
+            })
+
+    @app.route('/api/dashboard-stats')
+    def api_dashboard_stats():
+        """Get real-time dashboard statistics"""
+        try:
+            # Initialize with zero stats
+            stats = {
+                'total_transactions': '0',
+                'match_rate': '0%',
+                'total_spend': '$0',
+                'review_needed': 0,
+                'realtime_processed': 0
+            }
             
-            hf_client = HuggingFaceClient()
-            usage_stats = hf_client.get_usage_stats()
-            
-            # Get MongoDB usage if available
-            mongo_stats = {}
+            # Try to get real stats if MongoDB is connected
             if mongo_client.connected:
                 try:
-                    # Get database stats
-                    db_stats = mongo_client.db.command("dbStats")
-                    mongo_stats = {
-                        'connected': True,
-                        'storage_size_mb': round(db_stats.get('storageSize', 0) / 1024 / 1024, 2),
-                        'data_size_mb': round(db_stats.get('dataSize', 0) / 1024 / 1024, 2),
-                        'collections': db_stats.get('collections', 0),
-                        'documents': db_stats.get('objects', 0)
-                    }
-                except:
-                    mongo_stats = {'connected': True, 'stats_unavailable': True}
-            else:
-                mongo_stats = {'connected': False}
+                    # Count all transactions (bank + receipts)
+                    bank_transactions = mongo_client.db.bank_transactions.count_documents({})
+                    receipts = mongo_client.db.receipts.count_documents({})
+                    total_transactions = bank_transactions + receipts
+                    
+                    if total_transactions > 0:
+                        stats['total_transactions'] = f"{total_transactions:,}"
+                        
+                        # Calculate total spending from bank transactions
+                        pipeline = [
+                            {"$match": {"amount": {"$lt": 0}}},  # Only expenses
+                            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+                        ]
+                        result = list(mongo_client.db.bank_transactions.aggregate(pipeline))
+                        if result:
+                            total_spend = abs(result[0]['total'])
+                            if total_spend > 1000:
+                                stats['total_spend'] = f"${total_spend/1000:.1f}K"
+                            else:
+                                stats['total_spend'] = f"${total_spend:.0f}"
+                        
+                        # Calculate match rate
+                        matched_transactions = mongo_client.db.bank_transactions.count_documents({"receipt_matched": True})
+                        if bank_transactions > 0:
+                            match_rate = (matched_transactions / bank_transactions) * 100
+                            stats['match_rate'] = f"{match_rate:.1f}%"
+                        
+                        # Count items needing review
+                        review_needed = mongo_client.db.bank_transactions.count_documents({"needs_review": True})
+                        stats['review_needed'] = review_needed
+                        
+                        # Count real-time processed (recent transactions)
+                        from datetime import datetime, timedelta
+                        recent_cutoff = datetime.utcnow() - timedelta(hours=24)
+                        realtime_count = mongo_client.db.bank_transactions.count_documents({
+                            "synced_at": {"$gte": recent_cutoff}
+                        })
+                        stats['realtime_processed'] = realtime_count
+                        
+                except Exception as e:
+                    logger.warning(f"Failed to get real stats: {e}")
             
             return jsonify({
                 "success": True,
-                "timestamp": datetime.utcnow().isoformat(),
-                "huggingface": usage_stats,
-                "mongodb": mongo_stats,
-                "rate_limits": {
-                    "max_emails_per_batch": Config.MAX_EMAILS_PER_BATCH,
-                    "max_concurrent_processing": Config.MAX_CONCURRENT_PROCESSING,
-                    "max_file_size_mb": getattr(Config, 'MAX_FILE_SIZE_MB', 16),
-                    "max_receipts_per_session": getattr(Config, 'MAX_RECEIPTS_PER_SESSION', 200)
-                }
+                "stats": stats
             })
             
         except Exception as e:
-            logger.error(f"Error getting usage stats: {e}")
-            return jsonify({"success": False, "error": str(e)}), 500
+            logger.error(f"Dashboard stats error: {e}")
+            return jsonify({
+                "success": False,
+                "error": str(e),
+                "stats": {
+                    'total_transactions': '0',
+                    'match_rate': '0%',
+                    'total_spend': '$0',
+                    'review_needed': 0,
+                    'realtime_processed': 0
+                }
+            })
 
     @app.route('/api/security-status')
     def api_security_status():
