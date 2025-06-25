@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Any
 import ssl
 from urllib.parse import urljoin
 from dataclasses import dataclass
+import tempfile
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,129 @@ class TellerAccount:
     currency: str
     institution_name: str
 
+def load_certificates_from_environment():
+    """Load certificates from environment variables (Render) or files (local)"""
+    try:
+        # First, try to get certificates from environment variables (Render)
+        cert_content = os.getenv('TELLER_CERTIFICATE_CONTENT')
+        key_content = os.getenv('TELLER_PRIVATE_KEY_CONTENT')
+        
+        if cert_content and key_content:
+            logger.info("🔐 Loading certificates from environment variables (Render)")
+            
+            # Handle base64 encoded certificates
+            if is_base64_content(cert_content):
+                import base64
+                cert_content = base64.b64decode(cert_content).decode('utf-8')
+            if is_base64_content(key_content):
+                import base64
+                key_content = base64.b64decode(key_content).decode('utf-8')
+            
+            # Validate PEM format
+            if not validate_pem_format(cert_content, 'CERTIFICATE'):
+                logger.error("❌ Invalid certificate format in environment")
+                return None, None
+            if not validate_pem_format(key_content, 'PRIVATE KEY'):
+                logger.error("❌ Invalid private key format in environment")
+                return None, None
+            
+            # Create temporary files
+            cert_temp_path, key_temp_path = create_temp_certificate_files(cert_content, key_content)
+            logger.info("✅ Certificates loaded from environment variables")
+            return cert_temp_path, key_temp_path
+        
+        # Try Render secret files at /etc/secrets/
+        render_cert_path = '/etc/secrets/teller_certificate.pem'
+        render_key_path = '/etc/secrets/teller_private_key.pem'
+        
+        if os.path.exists(render_cert_path) and os.path.exists(render_key_path):
+            logger.info("🔐 Loading certificates from Render secret files")
+            return render_cert_path, render_key_path
+        
+        # Fallback to file-based loading (local development)
+        logger.info("🔐 Loading certificates from files (local development)")
+        cert_path = os.getenv('TELLER_CERT_PATH', './credentials/teller_certificate.pem')
+        key_path = os.getenv('TELLER_KEY_PATH', './credentials/teller_private_key.pem')
+        
+        if not cert_path or not key_path:
+            logger.warning("⚠️ No certificate paths configured")
+            return None, None
+        
+        if os.path.exists(cert_path) and os.path.exists(key_path):
+            return cert_path, key_path
+        
+        return None, None
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to load certificates: {e}")
+        return None, None
+
+def is_base64_content(content: str) -> bool:
+    """Check if content appears to be base64 encoded"""
+    if not content:
+        return False
+    
+    # Basic checks for base64
+    if len(content) < 100:  # Too short to be a certificate
+        return False
+    
+    if '\n' in content or ' ' in content:  # Base64 should be single line without spaces
+        return False
+    
+    # Check if all characters are valid base64
+    base64_chars = set('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=')
+    return all(c in base64_chars for c in content)
+
+def validate_pem_format(content: str, pem_type: str) -> bool:
+    """Validate that content is properly formatted PEM"""
+    if not content:
+        return False
+    
+    begin_marker = f"-----BEGIN {pem_type}-----"
+    end_marker = f"-----END {pem_type}-----"
+    
+    if not content.startswith(begin_marker):
+        logger.error(f"❌ Missing BEGIN marker for {pem_type}")
+        return False
+    
+    if not content.rstrip().endswith(end_marker):
+        logger.error(f"❌ Missing END marker for {pem_type}")
+        return False
+    
+    # Check that there's content between markers
+    content_lines = content.split('\n')[1:-1]  # Remove first and last line (markers)
+    if not any(line.strip() for line in content_lines):
+        logger.error(f"❌ No content between PEM markers for {pem_type}")
+        return False
+    
+    return True
+
+def create_temp_certificate_files(cert_content: str, key_content: str):
+    """Create temporary certificate files for requests library"""
+    try:
+        # Create temporary files
+        cert_fd, cert_temp_path = tempfile.mkstemp(suffix='.pem', text=True)
+        key_fd, key_temp_path = tempfile.mkstemp(suffix='.pem', text=True)
+        
+        # Write certificate content
+        with os.fdopen(cert_fd, 'w') as f:
+            f.write(cert_content)
+        
+        # Write key content
+        with os.fdopen(key_fd, 'w') as f:
+            f.write(key_content)
+        
+        # Set secure permissions
+        os.chmod(cert_temp_path, 0o600)
+        os.chmod(key_temp_path, 0o600)
+        
+        logger.info(f"✅ Created temporary certificate files: {cert_temp_path}, {key_temp_path}")
+        return cert_temp_path, key_temp_path
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to create temporary certificate files: {e}")
+        return None, None
+
 class TellerClient:
     """Teller API client for live bank transaction feeds and intelligent receipt matching"""
     
@@ -43,8 +167,9 @@ class TellerClient:
         self.environment = os.getenv('TELLER_ENVIRONMENT', 'sandbox')
         self.webhook_url = os.getenv('TELLER_WEBHOOK_URL')
         self.signing_secret = os.getenv('TELLER_SIGNING_SECRET')
-        self.cert_path = os.getenv('TELLER_CERT_PATH')
-        self.key_path = os.getenv('TELLER_KEY_PATH')
+        
+        # Load certificates using the enhanced loading function
+        self.cert_path, self.key_path = load_certificates_from_environment()
         
         self.session = None
         self.connected_accounts = []
