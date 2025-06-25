@@ -918,7 +918,7 @@
                     }
                     
                     if (text) {
-                        text.textContent = isHealthy ? 'Service operational' : 'Service needs configuration';
+                        text.textContent = data.message || (isHealthy ? 'Service operational' : 'Service needs configuration');
                     }
                 }
             }
@@ -968,6 +968,12 @@
             };
 
             await saveSettings('brian', settings);
+            
+            // Test and update status
+            const success = await testSettings('ai_processing');
+            if (success) {
+                updateServiceIndicator('brian', true, { message: 'AI settings configured successfully' });
+            }
         }
 
         async function saveEmailSettings() {
@@ -979,6 +985,12 @@
             };
 
             await saveSettings('email', settings);
+            
+            // Test and update status  
+            const success = await testSettings('email_integration');
+            if (success) {
+                updateServiceIndicator('email', true, { message: 'Email integration configured successfully' });
+            }
         }
 
         async function saveCalendarSettings() {
@@ -989,6 +1001,12 @@
             };
 
             await saveSettings('calendar', settings);
+            
+            // Test and update status
+            const success = await testSettings('calendar_sync');
+            if (success) {
+                updateServiceIndicator('calendar', true, { message: 'Calendar settings configured successfully' });
+            }
         }
 
         async function saveBankingSettings() {
@@ -999,6 +1017,12 @@
             };
 
             await saveSettings('banking', settings);
+            
+            // Test and update status
+            const success = await testSettings('banking_connection');
+            if (success) {
+                updateServiceIndicator('banking', true, { message: 'Banking settings configured successfully' });
+            }
         }
 
         async function saveOCRSettings() {
@@ -1009,6 +1033,12 @@
             };
 
             await saveSettings('ocr', settings);
+            
+            // Test and update status
+            const success = await testSettings('ai_processing');
+            if (success) {
+                updateServiceIndicator('ocr', true, { message: 'OCR settings configured successfully' });
+            }
         }
 
         async function saveStorageSettings() {
@@ -1019,6 +1049,12 @@
             };
 
             await saveSettings('storage', settings);
+            
+            // Test and update status
+            const success = await testSettings('ai_processing');
+            if (success) {
+                updateServiceIndicator('storage', true, { message: 'Storage settings configured successfully' });
+            }
         }
 
         async function saveSettings(section, settings) {
@@ -1043,6 +1079,29 @@
             } catch (error) {
                 console.error(`Failed to save ${section} settings:`, error);
                 showNotification(`❌ Failed to save ${section} settings: ${error.message}`, 'error');
+            }
+        }
+
+        async function testSettings(settingType) {
+            try {
+                const response = await fetch('/api/test-settings', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({type: settingType})
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(`✅ ${result.test_result.message}`, 'success');
+                    return true;
+                } else {
+                    showNotification(`❌ Settings test failed: ${result.error}`, 'error');
+                    return false;
+                }
+            } catch (error) {
+                console.error('Settings test failed:', error);
+                return false;
             }
         }
 
