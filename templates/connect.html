@@ -944,7 +944,87 @@
         }
 
         function showUploadModal() {
-            showNotification('📁 Manual upload feature coming soon...', 'info');
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 500px;">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-upload"></i> Upload Transaction CSV</h3>
+                        <button class="modal-close" onclick="closeModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="upload-section">
+                            <p style="margin-bottom: 1rem; color: var(--text-secondary);">
+                                Upload CSV files from your bank or financial institution.
+                            </p>
+                            <div class="file-upload-area" style="border: 2px dashed var(--border-subtle); border-radius: 12px; padding: 2rem; text-align: center; margin-bottom: 1rem;">
+                                <i class="fas fa-file-csv" style="font-size: 3rem; color: var(--primary-orange); margin-bottom: 1rem;"></i>
+                                <p>Drag and drop your CSV file here, or click to browse</p>
+                                <input type="file" id="csv-file-input" accept=".csv" style="display: none;" onchange="handleCSVUpload(event)">
+                                <button class="btn btn-secondary" onclick="document.getElementById('csv-file-input').click();">
+                                    <i class="fas fa-folder-open"></i> Choose CSV File
+                                </button>
+                            </div>
+                            <div class="format-info" style="background: var(--bg-glass); padding: 1rem; border-radius: 8px; font-size: 0.9rem;">
+                                <strong>Expected CSV format:</strong><br>
+                                Date, Description, Amount, Account, Category<br>
+                                <em>Column names are case-insensitive</em>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center;
+                z-index: 10000; backdrop-filter: blur(10px);
+            `;
+            
+            document.body.appendChild(modal);
+            window.currentModal = modal;
+        }
+        
+        function closeModal() {
+            if (window.currentModal) {
+                document.body.removeChild(window.currentModal);
+                window.currentModal = null;
+            }
+        }
+        
+        async function handleCSVUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                showNotification('Please select a CSV file', 'error');
+                return;
+            }
+            
+            showNotification('📁 Uploading CSV file...', 'info');
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const response = await fetch('/api/upload-csv', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(`✅ Imported ${result.transactions_imported} transactions`, 'success');
+                    closeModal();
+                    await loadConnectionStats();
+                } else {
+                    throw new Error(result.error || 'Upload failed');
+                }
+            } catch (error) {
+                console.error('CSV upload failed:', error);
+                showNotification('❌ Upload failed: ' + error.message, 'error');
+            }
         }
 
         function contactSupport() {

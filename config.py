@@ -74,8 +74,8 @@ class Config:
     TELLER_WEBHOOK_URL = os.environ.get('TELLER_WEBHOOK_URL')
     TELLER_SIGNING_SECRET = os.environ.get('TELLER_SIGNING_SECRET')
     TELLER_SIGNING_KEY = os.environ.get('TELLER_SIGNING_KEY')
-    TELLER_CERT_PATH = os.environ.get('TELLER_CERT_PATH')
-    TELLER_KEY_PATH = os.environ.get('TELLER_KEY_PATH')
+    TELLER_CERT_PATH = os.environ.get('TELLER_CERT_PATH', './credentials/teller_certificate.b64')
+    TELLER_KEY_PATH = os.environ.get('TELLER_KEY_PATH', './credentials/teller_private_key.b64')
     
     # File upload settings
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
