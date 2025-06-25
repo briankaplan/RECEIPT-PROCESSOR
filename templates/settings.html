@@ -816,64 +816,78 @@
         });
 
         async function loadServiceStatus() {
-            console.log('🔍 Checking service health...');
-            
             try {
-                const services = [
-                    { name: 'brian', endpoint: '/api/brian/health', label: 'Brian\'s Financial Wizard' },
-                    { name: 'calendar', endpoint: '/api/calendar/health', label: 'Calendar Intelligence' },
-                    { name: 'system', endpoint: '/health', label: 'Core System' },
-                    { name: 'memory', endpoint: '/api/memory/stats', label: 'Memory System' }
-                ];
-
+                console.log('🔍 Checking service status...');
+                
                 const statusGrid = document.getElementById('service-status-grid');
                 const connectionsGrid = document.getElementById('service-connections');
+                
+                if (!statusGrid || !connectionsGrid) {
+                    console.error('Status elements not found');
+                    return;
+                }
                 
                 statusGrid.innerHTML = '';
                 connectionsGrid.innerHTML = '';
 
+                // Define services to check with their health endpoints
+                const services = [
+                    { name: 'brian', label: 'Brian\'s Financial Wizard', endpoint: '/api/brian/health' },
+                    { name: 'email', label: 'Gmail Integration', endpoint: '/api/email/health' },
+                    { name: 'calendar', label: 'Calendar Intelligence', endpoint: '/api/calendar/health' },
+                    { name: 'banking', label: 'Teller API Connection', endpoint: '/api/banking/health' },
+                    { name: 'ocr', label: 'OCR & Document Processing', endpoint: '/api/ocr/health' },
+                    { name: 'storage', label: 'Cloud Storage & Export', endpoint: '/api/storage/health' }
+                ];
+
                 for (const service of services) {
                     try {
+                        console.log(`Checking ${service.name} service...`);
                         const response = await fetch(service.endpoint);
                         const data = await response.json();
-                        const isHealthy = data.status === 'healthy' || data.healthy || response.ok;
                         
+                        const isHealthy = data.success && (data.status === 'operational' || data.status === 'no_accounts');
+                        const statusIcon = isHealthy ? '✅' : '❌';
+                        const statusText = isHealthy ? 'Online' : 'Offline';
+
                         // Add to status grid
                         statusGrid.innerHTML += `
-                            <div class="stat-card">
-                                <div class="stat-number" style="color: ${isHealthy ? 'var(--accent-green)' : 'var(--accent-red)'};">
-                                    ${isHealthy ? '✅' : '❌'}
+                            <div class=\"stat-card\">
+                                <div class=\"stat-number\" style=\"color: ${isHealthy ? 'var(--accent-green)' : 'var(--accent-red)'};\">
+                                    ${statusIcon}
                                 </div>
-                                <div class="stat-label">${service.label}</div>
+                                <div class=\"stat-label\">${service.label}</div>
+                                <div class=\"stat-detail\">${statusText}</div>
                             </div>
                         `;
 
                         // Add to connections grid
                         connectionsGrid.innerHTML += `
-                            <div class="connection-item">
-                                <div class="connection-info">
-                                    <div class="connection-icon">
-                                        <i class="fas ${getServiceIcon(service.name)}"></i>
+                            <div class=\"connection-item\">
+                                <div class=\"connection-info\">
+                                    <div class=\"connection-icon\">
+                                        <i class=\"fas ${getServiceIcon(service.name)}\"></i>
                                     </div>
-                                    <div class="connection-details">
+                                    <div class=\"connection-details\">
                                         <h4>${service.label}</h4>
-                                        <p>${isHealthy ? 'Service operational' : 'Service needs attention'}</p>
+                                        <p>${data.message || (isHealthy ? 'Service operational' : 'Service needs attention')}</p>
                                     </div>
                                 </div>
-                                <div class="status-indicator ${isHealthy ? 'online' : 'offline'}"></div>
+                                <div class=\"status-indicator ${isHealthy ? 'online' : 'offline'}\"></div>
                             </div>
                         `;
 
-                        // Update individual service status
+                        // Update individual service status indicators
                         updateServiceIndicator(service.name, isHealthy, data);
 
                     } catch (error) {
                         console.error(`${service.name} service check failed:`, error);
                         
                         statusGrid.innerHTML += `
-                            <div class="stat-card">
-                                <div class="stat-number" style="color: var(--accent-red);">❌</div>
-                                <div class="stat-label">${service.label}</div>
+                            <div class=\"stat-card\">
+                                <div class=\"stat-number\" style=\"color: var(--accent-red);\">❌</div>
+                                <div class=\"stat-label\">${service.label}</div>
+                                <div class=\"stat-detail\">Error</div>
                             </div>
                         `;
 
