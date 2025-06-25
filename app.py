@@ -147,6 +147,25 @@ except ImportError as e:
     logger.warning(f"Enhanced transaction utilities not available: {e}")
     ENHANCED_TRANSACTIONS_AVAILABLE = False
 
+# BRIAN'S PERSONAL AI FINANCIAL WIZARD
+try:
+    from brian_financial_wizard import BrianFinancialWizard
+    from email_receipt_detector import EmailReceiptDetector
+    BRIAN_WIZARD_AVAILABLE = True
+    logger.info("🧙‍♂️ Brian's Financial Wizard loaded successfully")
+except ImportError as e:
+    logger.warning(f"Brian's Financial Wizard not available: {e}")
+    BRIAN_WIZARD_AVAILABLE = False
+
+# CALENDAR CONTEXT INTEGRATION
+try:
+    from calendar_api import register_calendar_blueprint
+    CALENDAR_INTEGRATION_AVAILABLE = True
+    logger.info("📅 Calendar context integration loaded successfully")
+except ImportError as e:
+    logger.warning(f"Calendar integration not available: {e}")
+    CALENDAR_INTEGRATION_AVAILABLE = False
+
 # ============================================================================
 # FIXED CONFIGURATION
 # ============================================================================
@@ -3649,6 +3668,207 @@ def create_app():
         except Exception as e:
             logger.error(f"Export error: {e}")
             return jsonify({"error": str(e)}), 500
+
+    @app.route('/api/brian-wizard-analyze', methods=['POST'])
+    def api_brian_wizard_analyze():
+        """
+        Brian's Personal AI Financial Wizard Analysis
+        Comprehensive expense categorization with business context
+        """
+        try:
+            if not BRIAN_WIZARD_AVAILABLE:
+                return jsonify({
+                    'success': False,
+                    'error': 'Brian\'s Financial Wizard not available'
+                }), 500
+            
+            data = request.get_json()
+            expense_data = data.get('expense', {})
+            
+            # Initialize Brian's Financial Wizard
+            wizard = BrianFinancialWizard()
+            
+            # Analyze the expense
+            analysis = wizard.smart_expense_categorization(expense_data)
+            
+            return jsonify({
+                'success': True,
+                'analysis': {
+                    'merchant': analysis.merchant,
+                    'amount': analysis.amount,
+                    'category': analysis.category,
+                    'business_type': analysis.business_type,
+                    'confidence': analysis.confidence,
+                    'purpose': analysis.purpose,
+                    'tax_deductible': analysis.tax_deductible,
+                    'needs_review': analysis.needs_review,
+                    'auto_approved': analysis.auto_approved,
+                    'receipt_source': analysis.receipt_source
+                }
+            })
+            
+        except Exception as e:
+            logger.error(f"Brian's Wizard analysis failed: {e}")
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+    
+    @app.route('/api/scan-emails-for-receipts', methods=['POST'])
+    def api_scan_emails_for_receipts():
+        """
+        Scan emails for receipts using Brian's Email Receipt Detector
+        """
+        try:
+            if not BRIAN_WIZARD_AVAILABLE:
+                return jsonify({
+                    'success': False,
+                    'error': 'Email Receipt Detector not available'
+                }), 500
+            
+            data = request.get_json()
+            email_account = data.get('email_account')
+            password = data.get('password')  # Should use OAuth in production
+            days_back = data.get('days_back', 30)
+            
+            if not email_account or not password:
+                return jsonify({
+                    'success': False,
+                    'error': 'Email account and password required'
+                }), 400
+            
+            # Initialize Email Receipt Detector
+            detector = EmailReceiptDetector()
+            
+            # Scan for receipts
+            receipts = detector.scan_emails_for_receipts(email_account, password, days_back)
+            
+            # Process found receipts with Brian's Wizard
+            wizard = BrianFinancialWizard()
+            processed_receipts = []
+            
+            for receipt in receipts:
+                # Prepare expense data for wizard analysis
+                expense_data = {
+                    'merchant': receipt.merchant_detected or 'Unknown',
+                    'amount': receipt.amount_detected or 0,
+                    'description': receipt.email_subject,
+                    'date': receipt.email_date,
+                    'source': 'email_auto_detected'
+                }
+                
+                # Analyze with Brian's Wizard
+                analysis = wizard.smart_expense_categorization(expense_data)
+                
+                processed_receipts.append({
+                    'email_info': {
+                        'subject': receipt.email_subject,
+                        'from': receipt.email_from,
+                        'date': receipt.email_date.isoformat(),
+                        'type': receipt.receipt_type,
+                        'confidence': receipt.confidence
+                    },
+                    'wizard_analysis': {
+                        'category': analysis.category,
+                        'business_type': analysis.business_type,
+                        'confidence': analysis.confidence,
+                        'purpose': analysis.purpose,
+                        'auto_approved': analysis.auto_approved
+                    },
+                    'download_url': receipt.download_url,
+                    'has_attachment': receipt.attachment_name is not None
+                })
+            
+            return jsonify({
+                'success': True,
+                'receipts_found': len(receipts),
+                'receipts': processed_receipts
+            })
+            
+        except Exception as e:
+            logger.error(f"Email receipt scanning failed: {e}")
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+    
+    @app.route('/api/train-wizard', methods=['POST'])
+    def api_train_wizard():
+        """
+        Train Brian's Financial Wizard from user corrections
+        """
+        try:
+            if not BRIAN_WIZARD_AVAILABLE:
+                return jsonify({
+                    'success': False,
+                    'error': 'Brian\'s Financial Wizard not available'
+                }), 500
+            
+            data = request.get_json()
+            original_analysis = data.get('original_analysis', {})
+            corrected_category = data.get('corrected_category')
+            corrected_business_type = data.get('corrected_business_type')
+            user_feedback = data.get('user_feedback', '')
+            
+            # Initialize Brian's Financial Wizard
+            wizard = BrianFinancialWizard()
+            
+            # Create ReceiptIntelligence object from original analysis
+            from brian_financial_wizard import ReceiptIntelligence
+            original = ReceiptIntelligence(
+                merchant=original_analysis.get('merchant', ''),
+                amount=original_analysis.get('amount', 0),
+                date=datetime.now(),
+                category=original_analysis.get('category', ''),
+                business_type=original_analysis.get('business_type', ''),
+                confidence=original_analysis.get('confidence', 0),
+                purpose=original_analysis.get('purpose', ''),
+                tax_deductible=original_analysis.get('tax_deductible', True),
+                needs_review=original_analysis.get('needs_review', False),
+                auto_approved=original_analysis.get('auto_approved', False),
+                receipt_source=original_analysis.get('receipt_source', 'manual'),
+                raw_data=original_analysis
+            )
+            
+            # Learn from the correction
+            wizard.learn_from_correction(
+                original, 
+                corrected_category, 
+                corrected_business_type, 
+                user_feedback
+            )
+            
+            return jsonify({
+                'success': True,
+                'message': 'Brian\'s Wizard has learned from your correction'
+            })
+            
+        except Exception as e:
+            logger.error(f"Wizard training failed: {e}")
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+
+    # ========================================================================
+    # REGISTER ADDITIONAL BLUEPRINTS
+    # ========================================================================
+    
+    # Register Brian's Wizard API if available
+    if BRIAN_WIZARD_AVAILABLE:
+        try:
+            from brian_wizard_api import register_brian_wizard_blueprint
+            register_brian_wizard_blueprint(app)
+        except ImportError:
+            logger.warning("Brian Wizard API blueprint not available")
+    
+    # Register Calendar Context API if available
+    if CALENDAR_INTEGRATION_AVAILABLE:
+        try:
+            register_calendar_blueprint(app)
+            logger.info("📅 Calendar API blueprint registered successfully")
+        except Exception as e:
+            logger.error(f"Failed to register calendar blueprint: {e}")
 
     return app
 

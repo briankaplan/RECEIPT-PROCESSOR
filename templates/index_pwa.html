@@ -504,28 +504,43 @@
                         </p>
                         
                         <div class="row g-3">
-                            <div class="col-md-3">
+                            <div class="col-md-6 col-lg-3">
                                 <button class="neo-btn-primary w-100" onclick="window.location.href='/transaction_manager'">
                                     <i class="fas fa-brain"></i><br>
                                     <span style="font-size: 0.9rem;">AI Manager</span>
                                 </button>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-6 col-lg-3">
                                 <button class="neo-btn w-100" onclick="window.location.href='/connect'">
                                     <i class="fas fa-university"></i><br>
                                     <span style="font-size: 0.9rem;">Connect Banks</span>
                                 </button>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-6 col-lg-3">
                                 <button class="neo-btn w-100" onclick="window.location.href='/scanner'">
                                     <i class="fas fa-camera"></i><br>
                                     <span style="font-size: 0.9rem;">Receipt Scanner</span>
                                 </button>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-6 col-lg-3">
+                                <button class="neo-btn w-100" onclick="showCalendarContext()">
+                                    <i class="fas fa-calendar-alt"></i><br>
+                                    <span style="font-size: 0.9rem;">Calendar Context</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-6">
                                 <button class="neo-btn w-100" onclick="window.location.href='/settings'">
                                     <i class="fas fa-cog"></i><br>
                                     <span style="font-size: 0.9rem;">Settings</span>
+                                </button>
+                            </div>
+                            <div class="col-md-6">
+                                <button class="neo-btn w-100" onclick="testCalendarAPI()">
+                                    <i class="fas fa-magic"></i><br>
+                                    <span style="font-size: 0.9rem;">Test Calendar</span>
                                 </button>
                             </div>
                         </div>
@@ -577,6 +592,266 @@
         function processAllTransactions() {
             console.log('🧠 Processing transactions with AI...');
             window.location.href = '/api/process-all';
+        }
+
+        // Calendar Context Functions
+        async function showCalendarContext() {
+            console.log('📅 Loading Calendar Context...');
+            try {
+                // Show loading state
+                const button = event.target.closest('button');
+                const originalContent = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i><br><span style="font-size: 0.9rem;">Loading...</span>';
+                
+                // Test calendar health first
+                const healthResponse = await fetch('/api/calendar/health');
+                const healthData = await healthResponse.json();
+                
+                if (healthData.status === 'healthy') {
+                    // Calendar is available, show context
+                    showCalendarModal();
+                } else {
+                    // Calendar limited, show setup message
+                    showCalendarSetupModal(healthData);
+                }
+                
+                // Restore button
+                button.innerHTML = originalContent;
+                
+            } catch (error) {
+                console.error('Calendar context error:', error);
+                alert('📅 Calendar functionality not yet configured. Coming soon!');
+                
+                // Restore button
+                const button = event.target.closest('button');
+                button.innerHTML = '<i class="fas fa-calendar-alt"></i><br><span style="font-size: 0.9rem;">Calendar Context</span>';
+            }
+        }
+
+        async function testCalendarAPI() {
+            console.log('🧪 Testing Calendar API...');
+            try {
+                const button = event.target.closest('button');
+                const originalContent = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i><br><span style="font-size: 0.9rem;">Testing...</span>';
+                
+                // Test calendar sync
+                const response = await fetch('/api/calendar/sync-events', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        days_back: 7,
+                        days_forward: 7
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert(`📅 Calendar Test Successful!\n\nSynced: ${data.synced_events} events\nBusiness Events: ${data.business_events}\nTravel Events: ${data.travel_events}`);
+                } else {
+                    alert(`📅 Calendar Test Failed:\n${data.error || 'Unknown error'}`);
+                }
+                
+                button.innerHTML = originalContent;
+                
+            } catch (error) {
+                console.error('Calendar test error:', error);
+                alert('📅 Calendar API test failed. Check console for details.');
+                
+                const button = event.target.closest('button');
+                button.innerHTML = '<i class="fas fa-magic"></i><br><span style="font-size: 0.9rem;">Test Calendar</span>';
+            }
+        }
+
+        function showCalendarModal() {
+            // Create and show calendar context modal
+            const modalHTML = `
+                <div class="modal fade" id="calendarModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--border-subtle);">
+                            <div class="modal-header" style="border-bottom: 1px solid var(--border-subtle);">
+                                <h5 class="modal-title" style="color: var(--text-primary);">
+                                    <i class="fas fa-calendar-alt" style="color: var(--primary-orange);"></i>
+                                    Calendar Context Intelligence
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="neo-stat-card">
+                                            <h6 style="color: var(--primary-orange);">Sync Calendar Events</h6>
+                                            <p style="color: var(--text-secondary);">Connect your Google Calendar to automatically understand meeting and travel context for expenses.</p>
+                                            <button class="neo-btn-primary" onclick="syncCalendarEvents()">
+                                                <i class="fas fa-sync"></i> Sync Events
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="neo-stat-card">
+                                            <h6 style="color: var(--primary-orange);">Match Expenses</h6>
+                                            <p style="color: var(--text-secondary);">Automatically match expenses to calendar events for better business context.</p>
+                                            <button class="neo-btn" onclick="matchExpensesToCalendar()">
+                                                <i class="fas fa-link"></i> Match Expenses
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-3">
+                                    <div class="col-md-6">
+                                        <div class="neo-stat-card">
+                                            <h6 style="color: var(--primary-orange);">Travel Analysis</h6>
+                                            <p style="color: var(--text-secondary);">Analyze travel patterns and predict business trip expenses.</p>
+                                            <button class="neo-btn" onclick="analyzeTravelPatterns()">
+                                                <i class="fas fa-plane"></i> Analyze Travel
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="neo-stat-card">
+                                            <h6 style="color: var(--primary-orange);">Business Context</h6>
+                                            <p style="color: var(--text-secondary);">View Down Home vs Music City Rodeo business event breakdown.</p>
+                                            <button class="neo-btn" onclick="viewBusinessContext()">
+                                                <i class="fas fa-briefcase"></i> View Context
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Add modal to page and show
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            const modal = new bootstrap.Modal(document.getElementById('calendarModal'));
+            modal.show();
+            
+            // Clean up when modal is hidden
+            document.getElementById('calendarModal').addEventListener('hidden.bs.modal', function() {
+                this.remove();
+            });
+        }
+
+        function showCalendarSetupModal(healthData) {
+            const modalHTML = `
+                <div class="modal fade" id="calendarSetupModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--border-subtle);">
+                            <div class="modal-header" style="border-bottom: 1px solid var(--border-subtle);">
+                                <h5 class="modal-title" style="color: var(--text-primary);">
+                                    <i class="fas fa-calendar-plus" style="color: var(--primary-orange);"></i>
+                                    Calendar Setup Required
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="neo-stat-card">
+                                    <h6 style="color: var(--primary-orange);">Status: ${healthData.status}</h6>
+                                    <p style="color: var(--text-secondary);">${healthData.message}</p>
+                                    
+                                    <div class="mt-3">
+                                        <h6>Setup Requirements:</h6>
+                                        <ul style="color: var(--text-secondary);">
+                                            <li>Google Calendar API credentials</li>
+                                            <li>Service account configuration</li>
+                                            <li>Calendar access permissions</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <button class="neo-btn-primary mt-3" onclick="window.open('https://developers.google.com/calendar/api/quickstart/python', '_blank')">
+                                        <i class="fas fa-external-link-alt"></i> Setup Guide
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            const modal = new bootstrap.Modal(document.getElementById('calendarSetupModal'));
+            modal.show();
+            
+            document.getElementById('calendarSetupModal').addEventListener('hidden.bs.modal', function() {
+                this.remove();
+            });
+        }
+
+        // Calendar API Functions
+        async function syncCalendarEvents() {
+            console.log('📅 Syncing calendar events...');
+            try {
+                const response = await fetch('/api/calendar/sync-events', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ days_back: 30, days_forward: 30 })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    alert(`✅ Successfully synced ${data.synced_events} calendar events!\n\nBusiness Events: ${data.business_events}\nTravel Events: ${data.travel_events}`);
+                } else {
+                    alert(`❌ Sync failed: ${data.error}`);
+                }
+            } catch (error) {
+                console.error('Calendar sync error:', error);
+                alert('❌ Calendar sync failed. Check console for details.');
+            }
+        }
+
+        async function matchExpensesToCalendar() {
+            console.log('🔗 Matching expenses to calendar...');
+            // This would fetch recent expenses and match them
+            alert('📅 Expense matching feature coming soon! This will automatically connect your expenses to calendar events.');
+        }
+
+        async function analyzeTravelPatterns() {
+            console.log('✈️ Analyzing travel patterns...');
+            try {
+                const response = await fetch('/api/calendar/travel-analysis');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const analysis = data.travel_analysis;
+                    alert(`✈️ Travel Analysis:\n\nTotal Travel Events: ${analysis.total_travel_events}\nBusiness Travel: ${analysis.business_travel}\nPersonal Travel: ${analysis.personal_travel}\n\nUpcoming Trips: ${analysis.upcoming_travel.length}`);
+                } else {
+                    alert(`❌ Travel analysis failed: ${data.error}`);
+                }
+            } catch (error) {
+                console.error('Travel analysis error:', error);
+                alert('❌ Travel analysis failed. Check console for details.');
+            }
+        }
+
+        async function viewBusinessContext() {
+            console.log('💼 Viewing business context...');
+            try {
+                const response = await fetch('/api/calendar/insights');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const insights = data.insights;
+                    const breakdown = insights.business_context_breakdown;
+                    
+                    let message = `💼 Business Context Breakdown:\n\n`;
+                    for (const [context, count] of Object.entries(breakdown)) {
+                        message += `${context.replace('_', ' ').toUpperCase()}: ${count} events\n`;
+                    }
+                    message += `\nBusiness Productivity: ${insights.business_productivity?.business_percentage?.toFixed(1) || 0}%`;
+                    
+                    alert(message);
+                } else {
+                    alert(`❌ Business context failed: ${data.error}`);
+                }
+            } catch (error) {
+                console.error('Business context error:', error);
+                alert('❌ Business context analysis failed. Check console for details.');
+            }
         }
 
         console.log('🎯 TransactionPro 2026 - Ultra-Modern PWA Initialized');

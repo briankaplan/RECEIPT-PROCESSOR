@@ -33,7 +33,7 @@ Pillow==11.0.0
 pytesseract==0.3.13
 
 # PDF processing (optional but imported by app.py)
-PyPDF2==4.0.1
+PyPDF2==3.0.1
 
 # HTML parsing for email receipt detection
 beautifulsoup4==4.12.2
