@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Advanced Hugging Face Receipt Processor
-Integrates multiple state-of-the-art models via cloud APIs for superior receipt processing
+Cloud-based inference using HuggingFace API for superior receipt processing
 """
 
 import os
@@ -20,49 +20,59 @@ logger = logging.getLogger(__name__)
 
 class HuggingFaceReceiptProcessor:
     """
-    Advanced receipt processor using Hugging Face transformers
+    Cloud-based receipt processor using HuggingFace Inference API
     Supports multiple models: PaliGemma, Donut, LayoutLM, TrOCR
     """
     
-    def __init__(self, model_preference: str = "paligemma", device: str = "auto"):
+    def __init__(self, api_token: Optional[str] = None, model_preference: str = "paligemma"):
         """
-        Initialize the HF receipt processor
+        Initialize the HF cloud receipt processor
         
         Args:
+            api_token: HuggingFace API token (or from env var HF_API_TOKEN)
             model_preference: "paligemma", "donut", "layoutlm", or "trocr"
-            device: "auto", "cuda", "cpu"
         """
+        self.api_token = api_token or os.getenv('HF_API_TOKEN')
         self.model_preference = model_preference
-        self.device = self._setup_device(device)
-        self.models = {}
-        self.processors = {}
+        self.base_url = "https://api-inference.huggingface.co/models"
         
-        # Check if transformers is available
-        self.transformers_available = self._check_transformers()
-        
-        # Model configurations
+        # Model configurations for cloud inference
         self.model_configs = {
             "paligemma": {
-                "model_id": "mychen76/paligemma-receipt-json-3b-mix-448-v2b",
+                "model_id": "google/paligemma-3b-mix-448",
+                "endpoint": f"{self.base_url}/google/paligemma-3b-mix-448",
                 "task": "image-to-text",
-                "prompt": "EXTRACT_JSON_RECEIPT",
-                "max_tokens": 512,
-                "confidence": 0.95
-            },
-            "mistral_ocr": {
-                "model_id": "mychen76/mistral7b_ocr_to_json_v1", 
-                "task": "ocr-to-json",
-                "confidence": 0.90
+                "prompt": "Extract receipt information as JSON",
+                "confidence": 0.95,
+                "timeout": 30
             },
             "donut": {
-                "model_id": "jinhybr/OCR-Donut-CORD",
-                "task": "document-parsing",
-                "confidence": 0.85
+                "model_id": "naver-clova-ix/donut-base-finetuned-cord-v2", 
+                "endpoint": f"{self.base_url}/naver-clova-ix/donut-base-finetuned-cord-v2",
+                "task": "document-question-answering",
+                "confidence": 0.90,
+                "timeout": 25
             },
             "layoutlm": {
-                "model_id": "jinhybr/OCR-LayoutLMv3-Invoice",
-                "task": "token-classification",
-                "confidence": 0.88
+                "model_id": "microsoft/layoutlmv3-base",
+                "endpoint": f"{self.base_url}/microsoft/layoutlmv3-base",
+                "task": "document-question-answering", 
+                "confidence": 0.88,
+                "timeout": 20
+            },
+            "trocr": {
+                "model_id": "microsoft/trocr-base-printed",
+                "endpoint": f"{self.base_url}/microsoft/trocr-base-printed",
+                "task": "image-to-text",
+                "confidence": 0.85,
+                "timeout": 15
+            },
+            "blip": {
+                "model_id": "Salesforce/blip-image-captioning-base",
+                "endpoint": f"{self.base_url}/Salesforce/blip-image-captioning-base",
+                "task": "image-to-text",
+                "confidence": 0.80,
+                "timeout": 15
             }
         }
         
@@ -72,134 +82,50 @@ class HuggingFaceReceiptProcessor:
             "successful_extractions": 0,
             "model_performance": {},
             "avg_processing_time": 0.0,
-            "confidence_scores": []
+            "confidence_scores": [],
+            "api_calls": 0,
+            "failed_api_calls": 0
         }
         
-        logger.info(f"🤗 HuggingFace Receipt Processor initialized")
-        logger.info(f"   Device: {self.device}")
+        logger.info(f"🤗 HuggingFace Cloud Receipt Processor initialized")
+        logger.info(f"   API Token: {'✅ Configured' if self.api_token else '❌ Missing'}")
         logger.info(f"   Preferred Model: {model_preference}")
-        logger.info(f"   Transformers Available: {self.transformers_available}")
+        logger.info(f"   Available Models: {', '.join(self.get_available_models())}")
         
-        if self.transformers_available:
-            # Try to load the preferred model
-            self._initialize_model(model_preference)
+        # Test API connection
+        self._test_api_connection()
     
-    def _check_transformers(self) -> bool:
-        """Check if transformers library is available"""
-        try:
-            import transformers
-            import torch
-            logger.info(f"✅ Transformers library available (v{transformers.__version__})")
-            return True
-        except ImportError:
-            logger.warning("⚠️ Transformers library not available")
+    def _test_api_connection(self) -> bool:
+        """Test HuggingFace API connection"""
+        if not self.api_token:
+            logger.warning("⚠️ No HuggingFace API token provided")
+            logger.info("   Set HF_API_TOKEN environment variable or pass api_token parameter")
             return False
-    
-    def _setup_device(self, device: str) -> str:
-        """Setup the appropriate device for model inference"""
-        if not self.transformers_available:
-            return "cpu"
-            
+        
         try:
-            import torch
-            if device == "auto":
-                if torch.cuda.is_available():
-                    return "cuda"
-                elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
-                    return "mps"  # Apple Silicon
-                else:
-                    return "cpu"
-            return device
-        except ImportError:
-            return "cpu"
-    
-    def _initialize_model(self, model_name: str) -> bool:
-        """Initialize a specific model"""
-        if not self.transformers_available:
-            logger.warning("Cannot initialize models - transformers not available")
-            return False
+            # Test with a simple model
+            test_url = f"{self.base_url}/microsoft/DialoGPT-medium"
+            headers = {"Authorization": f"Bearer {self.api_token}"}
             
-        try:
-            if model_name in self.models:
+            response = requests.get(test_url, headers=headers, timeout=5)
+            
+            if response.status_code == 200:
+                logger.info("✅ HuggingFace API connection successful")
                 return True
-                
-            config = self.model_configs.get(model_name)
-            if not config:
-                logger.error(f"Unknown model: {model_name}")
+            elif response.status_code == 401:
+                logger.error("❌ Invalid HuggingFace API token")
                 return False
-            
-            logger.info(f"📥 Loading {model_name} model: {config['model_id']}")
-            
-            if model_name == "paligemma":
-                return self._load_paligemma(config)
-            elif model_name == "donut":
-                return self._load_donut(config)
-            elif model_name == "layoutlm":
-                return self._load_layoutlm(config)
-            elif model_name == "mistral_ocr":
-                return self._load_mistral_ocr(config)
-            
-            return False
-            
+            else:
+                logger.warning(f"⚠️ API test returned status {response.status_code}")
+                return False
+                
         except Exception as e:
-            logger.error(f"Failed to initialize {model_name}: {str(e)}")
-            return False
-    
-    def _load_paligemma(self, config: Dict) -> bool:
-        """Load PaliGemma receipt model"""
-        try:
-            from transformers import AutoProcessor, PaliGemmaForConditionalGeneration
-            import torch
-            
-            model_id = config["model_id"]
-            
-            # Load processor and model
-            processor = AutoProcessor.from_pretrained(model_id)
-            model = PaliGemmaForConditionalGeneration.from_pretrained(
-                model_id,
-                torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
-                device_map=self.device if self.device != "cpu" else None
-            )
-            
-            self.processors["paligemma"] = processor
-            self.models["paligemma"] = model
-            
-            logger.info("✅ PaliGemma model loaded successfully")
-            return True
-            
-        except ImportError:
-            logger.warning("⚠️ PaliGemma not available - install transformers>=4.40.0")
-            return False
-        except Exception as e:
-            logger.error(f"Failed to load PaliGemma: {str(e)}")
-            return False
-    
-    def _load_donut(self, config: Dict) -> bool:
-        """Load Donut receipt model"""
-        try:
-            from transformers import DonutProcessor, VisionEncoderDecoderModel
-            
-            model_id = config["model_id"]
-            
-            processor = DonutProcessor.from_pretrained(model_id)
-            model = VisionEncoderDecoderModel.from_pretrained(model_id)
-            
-            if self.device != "cpu":
-                model = model.to(self.device)
-            
-            self.processors["donut"] = processor
-            self.models["donut"] = model
-            
-            logger.info("✅ Donut model loaded successfully")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Failed to load Donut: {str(e)}")
+            logger.error(f"❌ API connection test failed: {str(e)}")
             return False
     
     def process_receipt_image(self, image_path: str, model_name: Optional[str] = None) -> Dict[str, Any]:
         """
-        Process a receipt image using HuggingFace models
+        Process a receipt image using HuggingFace cloud models
         
         Args:
             image_path: Path to receipt image
@@ -210,29 +136,24 @@ class HuggingFaceReceiptProcessor:
         """
         start_time = datetime.now()
         
-        if not self.transformers_available:
-            return self._create_error_response("Transformers library not available")
+        if not self.api_token:
+            return self._create_error_response("HuggingFace API token not configured")
         
         try:
             # Use specified model or default preference
             model_to_use = model_name or self.model_preference
             
-            # Ensure model is loaded
-            if not self._initialize_model(model_to_use):
-                # Fallback to any available model
-                available_models = list(self.models.keys())
-                if not available_models:
-                    return self._create_error_response("No models available")
-                model_to_use = available_models[0]
-                logger.warning(f"Using fallback model: {model_to_use}")
+            # Validate model
+            if model_to_use not in self.model_configs:
+                return self._create_error_response(f"Unknown model: {model_to_use}")
             
             # Load and validate image
-            image = self._load_image(image_path)
-            if image is None:
-                return self._create_error_response("Failed to load image")
+            image_data = self._load_and_encode_image(image_path)
+            if image_data is None:
+                return self._create_error_response("Failed to load and encode image")
             
             # Process with selected model
-            result = self._process_with_model(image, model_to_use)
+            result = self._process_with_cloud_model(image_data, model_to_use)
             
             # Add metadata
             processing_time = (datetime.now() - start_time).total_seconds()
@@ -240,9 +161,10 @@ class HuggingFaceReceiptProcessor:
                 "processing_metadata": {
                     "model_used": model_to_use,
                     "processing_time_seconds": round(processing_time, 3),
-                    "device": self.device,
+                    "api_endpoint": self.model_configs[model_to_use]["endpoint"],
                     "image_path": os.path.basename(image_path),
-                    "timestamp": datetime.now().isoformat()
+                    "timestamp": datetime.now().isoformat(),
+                    "cloud_inference": True
                 }
             })
             
@@ -255,153 +177,255 @@ class HuggingFaceReceiptProcessor:
             logger.error(f"Receipt processing failed: {str(e)}")
             return self._create_error_response(str(e))
     
-    def _load_image(self, image_path: str) -> Optional[Image.Image]:
-        """Load and validate image file"""
+    def _load_and_encode_image(self, image_path: str) -> Optional[str]:
+        """Load image and encode as base64 for API"""
         try:
             if isinstance(image_path, str):
-                image = Image.open(image_path)
+                with open(image_path, 'rb') as image_file:
+                    image_data = image_file.read()
             else:
-                image = image_path  # Assume it's already a PIL Image
+                # Assume it's a PIL Image
+                buffer = BytesIO()
+                image_path.save(buffer, format='PNG')
+                image_data = buffer.getvalue()
             
-            # Convert to RGB if needed
-            if image.mode != 'RGB':
-                image = image.convert('RGB')
-            
-            return image
+            # Encode as base64
+            encoded_image = base64.b64encode(image_data).decode('utf-8')
+            return encoded_image
             
         except Exception as e:
-            logger.error(f"Failed to load image {image_path}: {str(e)}")
+            logger.error(f"Failed to load and encode image: {str(e)}")
             return None
     
-    def _process_with_model(self, image: Image.Image, model_name: str) -> Dict[str, Any]:
-        """Process image with specific model"""
+    def _process_with_cloud_model(self, image_data: str, model_name: str) -> Dict[str, Any]:
+        """Process image with cloud model via API"""
         try:
+            config = self.model_configs[model_name]
+            
+            # Prepare API request
+            headers = {
+                "Authorization": f"Bearer {self.api_token}",
+                "Content-Type": "application/json"
+            }
+            
+            # Different payload formats for different models
             if model_name == "paligemma":
-                return self._process_with_paligemma(image)
+                return self._process_with_paligemma_api(image_data, config, headers)
             elif model_name == "donut":
-                return self._process_with_donut(image)
+                return self._process_with_donut_api(image_data, config, headers)
             elif model_name == "layoutlm":
-                return self._process_with_layoutlm(image)
-            elif model_name == "mistral_ocr":
-                return self._process_with_mistral_ocr(image)
+                return self._process_with_layoutlm_api(image_data, config, headers)
+            elif model_name == "trocr":
+                return self._process_with_trocr_api(image_data, config, headers)
+            elif model_name == "blip":
+                return self._process_with_blip_api(image_data, config, headers)
             else:
-                return self._create_error_response(f"Unknown model: {model_name}")
+                return self._create_error_response(f"Unsupported model: {model_name}")
                 
         except Exception as e:
-            logger.error(f"Model processing failed with {model_name}: {str(e)}")
-            return self._create_error_response(f"Model processing failed: {str(e)}")
+            logger.error(f"Cloud model processing failed: {str(e)}")
+            return self._create_error_response(f"Cloud processing error: {str(e)}")
     
-    def _process_with_paligemma(self, image: Image.Image) -> Dict[str, Any]:
-        """Process receipt with PaliGemma model"""
+    def _process_with_paligemma_api(self, image_data: str, config: Dict, headers: Dict) -> Dict[str, Any]:
+        """Process with PaliGemma via API"""
         try:
-            import torch
+            self.processing_stats["api_calls"] += 1
             
-            processor = self.processors["paligemma"]
-            model = self.models["paligemma"]
-            config = self.model_configs["paligemma"]
+            payload = {
+                "inputs": {
+                    "image": image_data,
+                    "text": "Extract all receipt information including merchant, date, total amount, items, and payment method as structured JSON"
+                },
+                "parameters": {
+                    "max_new_tokens": 512,
+                    "temperature": 0.1,
+                    "return_full_text": False
+                }
+            }
             
-            # Prepare inputs
-            prompt = config["prompt"]
-            inputs = processor(
-                text=prompt, 
-                images=image, 
-                return_tensors="pt"
+            response = requests.post(
+                config["endpoint"],
+                headers=headers,
+                json=payload,
+                timeout=config["timeout"]
             )
             
-            # Move to device
-            if self.device != "cpu":
-                inputs = {k: v.to(self.device) for k, v in inputs.items()}
-            
-            # Generate response
-            with torch.no_grad():
-                generated_ids = model.generate(
-                    **inputs,
-                    max_new_tokens=config["max_tokens"],
-                    do_sample=False,
-                    temperature=0.1
-                )
-            
-            # Decode response
-            generated_text = processor.batch_decode(
-                generated_ids, 
-                skip_special_tokens=True
-            )[0]
-            
-            # Extract JSON from generated text
-            receipt_data = self._extract_json_from_text(generated_text)
-            
-            if receipt_data:
-                return self._standardize_receipt_data(
-                    receipt_data, 
-                    model_name="paligemma",
-                    confidence=config["confidence"]
-                )
+            if response.status_code == 200:
+                result = response.json()
+                
+                # Extract text from response
+                if isinstance(result, list) and len(result) > 0:
+                    generated_text = result[0].get("generated_text", "")
+                elif isinstance(result, dict):
+                    generated_text = result.get("generated_text", "")
+                else:
+                    generated_text = str(result)
+                
+                # Try to extract JSON from the generated text
+                receipt_data = self._extract_json_from_text(generated_text)
+                
+                if receipt_data:
+                    return self._standardize_receipt_data(
+                        receipt_data,
+                        model_name="paligemma", 
+                        confidence=config["confidence"],
+                        raw_response=generated_text
+                    )
+                else:
+                    # Fallback: extract fields from text
+                    extracted_fields = self._extract_fields_from_text(generated_text)
+                    return self._standardize_receipt_data(
+                        extracted_fields,
+                        model_name="paligemma",
+                        confidence=config["confidence"] * 0.7,
+                        raw_response=generated_text
+                    )
             else:
-                return self._create_error_response("Failed to extract valid JSON")
+                self.processing_stats["failed_api_calls"] += 1
+                error_msg = f"API error {response.status_code}: {response.text}"
+                logger.error(f"PaliGemma API error: {error_msg}")
+                return self._create_error_response(error_msg)
                 
         except Exception as e:
-            logger.error(f"PaliGemma processing failed: {str(e)}")
-            return self._create_error_response(f"PaliGemma error: {str(e)}")
+            self.processing_stats["failed_api_calls"] += 1
+            logger.error(f"PaliGemma API processing failed: {str(e)}")
+            return self._create_error_response(f"PaliGemma API error: {str(e)}")
     
-    def _process_with_donut(self, image: Image.Image) -> Dict[str, Any]:
-        """Process receipt with Donut model"""
+    def _process_with_donut_api(self, image_data: str, config: Dict, headers: Dict) -> Dict[str, Any]:
+        """Process with Donut via API"""
         try:
-            processor = self.processors["donut"]
-            model = self.models["donut"]
-            config = self.model_configs["donut"]
+            self.processing_stats["api_calls"] += 1
             
-            # Prepare task prompt for receipt parsing
-            task_prompt = "<s_receipt>"
-            decoder_input_ids = processor.tokenizer(
-                task_prompt, 
-                add_special_tokens=False, 
-                return_tensors="pt"
-            ).input_ids
+            payload = {
+                "inputs": {
+                    "image": image_data,
+                    "question": "What is the merchant name, date, total amount, and items on this receipt?"
+                }
+            }
             
-            pixel_values = processor(image, return_tensors="pt").pixel_values
-            
-            # Generate
-            outputs = model.generate(
-                pixel_values.to(self.device) if self.device != "cpu" else pixel_values,
-                decoder_input_ids=decoder_input_ids.to(self.device) if self.device != "cpu" else decoder_input_ids,
-                max_length=model.decoder.config.max_position_embeddings,
-                early_stopping=True,
-                pad_token_id=processor.tokenizer.pad_token_id,
-                eos_token_id=processor.tokenizer.eos_token_id,
-                use_cache=True,
-                num_beams=1,
-                bad_words_ids=[[processor.tokenizer.unk_token_id]],
-                return_dict_in_generate=True,
+            response = requests.post(
+                config["endpoint"],
+                headers=headers,
+                json=payload,
+                timeout=config["timeout"]
             )
             
-            # Decode output
-            sequence = processor.batch_decode(outputs.sequences)[0]
-            sequence = sequence.replace(processor.tokenizer.eos_token, "").replace(processor.tokenizer.pad_token, "")
-            sequence = re.sub(r"<.*?>", "", sequence, count=1).strip()  # remove first task start token
-            
-            # Parse JSON from sequence
-            receipt_data = self._extract_json_from_text(sequence)
-            
-            if receipt_data:
+            if response.status_code == 200:
+                result = response.json()
+                
+                # Process Donut response
+                if isinstance(result, dict) and "answer" in result:
+                    answer_text = result["answer"]
+                elif isinstance(result, list) and len(result) > 0:
+                    answer_text = result[0].get("answer", str(result[0]))
+                else:
+                    answer_text = str(result)
+                
+                # Extract fields from answer
+                extracted_fields = self._extract_fields_from_text(answer_text)
+                
                 return self._standardize_receipt_data(
-                    receipt_data,
-                    model_name="donut", 
-                    confidence=config["confidence"]
+                    extracted_fields,
+                    model_name="donut",
+                    confidence=config["confidence"],
+                    raw_response=answer_text
                 )
             else:
-                return self._create_error_response("Failed to parse Donut output")
+                self.processing_stats["failed_api_calls"] += 1
+                error_msg = f"API error {response.status_code}: {response.text}"
+                return self._create_error_response(error_msg)
                 
         except Exception as e:
-            logger.error(f"Donut processing failed: {str(e)}")
-            return self._create_error_response(f"Donut error: {str(e)}")
+            self.processing_stats["failed_api_calls"] += 1
+            return self._create_error_response(f"Donut API error: {str(e)}")
     
-    def _process_with_layoutlm(self, image: Image.Image) -> Dict[str, Any]:
-        """Process receipt with LayoutLM model (placeholder - requires OCR preprocessing)"""
-        return self._create_error_response("LayoutLM processing not yet implemented")
+    def _process_with_trocr_api(self, image_data: str, config: Dict, headers: Dict) -> Dict[str, Any]:
+        """Process with TrOCR via API"""
+        try:
+            self.processing_stats["api_calls"] += 1
+            
+            payload = {"inputs": image_data}
+            
+            response = requests.post(
+                config["endpoint"],
+                headers=headers,
+                json=payload,
+                timeout=config["timeout"]
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                
+                # Extract OCR text
+                if isinstance(result, list) and len(result) > 0:
+                    ocr_text = result[0].get("generated_text", "")
+                elif isinstance(result, dict):
+                    ocr_text = result.get("generated_text", "")
+                else:
+                    ocr_text = str(result)
+                
+                # Extract fields from OCR text
+                extracted_fields = self._extract_fields_from_text(ocr_text)
+                
+                return self._standardize_receipt_data(
+                    extracted_fields,
+                    model_name="trocr",
+                    confidence=config["confidence"],
+                    raw_response=ocr_text
+                )
+            else:
+                self.processing_stats["failed_api_calls"] += 1
+                return self._create_error_response(f"TrOCR API error {response.status_code}")
+                
+        except Exception as e:
+            self.processing_stats["failed_api_calls"] += 1
+            return self._create_error_response(f"TrOCR API error: {str(e)}")
     
-    def _process_with_mistral_ocr(self, image: Image.Image) -> Dict[str, Any]:
-        """Process receipt with Mistral OCR model (placeholder)"""
-        return self._create_error_response("Mistral OCR processing not yet implemented")
+    def _process_with_blip_api(self, image_data: str, config: Dict, headers: Dict) -> Dict[str, Any]:
+        """Process with BLIP via API"""
+        try:
+            self.processing_stats["api_calls"] += 1
+            
+            payload = {"inputs": image_data}
+            
+            response = requests.post(
+                config["endpoint"],
+                headers=headers,
+                json=payload,
+                timeout=config["timeout"]
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                
+                # Extract caption
+                if isinstance(result, list) and len(result) > 0:
+                    caption = result[0].get("generated_text", "")
+                elif isinstance(result, dict):
+                    caption = result.get("generated_text", "")
+                else:
+                    caption = str(result)
+                
+                # Extract fields from caption
+                extracted_fields = self._extract_fields_from_text(caption)
+                
+                return self._standardize_receipt_data(
+                    extracted_fields,
+                    model_name="blip",
+                    confidence=config["confidence"],
+                    raw_response=caption
+                )
+            else:
+                self.processing_stats["failed_api_calls"] += 1
+                return self._create_error_response(f"BLIP API error {response.status_code}")
+                
+        except Exception as e:
+            self.processing_stats["failed_api_calls"] += 1
+            return self._create_error_response(f"BLIP API error: {str(e)}")
+    
+    def _process_with_layoutlm_api(self, image_data: str, config: Dict, headers: Dict) -> Dict[str, Any]:
+        """Process with LayoutLM via API (placeholder - requires specific setup)"""
+        return self._create_error_response("LayoutLM API processing requires specific OCR preprocessing")
     
     def _extract_json_from_text(self, text: str) -> Optional[Dict]:
         """Extract JSON object from generated text"""
@@ -428,33 +452,82 @@ class HuggingFaceReceiptProcessor:
             except json.JSONDecodeError:
                 pass
             
-            # Last resort: try to create JSON from text patterns
-            return self._extract_fields_from_text(text)
+            return None
             
         except Exception as e:
             logger.error(f"JSON extraction failed: {str(e)}")
             return None
     
     def _extract_fields_from_text(self, text: str) -> Dict:
-        """Fallback field extraction from raw text"""
+        """Extract receipt fields from natural text"""
         result = {}
         
-        # Common receipt field patterns
+        # Enhanced patterns for better extraction
         patterns = {
-            "store_name": r"(?:store|shop|restaurant|cafe):\s*([^\n]+)",
-            "total": r"(?:total|sum|amount):\s*\$?(\d+\.?\d*)",
-            "date": r"(?:date|time):\s*([^\n]+)",
-            "items": r"(?:item|product):\s*([^\n]+)"
+            "merchant": [
+                r"(?:store|shop|restaurant|cafe|merchant|business|company):\s*([^\n]+)",
+                r"^([A-Z][A-Z\s&]+)(?:\n|$)",  # All caps company names
+                r"([A-Z][a-zA-Z\s]+(?:Store|Shop|Restaurant|Cafe|Inc|LLC))",
+            ],
+            "total": [
+                r"(?:total|sum|amount|grand total|final|due):\s*\$?(\d+\.?\d*)",
+                r"\$(\d+\.\d{2})\s*(?:total|due|final)",
+                r"total\s*\$?(\d+\.?\d*)",
+            ],
+            "date": [
+                r"(?:date|time|on):\s*([^\n]+)",
+                r"(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})",
+                r"(\d{4}-\d{2}-\d{2})",
+                r"((?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2},?\s+\d{4})",
+            ],
+            "subtotal": [
+                r"(?:subtotal|sub total|sub-total):\s*\$?(\d+\.?\d*)",
+            ],
+            "tax": [
+                r"(?:tax|vat|gst):\s*\$?(\d+\.?\d*)",
+            ],
+            "payment_method": [
+                r"(?:visa|mastercard|amex|discover|cash|debit|credit)(?:\s*\*+\d+)?",
+                r"(?:payment|paid|tender):\s*([^\n]+)",
+            ]
         }
         
-        for field, pattern in patterns.items():
-            match = re.search(pattern, text, re.IGNORECASE)
-            if match:
-                result[field] = match.group(1).strip()
+        for field, pattern_list in patterns.items():
+            for pattern in pattern_list:
+                match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
+                if match:
+                    result[field] = match.group(1).strip()
+                    break
+        
+        # Extract items (simple approach)
+        item_patterns = [
+            r"(\w+(?:\s+\w+)*)\s+\$(\d+\.\d{2})",
+            r"(\d+)\s*x?\s*([^$\n]+)\s+\$(\d+\.\d{2})",
+        ]
+        
+        items = []
+        for pattern in item_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            for match in matches:
+                if len(match) == 2:  # name, price
+                    items.append({
+                        "name": match[0].strip(),
+                        "price": float(match[1]),
+                        "quantity": 1
+                    })
+                elif len(match) == 3:  # quantity, name, price
+                    items.append({
+                        "name": match[1].strip(),
+                        "price": float(match[2]),
+                        "quantity": int(match[0]) if match[0].isdigit() else 1
+                    })
+        
+        if items:
+            result["items"] = items
         
         return result if result else {"raw_text": text}
     
-    def _standardize_receipt_data(self, data: Dict, model_name: str, confidence: float) -> Dict[str, Any]:
+    def _standardize_receipt_data(self, data: Dict, model_name: str, confidence: float, raw_response: str = "") -> Dict[str, Any]:
         """Standardize receipt data format across different models"""
         
         # Create standardized structure
@@ -474,12 +547,13 @@ class HuggingFaceReceiptProcessor:
                 "address": None,
                 "phone": None
             },
-            "raw_model_output": data
+            "raw_model_output": data,
+            "raw_response": raw_response
         }
         
         # Map common field variations to standard fields
         field_mappings = {
-            "merchant": ["store_name", "company", "merchant", "business", "shop"],
+            "merchant": ["store_name", "company", "merchant", "business", "shop", "store"],
             "total_amount": ["total", "total_amount", "grand_total", "amount_due", "sum"],
             "date": ["date", "transaction_date", "receipt_date", "time", "datetime"],
             "subtotal": ["subtotal", "sub_total", "net_amount"],
@@ -575,7 +649,8 @@ class HuggingFaceReceiptProcessor:
             "error_message": error_message,
             "confidence_score": 0.0,
             "extracted_data": None,
-            "model_used": self.model_preference
+            "model_used": self.model_preference,
+            "cloud_inference": True
         }
     
     def _update_stats(self, result: Dict, processing_time: float):
@@ -594,10 +669,6 @@ class HuggingFaceReceiptProcessor:
         """Get list of available models"""
         return list(self.model_configs.keys())
     
-    def get_loaded_models(self) -> List[str]:
-        """Get list of currently loaded models"""
-        return list(self.models.keys())
-    
     def get_processing_stats(self) -> Dict[str, Any]:
         """Get processing statistics"""
         stats = self.processing_stats.copy()
@@ -608,60 +679,71 @@ class HuggingFaceReceiptProcessor:
             stats["avg_confidence"] = 0.0
         
         stats["success_rate"] = (stats["successful_extractions"] / max(stats["total_processed"], 1)) * 100
-        stats["transformers_available"] = self.transformers_available
+        stats["api_success_rate"] = ((stats["api_calls"] - stats["failed_api_calls"]) / max(stats["api_calls"], 1)) * 100
+        stats["api_token_configured"] = bool(self.api_token)
         
         return stats
     
     def get_system_info(self) -> Dict[str, Any]:
         """Get system information"""
         info = {
-            "transformers_available": self.transformers_available,
-            "device": self.device,
+            "api_token_configured": bool(self.api_token),
+            "base_url": self.base_url,
             "available_models": self.get_available_models(),
-            "loaded_models": self.get_loaded_models(),
-            "model_preference": self.model_preference
+            "model_preference": self.model_preference,
+            "cloud_inference": True
         }
         
-        if self.transformers_available:
-            try:
-                import transformers
-                import torch
-                info["transformers_version"] = transformers.__version__
-                info["torch_version"] = torch.__version__
-                info["cuda_available"] = torch.cuda.is_available()
-                if torch.cuda.is_available():
-                    info["cuda_device_count"] = torch.cuda.device_count()
-                    info["cuda_device_name"] = torch.cuda.get_device_name(0)
-            except ImportError:
-                pass
+        if self.api_token:
+            # Test connection status
+            connection_ok = self._test_api_connection()
+            info["api_connection_status"] = "✅ Connected" if connection_ok else "❌ Connection Failed"
+        else:
+            info["api_connection_status"] = "❌ No API Token"
         
         return info
+    
+    def batch_process_receipts(self, image_paths: List[str], model_name: Optional[str] = None) -> Dict[str, Any]:
+        """Process multiple receipt images in batch"""
+        results = []
+        
+        logger.info(f"🔄 Processing batch of {len(image_paths)} receipts via cloud API")
+        
+        for i, image_path in enumerate(image_paths):
+            logger.info(f"   Processing {i+1}/{len(image_paths)}: {os.path.basename(image_path)}")
+            
+            result = self.process_receipt_image(image_path, model_name)
+            results.append(result)
+        
+        # Add batch summary
+        successful = sum(1 for r in results if r["status"] == "success")
+        batch_summary = {
+            "batch_size": len(image_paths),
+            "successful_extractions": successful,
+            "success_rate": (successful / len(image_paths)) * 100,
+            "avg_confidence": sum(r.get("confidence_score", 0) for r in results) / len(results),
+            "total_api_calls": len(image_paths),
+            "model_used": model_name or self.model_preference
+        }
+        
+        return {
+            "batch_summary": batch_summary,
+            "results": results
+        }
 
 
 # Factory functions for easy integration
-def create_huggingface_processor(model_preference: str = "paligemma", device: str = "auto") -> HuggingFaceReceiptProcessor:
-    """Factory function to create HuggingFace processor"""
-    return HuggingFaceReceiptProcessor(model_preference=model_preference, device=device)
+def create_huggingface_processor(api_token: Optional[str] = None, model_preference: str = "paligemma") -> HuggingFaceReceiptProcessor:
+    """Factory function to create cloud-based HuggingFace processor"""
+    return HuggingFaceReceiptProcessor(api_token=api_token, model_preference=model_preference)
 
-def test_model_availability() -> Dict[str, bool]:
-    """Test which models are available for use"""
-    processor = HuggingFaceReceiptProcessor()
-    availability = {}
+def test_api_availability(api_token: Optional[str] = None) -> Dict[str, Any]:
+    """Test HuggingFace API availability and models"""
+    processor = HuggingFaceReceiptProcessor(api_token=api_token)
     
-    if not processor.transformers_available:
-        logger.warning("Transformers not available - cannot test models")
-        return {"transformers_available": False}
-    
-    for model_name in processor.get_available_models():
-        try:
-            success = processor._initialize_model(model_name)
-            availability[model_name] = success
-            if success:
-                logger.info(f"✅ {model_name} model available")
-            else:
-                logger.warning(f"❌ {model_name} model not available")
-        except Exception as e:
-            availability[model_name] = False
-            logger.error(f"Model {model_name} not available: {str(e)}")
-    
-    return availability 
+    return {
+        "api_configured": bool(processor.api_token),
+        "available_models": processor.get_available_models(),
+        "system_info": processor.get_system_info(),
+        "processing_stats": processor.get_processing_stats()
+    } 
