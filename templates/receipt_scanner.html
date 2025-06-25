@@ -485,13 +485,13 @@
         @media (max-width: 480px) {
             .scanner-container {
                 padding: 0 16px 32px;
-            }
-            
+        }
+
             .camera-viewfinder {
                 height: 320px;
                 margin: 16px 0;
-            }
-            
+        }
+
             .scan-frame {
                 width: 240px;
                 height: 160px;
@@ -518,18 +518,18 @@
             opacity: 0;
             transform: translate(-50%, 20px);
             transition: all 0.3s ease;
-        }
-
+            }
+            
         .toast.show {
             opacity: 1;
             transform: translate(-50%, 0);
-        }
-
+            }
+            
         .toast.success {
             border-color: var(--accent-green);
             background: rgba(52, 199, 89, 0.1);
-        }
-
+            }
+            
         .toast.error {
             border-color: var(--accent-red);
             background: rgba(255, 59, 48, 0.1);
@@ -543,13 +543,13 @@
         <div class="header-content">
             <button class="back-button" onclick="window.history.back()">
                 <i class="fas fa-chevron-left"></i> Back
-            </button>
+                </button>
             <div class="header-title">Receipt Scanner</div>
             <button class="header-action" onclick="toggleFlash()">
                 <i class="fas fa-bolt" id="flash-icon"></i>
             </button>
+            </div>
         </div>
-    </div>
 
     <!-- Main Scanner Interface -->
     <div class="scanner-container">
@@ -559,13 +559,13 @@
             <canvas id="camera-canvas" style="display: none;"></canvas>
             
             <div class="viewfinder-overlay" id="viewfinder-overlay">
-                <div class="camera-placeholder">
-                    <i class="fas fa-camera"></i>
+                    <div class="camera-placeholder">
+                        <i class="fas fa-camera"></i>
                     <h3>Position Receipt in Frame</h3>
                     <p>Align the receipt within the frame for optimal scanning</p>
+                    </div>
                 </div>
-            </div>
-            
+
             <div class="scan-frame" id="scan-frame" style="display: none;"></div>
         </div>
 
@@ -575,40 +575,40 @@
                 <button class="control-button" onclick="startCamera()" id="camera-btn">
                     <i class="fas fa-video"></i>
                     <span>Camera</span>
-                </button>
+                    </button>
                 <button class="control-button" onclick="uploadFile()" id="upload-btn">
                     <i class="fas fa-upload"></i>
                     <span>Upload</span>
-                </button>
+                    </button>
                 <button class="control-button" onclick="toggleEnhancement()" id="enhance-btn">
                     <i class="fas fa-magic"></i>
                     <span>Enhance</span>
-                </button>
-            </div>
-            
+                    </button>
+                </div>
+
             <!-- Capture Button -->
             <div class="capture-section">
                 <button class="capture-button" onclick="captureReceipt()" id="capture-btn" style="display: none;">
                     <i class="fas fa-camera"></i>
                 </button>
+                </div>
             </div>
-        </div>
 
         <!-- Result Preview -->
         <div class="result-preview" id="result-preview">
             <div class="result-header">
                 <i class="fas fa-check-circle"></i>
                 <h3>Receipt Processed</h3>
-            </div>
+                </div>
             <div class="result-data" id="result-data">
                 <!-- Results will be populated here -->
-            </div>
+                </div>
             <div class="action-buttons">
                 <button class="action-btn secondary" onclick="scanAnother()">Scan Another</button>
                 <button class="action-btn primary" onclick="saveReceipt()">Save Receipt</button>
+                </div>
             </div>
         </div>
-    </div>
 
     <!-- Processing Overlay -->
     <div class="processing-overlay" id="processing-overlay">
@@ -616,8 +616,8 @@
             <div class="processing-spinner"></div>
             <div class="processing-text" id="processing-text">Processing Receipt...</div>
             <div class="processing-detail" id="processing-detail">Extracting text and data</div>
-        </div>
-    </div>
+                </div>
+            </div>
 
     <!-- Hidden File Input -->
     <input type="file" id="file-input" accept="image/*" style="display: none;" onchange="handleFileUpload(event)">
@@ -644,7 +644,7 @@
                 const permission = await navigator.permissions.query({ name: 'camera' });
                 if (permission.state === 'granted') {
                     console.log('✅ Camera permission granted');
-                } else {
+            } else {
                     console.log('📱 Camera permission needed');
                     showToast('Camera access needed for scanning', 'info');
                 }
@@ -686,7 +686,7 @@
                 
                 hideProcessing();
                 showToast('Camera ready for scanning', 'success');
-
+                
             } catch (error) {
                 console.error('❌ Camera start failed:', error);
                 hideProcessing();
@@ -710,17 +710,17 @@
 
         async function captureReceipt() {
             try {
-                const video = document.getElementById('camera-video');
-                const canvas = document.getElementById('camera-canvas');
+            const video = document.getElementById('camera-video');
+            const canvas = document.getElementById('camera-canvas');
                 const ctx = canvas.getContext('2d');
 
                 // Set canvas size
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
                 // Draw video frame to canvas
-                ctx.drawImage(video, 0, 0);
-
+            ctx.drawImage(video, 0, 0);
+            
                 // Get image data
                 capturedImageData = canvas.toDataURL('image/jpeg', 0.9);
                 
@@ -733,7 +733,7 @@
             } catch (error) {
                 console.error('❌ Capture failed:', error);
                 showToast('Failed to capture image', 'error');
-            }
+        }
         }
 
         // File Upload Functions
@@ -773,7 +773,7 @@
         async function processReceiptImage(imageData) {
             try {
                 showProcessing('Processing Receipt...', 'Extracting text and analyzing data');
-
+            
                 // Convert data URL to blob for upload
                 const response = await fetch(imageData);
                 const blob = await response.blob();
@@ -781,24 +781,24 @@
                 const formData = new FormData();
                 formData.append('file', blob, 'receipt.jpg');
                 formData.append('enhance', enhancementEnabled);
-
+                
                 // Call backend API
                 const apiResponse = await fetch('/api/process-receipt', {
                     method: 'POST',
                     body: formData
                 });
-
+                
                 const result = await apiResponse.json();
                 
                 hideProcessing();
-
+                
                 if (result.success) {
                     displayResults(result);
                     showToast('Receipt processed successfully!', 'success');
                 } else {
                     throw new Error(result.error || 'Processing failed');
                 }
-
+                
             } catch (error) {
                 console.error('❌ Processing failed:', error);
                 hideProcessing();
@@ -857,7 +857,7 @@
                     showToast(isFlashOn ? 'Flash turned on' : 'Flash turned off', 'info');
                 } else {
                     showToast('Flash not available on this device', 'error');
-                }
+            }
             }
         }
 
@@ -887,11 +887,11 @@
                         extracted_data: window.lastProcessedData
                     })
                 });
-
+                
                 const result = await saveResponse.json();
                 
                 hideProcessing();
-                
+                    
                 if (result.success) {
                     showToast('Receipt saved successfully!', 'success');
                     setTimeout(() => {
@@ -900,7 +900,7 @@
                 } else {
                     throw new Error(result.error);
                 }
-
+                
             } catch (error) {
                 console.error('❌ Save failed:', error);
                 hideProcessing();
@@ -948,7 +948,7 @@
                 currentStream.getTracks().forEach(track => track.stop());
             }
         });
-
+            
         // Prevent zoom on double tap
         let lastTouchEnd = 0;
         document.addEventListener('touchend', function(event) {

@@ -182,6 +182,10 @@ class Config:
     DEBUG = os.getenv('DEBUG', 'false').lower() == 'true'
     PORT = int(os.getenv('PORT', 10000))  # Render's default port
     
+    # File Upload Configuration
+    UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', '/tmp/uploads')
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
+    
     # MongoDB - CRITICAL: Check both MONGO_URI and MONGODB_URI
     MONGODB_URI = os.getenv('MONGODB_URI') or os.getenv('MONGO_URI')
     MONGODB_DATABASE = os.getenv('MONGODB_DATABASE', 'expense')
@@ -5252,7 +5256,7 @@ def create_app():
     # ============================================================================
     # 🚀 MISSING API ENDPOINTS FOR UI INTEGRATION
     # ============================================================================
-
+    
     @app.route('/api/disconnect-bank', methods=['POST'])
     def api_disconnect_bank():
         """Disconnect a bank account"""
@@ -5301,6 +5305,10 @@ def create_app():
             if not file.filename.lower().endswith('.csv'):
                 return jsonify({'success': False, 'error': 'Only CSV files are supported'}), 400
             
+            # Create upload directory if it doesn't exist
+            upload_dir = Config.UPLOAD_FOLDER
+            os.makedirs(upload_dir, exist_ok=True)
+            
             # Read CSV content
             import csv
             import io
@@ -5308,7 +5316,7 @@ def create_app():
             # Save uploaded file temporarily
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"csv_upload_{timestamp}_{file.filename}"
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            filepath = os.path.join(upload_dir, filename)
             file.save(filepath)
             
             # Parse CSV
@@ -5326,41 +5334,85 @@ def create_app():
                     if row_num > 1000:  # Limit to 1000 transactions
                         break
                     
-                    # Map common CSV column names
+                    # Map common CSV column names for Chase bank exports
                     transaction = {
-                        'date': row.get('Date') or row.get('date') or row.get('DATE'),
-                        'description': row.get('Description') or row.get('description') or row.get('DESCRIPTION'),
-                        'amount': row.get('Amount') or row.get('amount') or row.get('AMOUNT'),
-                        'account': row.get('Account') or row.get('account') or 'CSV Upload',
-                        'category': row.get('Category') or row.get('category') or 'Uncategorized',
+                        'date': row.get('Date') or row.get('date') or row.get('DATE') or row.get('Transaction Date'),
+                        'description': row.get('Description') or row.get('description') or row.get('DESCRIPTION') or row.get('Transaction Description'),
+                        'amount': row.get('Amount') or row.get('amount') or row.get('AMOUNT') or row.get('Transaction Amount'),
+                        'account': row.get('Account') or row.get('account') or row.get('Account Name') or 'Chase Credit Card',
+                        'category': row.get('Category') or row.get('category') or row.get('CATEGORY') or 'Uncategorized',
+                        'merchant': row.get('Merchant') or row.get('merchant') or row.get('MERCHANT') or row.get('Transaction Description'),
                         'source': 'csv_upload',
                         'upload_filename': file.filename,
-                        'uploaded_at': datetime.utcnow()
+                        'uploaded_at': datetime.utcnow(),
+                        'business_type': 'personal'  # Default to personal, can be updated later
                     }
                     
-                    # Parse amount
-                    amount_str = str(transaction['amount']).replace(',', '').replace('$', '')
+                    # Parse amount - handle Chase format
+                    amount_str = str(transaction['amount']).replace(',', '').replace('$', '').strip()
                     try:
-                        transaction['amount'] = float(amount_str)
+                        # Handle negative amounts (expenses)
+                        if amount_str.startswith('-') or amount_str.startswith('('):
+                            amount_str = amount_str.replace('(', '').replace(')', '')
+                            transaction['amount'] = -abs(float(amount_str))
+                        else:
+                            transaction['amount'] = float(amount_str)
                     except (ValueError, TypeError):
                         transaction['amount'] = 0.0
                     
-                    # Parse date
+                    # Parse date - handle multiple formats
                     date_str = transaction['date']
-                    try:
-                        transaction['date'] = datetime.strptime(date_str, '%Y-%m-%d')
-                    except ValueError:
+                    parsed_date = None
+                    
+                    # Try multiple date formats
+                    date_formats = [
+                        '%Y-%m-%d',      # 2024-01-15
+                        '%m/%d/%Y',      # 01/15/2024
+                        '%m/%d/%y',      # 01/15/24
+                        '%d/%m/%Y',      # 15/01/2024
+                        '%Y/%m/%d',      # 2024/01/15
+                        '%m-%d-%Y',      # 01-15-2024
+                        '%d-%m-%Y',      # 15-01-2024
+                    ]
+                    
+                    for date_format in date_formats:
                         try:
-                            transaction['date'] = datetime.strptime(date_str, '%m/%d/%Y')
+                            parsed_date = datetime.strptime(date_str, date_format)
+                            break
                         except ValueError:
-                            transaction['date'] = datetime.utcnow()
+                            continue
+                    
+                    if parsed_date:
+                        transaction['date'] = parsed_date
+                    else:
+                        transaction['date'] = datetime.utcnow()
+                    
+                    # Auto-categorize based on merchant name
+                    merchant_lower = str(transaction['merchant']).lower()
+                    if any(word in merchant_lower for word in ['starbucks', 'coffee', 'dunkin', 'peets']):
+                        transaction['category'] = 'Food & Beverage'
+                    elif any(word in merchant_lower for word in ['shell', 'exxon', 'chevron', 'bp', 'gas']):
+                        transaction['category'] = 'Transportation'
+                    elif any(word in merchant_lower for word in ['target', 'walmart', 'amazon', 'costco']):
+                        transaction['category'] = 'Shopping'
+                    elif any(word in merchant_lower for word in ['uber', 'lyft', 'taxi']):
+                        transaction['category'] = 'Transportation'
+                    elif any(word in merchant_lower for word in ['netflix', 'spotify', 'hulu', 'disney']):
+                        transaction['category'] = 'Entertainment'
                     
                     transactions.append(transaction)
             
             # Save to MongoDB
             if mongo_client.connected and transactions:
+                # Add transaction IDs and processing metadata
+                for transaction in transactions:
+                    transaction['transaction_id'] = f"csv_{int(time.time())}_{secrets.token_hex(8)}"
+                    transaction['synced_at'] = datetime.utcnow()
+                    transaction['needs_review'] = False
+                    transaction['receipt_matched'] = False
+                
                 mongo_client.db.bank_transactions.insert_many(transactions)
-                logger.info(f"📁 Uploaded {len(transactions)} transactions from CSV")
+                logger.info(f"📁 Uploaded {len(transactions)} transactions from CSV: {file.filename}")
             
             # Clean up uploaded file
             try:
@@ -5372,7 +5424,12 @@ def create_app():
                 'success': True,
                 'transactions_imported': len(transactions),
                 'filename': file.filename,
-                'message': f'Successfully imported {len(transactions)} transactions'
+                'message': f'Successfully imported {len(transactions)} transactions from {file.filename}',
+                'categories_found': list(set(t['category'] for t in transactions)),
+                'date_range': {
+                    'earliest': min(t['date'] for t in transactions).strftime('%Y-%m-%d') if transactions else None,
+                    'latest': max(t['date'] for t in transactions).strftime('%Y-%m-%d') if transactions else None
+                }
             })
             
         except Exception as e:
@@ -5405,17 +5462,17 @@ def create_app():
                 except:
                     pass
                 
-                return jsonify({
-                    'success': True,
+                    return jsonify({
+                        'success': True,
                     'message': 'Bank connection test passed',
                     'certificates': 'loaded successfully'
-                })
-            else:
-                return jsonify({
-                    'success': False,
+                    })
+                else:
+                    return jsonify({
+                        'success': False,
                     'error': 'Failed to load certificates',
                     'action': 'Check certificate files'
-                })
+                    })
                 
         except Exception as e:
             logger.error(f"Bank connection test error: {e}")
@@ -5516,15 +5573,15 @@ def create_app():
             except:
                 pass
             
-            return jsonify({
+                return jsonify({
                 'success': result.get('status') == 'success',
                 'merchant': result.get('merchant', 'Unknown'),
                 'amount': result.get('amount', 0.0),
                 'date': result.get('date'),
                 'confidence': result.get('confidence', 0.0),
                 'processing_method': result.get('processing_method', 'unknown')
-            })
-            
+                })
+                
         except Exception as e:
             logger.error(f"Receipt processing error: {e}")
             return jsonify({'success': False, 'error': str(e)}), 500
@@ -5834,8 +5891,8 @@ def create_app():
             })
         except Exception as e:
             logger.error(f"Email health check error: {e}")
-            return jsonify({
-                'success': False,
+                return jsonify({
+                    'success': False,
                 'service': 'Gmail Integration',
                 'status': 'error',
                 'error': str(e)

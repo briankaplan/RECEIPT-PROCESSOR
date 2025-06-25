@@ -370,14 +370,14 @@
             background: rgba(105, 240, 174, 0.2);
             color: var(--accent-green);
             border-color: rgba(105, 240, 174, 0.3);
-        }
-
+            }
+            
         .notification.error {
             background: rgba(255, 82, 82, 0.2);
             color: var(--accent-red);
             border-color: rgba(255, 82, 82, 0.3);
-        }
-
+            }
+            
         .notification.info {
             background: rgba(79, 195, 247, 0.2);
             color: var(--accent-blue);
@@ -387,15 +387,15 @@
         @keyframes slideIn {
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
-        }
-
-        .stats-grid {
+            }
+            
+            .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1.5rem;
             margin-bottom: 2rem;
-        }
-
+            }
+            
         .stat-card {
             background: var(--bg-glass);
             padding: 1.5rem;
@@ -415,15 +415,232 @@
             color: var(--text-secondary);
             font-size: 0.9rem;
         }
+
+        /* Connection Alternatives */
+        .connection-alternatives {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: var(--border-radius-large);
+            padding: 24px;
+            margin: 24px 0;
+        }
+
+        .alternative-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .alternative-header i {
+            font-size: 32px;
+            color: var(--accent-orange);
+            margin-bottom: 12px;
+        }
+
+        .alternative-header h3 {
+            font-size: 20px;
+            font-weight: var(--font-weight-semibold);
+            margin-bottom: 8px;
+        }
+
+        .alternative-header p {
+            color: var(--text-secondary);
+        }
+
+        .alternative-methods {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .alternative-method {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-light);
+            border-radius: var(--border-radius-medium);
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .method-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--accent-blue);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .method-icon i {
+            font-size: 20px;
+            color: white;
+        }
+
+        .method-content h4 {
+            font-size: 16px;
+            font-weight: var(--font-weight-semibold);
+            margin-bottom: 4px;
+        }
+
+        .method-content p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        /* CSV Upload Section */
+        .csv-upload-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: var(--border-radius-large);
+            padding: 24px;
+            margin: 24px 0;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .section-header i {
+            font-size: 32px;
+            color: var(--accent-green);
+            margin-bottom: 12px;
+        }
+
+        .section-header h3 {
+            font-size: 20px;
+            font-weight: var(--font-weight-semibold);
+            margin-bottom: 8px;
+        }
+
+        .section-header p {
+            color: var(--text-secondary);
+        }
+
+        .upload-area {
+            border: 2px dashed var(--border-light);
+            border-radius: var(--border-radius-medium);
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .upload-area:hover {
+            border-color: var(--accent-blue);
+            background: rgba(0, 122, 255, 0.05);
+        }
+
+        .upload-area.dragover {
+            border-color: var(--accent-green);
+            background: rgba(52, 199, 89, 0.1);
+        }
+
+        .upload-content i {
+            font-size: 48px;
+            color: var(--accent-blue);
+            margin-bottom: 16px;
+        }
+
+        .upload-content h4 {
+            font-size: 18px;
+            font-weight: var(--font-weight-semibold);
+            margin-bottom: 8px;
+        }
+
+        .upload-content p {
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+        }
+
+        .upload-instructions {
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius-medium);
+            padding: 20px;
+        }
+
+        .upload-instructions h4 {
+            font-size: 16px;
+            font-weight: var(--font-weight-semibold);
+            margin-bottom: 12px;
+        }
+
+        .upload-instructions ol {
+            padding-left: 20px;
+            color: var(--text-secondary);
+        }
+
+        .upload-instructions li {
+            margin-bottom: 8px;
+        }
+
+        /* Processing Animation */
+        .processing-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .processing-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .processing-content {
+            background: var(--bg-card);
+            border-radius: var(--border-radius-large);
+            padding: 40px;
+            text-align: center;
+            max-width: 400px;
+        }
+
+        .processing-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--border-light);
+            border-top: 4px solid var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 24px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .processing-text {
+            font-size: 18px;
+            font-weight: var(--font-weight-semibold);
+            margin-bottom: 8px;
+        }
+
+        .processing-detail {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1><i class="fas fa-university"></i> Bank Connection</h1>
-            <a href="/" class="back-btn">
-                <i class="fas fa-arrow-left"></i> Back to Dashboard
-            </a>
+                <a href="/" class="back-btn">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
         </div>
 
         <!-- Connection Status -->
@@ -431,18 +648,18 @@
             <div id="connection-indicator" class="status-indicator status-disconnected">
                 <i class="fas fa-exclamation-circle"></i>
                 <span>No Banks Connected</span>
-            </div>
+        </div>
             <h2>Connect Your Chase Bank Account</h2>
             <p style="color: var(--text-secondary); margin-bottom: 2rem;">
                 Securely connect your Chase credit card to automatically import the past year of transactions
             </p>
-            
+
             <!-- Connection Stats -->
-            <div id="connection-stats" class="stats-grid">
+        <div id="connection-stats" class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-number" id="connected-accounts">0</div>
                     <div class="stat-label">Connected Accounts</div>
-                </div>
+        </div>
                 <div class="stat-card">
                     <div class="stat-number" id="total-transactions">0</div>
                     <div class="stat-label">Total Transactions</div>
@@ -450,7 +667,7 @@
                 <div class="stat-card">
                     <div class="stat-number" id="last-sync">Never</div>
                     <div class="stat-label">Last Sync</div>
-                </div>
+            </div>
                 <div class="stat-card">
                     <div class="stat-number" id="sync-status">Ready</div>
                     <div class="stat-label">Status</div>
@@ -511,14 +728,94 @@
                     Upload CSV File
                 </button>
             </div>
-        </div>
+            </div>
 
         <!-- Connected Accounts Display -->
         <div id="connected-accounts-section" class="connected-accounts" style="display: none;">
             <h3><i class="fas fa-link"></i> Connected Accounts</h3>
             <div id="accounts-list">
                 <!-- Connected accounts will be loaded here -->
+                    </div>
+                    </div>
+                </div>
+
+        <!-- Connection Alternatives (shown when Teller Connect fails) -->
+        <div id="connection-alternatives" class="connection-alternatives" style="display: none;">
+            <div class="alternative-header">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Alternative Connection Methods</h3>
+                <p>Teller Connect is temporarily unavailable. Use these alternatives:</p>
             </div>
+            
+            <div class="alternative-methods">
+                <div class="alternative-method">
+                    <div class="method-icon">
+                        <i class="fas fa-file-csv"></i>
+                    </div>
+                    <div class="method-content">
+                        <h4>Upload CSV Export</h4>
+                        <p>Download your Chase transactions as CSV and upload them here</p>
+                        <button class="btn btn-primary" onclick="document.getElementById('csv-upload').click()">
+                            <i class="fas fa-upload"></i> Upload CSV
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="alternative-method">
+                    <div class="method-icon">
+                        <i class="fas fa-sync-alt"></i>
+                    </div>
+                    <div class="method-content">
+                        <h4>Manual Sync</h4>
+                        <p>Try refreshing the page or check back later</p>
+                        <button class="btn btn-secondary" onclick="location.reload()">
+                            <i class="fas fa-redo"></i> Refresh Page
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CSV Upload Section -->
+        <div class="csv-upload-section">
+            <div class="section-header">
+                <i class="fas fa-file-csv"></i>
+                <h3>Upload Chase Transaction CSV</h3>
+                <p>Export your Chase transactions as CSV and upload them here for processing</p>
+            </div>
+            
+            <div class="upload-area" id="csv-upload-area">
+                <div class="upload-content">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <h4>Drag & Drop CSV File</h4>
+                    <p>Or click to select your Chase transaction export</p>
+                    <button class="btn btn-primary" onclick="document.getElementById('csv-upload').click()">
+                        <i class="fas fa-folder-open"></i> Choose File
+                    </button>
+                </div>
+                <input type="file" id="csv-upload" accept=".csv" style="display: none;" onchange="handleCSVUpload(event)">
+            </div>
+            
+            <div class="upload-instructions">
+                <h4>How to export from Chase:</h4>
+                <ol>
+                    <li>Log into your Chase account</li>
+                    <li>Go to Account Activity</li>
+                    <li>Select date range (up to 1 year)</li>
+                    <li>Click "Download" or "Export"</li>
+                    <li>Choose CSV format</li>
+                    <li>Upload the file here</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <!-- Processing Overlay -->
+    <div class="processing-overlay" id="processing-overlay">
+        <div class="processing-content">
+            <div class="processing-spinner"></div>
+            <div class="processing-text" id="processing-text">Processing...</div>
+            <div class="processing-detail" id="processing-detail">Please wait</div>
         </div>
     </div>
 
@@ -611,7 +908,7 @@
                     
                     // Update UI
                     updateConnectionStatus(true);
-                    loadConnectedAccounts();
+            loadConnectedAccounts();
                     loadConnectionStats();
                     
                 } else {
@@ -672,11 +969,11 @@
             try {
                 const response = await fetch('/api/memory/connections');
                 const data = await response.json();
-                
+
                 if (data.success && data.connections.length > 0) {
                     const accountsSection = document.getElementById('connected-accounts-section');
-                    const accountsList = document.getElementById('accounts-list');
-                    
+                const accountsList = document.getElementById('accounts-list');
+
                     accountsSection.style.display = 'block';
                     accountsList.innerHTML = data.connections.map(conn => `
                         <div class="account-item">
@@ -712,7 +1009,7 @@
             try {
                 const response = await fetch('/api/connection-stats');
                 const stats = await response.json();
-                
+
                 if (stats.success) {
                     document.getElementById('connected-accounts').textContent = stats.connected_accounts || 0;
                     document.getElementById('total-transactions').textContent = stats.total_transactions || 0;
@@ -781,29 +1078,15 @@
         }
 
         // Show processing overlay
-        function showProcessing(title, subtitle) {
-            const overlay = document.createElement('div');
-            overlay.className = 'processing-overlay';
-            overlay.id = 'processing-overlay';
-            overlay.innerHTML = `
-                <div class="processing-content">
-                    <div class="processing-icon">
-                        <i class="fas fa-university"></i>
-                    </div>
-                    <h3>${title}</h3>
-                    <p style="color: var(--text-secondary); margin-bottom: 2rem;">${subtitle}</p>
-                    <div class="loading-spinner"></div>
-                </div>
-            `;
-            document.body.appendChild(overlay);
+        function showProcessing(title, detail) {
+            document.getElementById('processing-text').textContent = title;
+            document.getElementById('processing-detail').textContent = detail;
+            document.getElementById('processing-overlay').classList.add('show');
         }
 
         // Hide processing overlay
         function hideProcessing() {
-            const overlay = document.getElementById('processing-overlay');
-            if (overlay) {
-                overlay.remove();
-            }
+            document.getElementById('processing-overlay').classList.remove('show');
         }
 
         // Show notification
@@ -858,40 +1141,52 @@
         }
 
         // Handle CSV upload
-        async function handleCSVUpload() {
-            const fileInput = document.getElementById('csv-upload');
-            const file = fileInput.files[0];
-            
-            if (!file) {
-                showNotification('Please select a CSV file', 'error');
-                return;
-            }
-            
-            showProcessing('Uploading CSV...', 'Processing your transaction data');
-            
+        async function handleCSVUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
             try {
+                showProcessing('Uploading CSV...', 'Processing Chase transaction data');
+                
                 const formData = new FormData();
                 formData.append('file', file);
-                
+
                 const response = await fetch('/api/upload-csv', {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 const result = await response.json();
                 hideProcessing();
-                
+
                 if (result.success) {
-                    showNotification(`✅ Imported ${result.transactions_imported || 0} transactions`, 'success');
-                    loadConnectionStats();
-                    // Close modal
-                    document.querySelector('.processing-overlay').remove();
+                    showNotification(`✅ Successfully imported ${result.transactions_imported} transactions from ${result.filename}`, 'success');
+                    
+                    // Show import summary
+                    const summary = `
+                        📊 Import Summary:
+                        • Transactions: ${result.transactions_imported}
+                        • Date Range: ${result.date_range.earliest} to ${result.date_range.latest}
+                        • Categories: ${result.categories_found.join(', ')}
+                    `;
+                    
+                    setTimeout(() => {
+                        showNotification(summary, 'info');
+                    }, 2000);
+                    
+                    // Redirect to transaction manager to see the data
+                    setTimeout(() => {
+                        window.location.href = '/transaction_manager';
+                    }, 3000);
+                    
                 } else {
-                    showNotification('❌ Upload failed: ' + result.error, 'error');
+                    throw new Error(result.error);
                 }
+
             } catch (error) {
+                console.error('❌ CSV upload failed:', error);
                 hideProcessing();
-                showNotification('❌ Upload failed: ' + error.message, 'error');
+                showNotification('❌ CSV upload failed: ' + error.message, 'error');
             }
         }
 
@@ -935,36 +1230,76 @@
                 setTimeout(() => {
                     if (typeof TellerConnect === 'undefined') {
                         console.error('❌ Teller Connect SDK still not available');
-                        showNotification('❌ Unable to load Teller Connect. Please check your internet connection and refresh.', 'error');
+                        showNotification('❌ Teller Connect SDK failed to load. Please check your internet connection and refresh the page.', 'error');
+                        
+                        // Show alternative connection methods
+                        document.getElementById('connection-alternatives').style.display = 'block';
                     } else {
                         console.log('✅ Teller Connect SDK loaded successfully (delayed)');
                         initializeTellerConnect();
                     }
                 }, 2000);
             } else {
-                console.log('✅ Teller Connect SDK available immediately');
+                console.log('✅ Teller Connect SDK loaded successfully');
                 initializeTellerConnect();
             }
             
-            loadConnectedAccounts();
-            loadConnectionStats();
+            // Load current settings
+            loadCurrentSettings();
         });
 
-        // Initialize Teller Connect when SDK is ready
         function initializeTellerConnect() {
             try {
-                if (typeof TellerConnect !== 'undefined' && TellerConnect.setup) {
-                    tellerConnect = TellerConnect.setup(tellerConfig);
-                    console.log('✅ Teller Connect initialized successfully');
-                } else {
-                    console.error('❌ TellerConnect.setup not available');
-                    throw new Error('TellerConnect.setup method not found');
-                }
+                console.log('🔧 Initializing Teller Connect...');
+                
+                // Initialize Teller Connect with proper error handling
+                tellerConnect = TellerConnect.setup(tellerConfig);
+                
+                console.log('✅ Teller Connect initialized successfully');
+                showNotification('✅ Teller Connect ready for bank connection', 'success');
+                
             } catch (error) {
                 console.error('❌ Teller Connect initialization failed:', error);
-                tellerConnect = null;
+                showNotification('❌ Teller Connect initialization failed: ' + error.message, 'error');
+                
+                // Show alternative connection methods
+                document.getElementById('connection-alternatives').style.display = 'block';
             }
         }
+
+        // Drag and drop functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadArea = document.getElementById('csv-upload-area');
+            
+            if (uploadArea) {
+                uploadArea.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    uploadArea.classList.add('dragover');
+                });
+                
+                uploadArea.addEventListener('dragleave', function(e) {
+                    e.preventDefault();
+                    uploadArea.classList.remove('dragover');
+                });
+                
+                uploadArea.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    uploadArea.classList.remove('dragover');
+                    
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                        const file = files[0];
+                        if (file.name.toLowerCase().endsWith('.csv')) {
+                            // Create a fake event for the file input
+                            const event = { target: { files: [file] } };
+                            handleCSVUpload(event);
+                        } else {
+                            showNotification('❌ Please select a CSV file', 'error');
+                        }
+                    }
+                });
+            }
+        });
     </script>
 </body>
 </html>
