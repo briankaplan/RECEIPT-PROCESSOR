@@ -29,11 +29,14 @@ click==8.1.8
 blinker==1.9.0
 
 # Image processing and OCR (optional but imported by app.py)
-Pillow==11.1.1
+Pillow==11.0.0
 pytesseract==0.3.16
 
 # PDF processing (optional but imported by app.py)
 PyPDF2==4.0.1
+
+# HTML parsing for email receipt detection
+beautifulsoup4==4.12.2
 
 # AI Services (FREE & POWERFUL)
 # Hugging Face API only - no OpenAI needed!
