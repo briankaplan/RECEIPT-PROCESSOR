@@ -16,44 +16,40 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def test_huggingface_availability():
-    """Test if HuggingFace models are available"""
-    print("🤗 HUGGINGFACE MODELS AVAILABILITY TEST")
-    print("=" * 50)
+    """Test if HuggingFace cloud API is available"""
+    print("🤗 HUGGINGFACE CLOUD API AVAILABILITY TEST")
+    print("=" * 55)
     
     try:
-        from huggingface_receipt_processor import HuggingFaceReceiptProcessor, test_model_availability
+        from huggingface_receipt_processor import HuggingFaceReceiptProcessor, test_api_availability
         
         processor = HuggingFaceReceiptProcessor()
         system_info = processor.get_system_info()
         
         print(f"📊 System Information:")
-        print(f"   Transformers Available: {'✅' if system_info['transformers_available'] else '❌'}")
-        print(f"   Device: {system_info['device']}")
+        print(f"   API Token Configured: {'✅' if system_info['api_token_configured'] else '❌'}")
+        print(f"   API Connection: {system_info['api_connection_status']}")
+        print(f"   Base URL: {system_info['base_url']}")
         print(f"   Available Models: {', '.join(system_info['available_models'])}")
-        print(f"   Loaded Models: {', '.join(system_info['loaded_models'])}")
+        print(f"   Preferred Model: {system_info['model_preference']}")
+        print(f"   Cloud Inference: {'✅' if system_info['cloud_inference'] else '❌'}")
         
-        if system_info['transformers_available']:
-            print(f"   Transformers Version: {system_info.get('transformers_version', 'Unknown')}")
-            print(f"   PyTorch Version: {system_info.get('torch_version', 'Unknown')}")
-            print(f"   CUDA Available: {'✅' if system_info.get('cuda_available', False) else '❌'}")
-            
-            if system_info.get('cuda_available'):
-                print(f"   CUDA Device Count: {system_info.get('cuda_device_count', 0)}")
-                print(f"   CUDA Device Name: {system_info.get('cuda_device_name', 'Unknown')}")
+        print(f"\n🔍 Testing API Availability:")
+        availability = test_api_availability()
         
-        print(f"\n🔍 Testing Model Availability:")
-        availability = test_model_availability()
-        
-        for model_name, available in availability.items():
-            status = "✅ Available" if available else "❌ Not Available"
-            print(f"   {model_name}: {status}")
+        if availability['api_configured']:
+            print(f"   ✅ API Token: Configured")
+            print(f"   ✅ Available Models: {', '.join(availability['available_models'])}")
+        else:
+            print(f"   ❌ API Token: Not configured")
+            print(f"   💡 Set HF_API_TOKEN environment variable")
         
         return system_info, availability
         
     except ImportError as e:
         print(f"❌ Import Error: {str(e)}")
         print("   Please install required dependencies:")
-        print("   pip install transformers torch pillow accelerate")
+        print("   pip install requests python-dateutil pillow")
         return None, None
     except Exception as e:
         print(f"❌ Error: {str(e)}")
@@ -206,40 +202,32 @@ def test_basic_processing():
         return False
 
 def test_with_models():
-    """Test processing with actual models (if available)"""
-    print(f"\n🤖 MODEL PROCESSING TEST")
-    print("=" * 30)
+    """Test processing with cloud API models (if API token available)"""
+    print(f"\n🤖 CLOUD MODEL PROCESSING TEST")
+    print("=" * 35)
     
     try:
-        from huggingface_receipt_processor import HuggingFaceReceiptProcessor, test_model_availability
+        from huggingface_receipt_processor import HuggingFaceReceiptProcessor, test_api_availability
         
-        # Check model availability
-        availability = test_model_availability()
+        # Check API availability
+        availability = test_api_availability()
         
-        if not availability or not any(availability.values()):
-            print("⚠️ No models available for testing")
-            print("   To test with models, install:")
-            print("   pip install transformers>=4.40.0 torch>=2.0.0")
+        if not availability['api_configured']:
+            print("⚠️ No HuggingFace API token configured")
+            print("   To test with cloud models:")
+            print("   1. Get token from https://huggingface.co/settings/tokens")
+            print("   2. Set environment variable: export HF_API_TOKEN=hf_your_token")
             return False
         
-        # Find an available model
-        available_model = None
-        for model, available in availability.items():
-            if available and model != "transformers_available":
-                available_model = model
-                break
-        
-        if not available_model:
-            print("⚠️ No working models found")
-            return False
-        
-        print(f"🎯 Testing with model: {available_model}")
+        # Test with PaliGemma (best model)
+        test_model = "paligemma"
+        print(f"🎯 Testing with cloud model: {test_model}")
         
         # Create test images
         test_images = create_test_receipt_images()
         
-        # Initialize processor with available model
-        processor = HuggingFaceReceiptProcessor(model_preference=available_model)
+        # Initialize processor
+        processor = HuggingFaceReceiptProcessor(model_preference=test_model)
         
         # Process test images
         for i, image_path in enumerate(test_images[:2]):  # Test first 2 images
@@ -253,6 +241,7 @@ def test_with_models():
             print(f"      📊 Status: {result['status']}")
             print(f"      🤖 Model: {result.get('model_used', 'Unknown')}")
             print(f"      🎯 Confidence: {result.get('confidence_score', 0.0)}")
+            print(f"      ☁️ Cloud Inference: {result.get('processing_metadata', {}).get('cloud_inference', False)}")
             
             if result['status'] == 'success':
                 data = result.get('extracted_data', {})
@@ -277,6 +266,8 @@ def test_with_models():
         print(f"   Success Rate: {final_stats['success_rate']:.1f}%")
         print(f"   Average Confidence: {final_stats['avg_confidence']:.2f}")
         print(f"   Average Processing Time: {final_stats['avg_processing_time']:.2f}s")
+        print(f"   API Calls: {final_stats['api_calls']}")
+        print(f"   API Success Rate: {final_stats['api_success_rate']:.1f}%")
         
         # Clean up
         for img_path in test_images:
@@ -288,7 +279,7 @@ def test_with_models():
         return True
         
     except Exception as e:
-        print(f"❌ Model processing test failed: {str(e)}")
+        print(f"❌ Cloud model processing test failed: {str(e)}")
         return False
 
 def test_api_integration():

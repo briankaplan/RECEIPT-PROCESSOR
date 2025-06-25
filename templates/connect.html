@@ -840,8 +840,17 @@
             showNotification('🔗 Connecting to Teller.io...', 'info');
             
             try {
-                // Redirect to Teller connection flow
-                window.location.href = '/connect-teller';
+                // Get Teller connect URL from backend
+                const response = await fetch('/api/teller-environment');
+                const result = await response.json();
+                
+                if (result.success && result.connect_url) {
+                    // Redirect to actual Teller.io connection flow
+                    console.log('🔗 Redirecting to Teller:', result.connect_url);
+                    window.location.href = result.connect_url;
+                } else {
+                    throw new Error(result.error || 'Failed to get Teller connect URL');
+                }
             } catch (error) {
                 console.error('Teller connection failed:', error);
                 showNotification('❌ Failed to connect to Teller: ' + error.message, 'error');

@@ -4236,12 +4236,24 @@ def create_app():
     @app.route('/api/teller-environment', methods=['GET'])
     def api_teller_environment():
         """Get current Teller environment configuration"""
-        return jsonify({
-            "environment": Config.TELLER_ENVIRONMENT,
-            "application_id": Config.TELLER_APPLICATION_ID,
-            "webhook_url": Config.TELLER_WEBHOOK_URL,
-            "connected": teller_client.connected if 'teller_client' in globals() else False
-        })
+        try:
+            connect_url = teller_client.get_connect_url("user_12345")
+            return jsonify({
+                "success": True,
+                "environment": Config.TELLER_ENVIRONMENT,
+                "application_id": Config.TELLER_APPLICATION_ID,
+                "webhook_url": Config.TELLER_WEBHOOK_URL,
+                "connect_url": connect_url,
+                "connected": teller_client.connected if hasattr(teller_client, 'connected') else False
+            })
+        except Exception as e:
+            logger.error(f"Teller environment error: {e}")
+            return jsonify({
+                "success": False,
+                "error": str(e),
+                "environment": Config.TELLER_ENVIRONMENT,
+                "connect_url": "#"
+            })
 
     # ========================================================================
     # REGISTER ADDITIONAL BLUEPRINTS
