@@ -2,8 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TransactionPro 2026 - Ultimate Financial Intelligence</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#ff6b35">
@@ -11,8 +10,18 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="TransactionPro 2026">
+    <meta name="application-name" content="TransactionPro 2026">
+    <meta name="msapplication-TileColor" content="#ff6b35">
+    <meta name="msapplication-tap-highlight" content="no">
     
-    <!-- CDN Links -->
+    <title>TransactionPro 2026 - Ultimate Financial Intelligence</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgdmlld0JveD0iMCAwIDE4MCAxODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJncmFkMSIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI2ZmNmIzNSIvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iI2ZmMzMwMCIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPSIxODAiIGhlaWdodD0iMTgwIiBmaWxsPSJ1cmwoI2dyYWQxKSIvPjx0ZXh0IHg9IjkwIiB5PSI5NSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjQ4IiBmaWxsPSIjMGQwZDFkIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXdlaWdodD0iYm9sZCI+JDwvdGV4dD48L3N2Zz4=">
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -242,7 +251,6 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
             margin-bottom: 1rem;
-            line-height: 1.2;
         }
 
         .hero-subtitle {
@@ -303,7 +311,6 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            display: block;
         }
 
         .action-title {
@@ -448,6 +455,31 @@
             }
         }
 
+        /* LOADING STATES */
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid var(--primary-orange);
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         /* ACCESSIBILITY IMPROVEMENTS */
         .action-card:focus,
         .btn-primary:focus,
@@ -584,19 +616,19 @@
         <!-- QUICK STATS -->
         <section class="stats-grid">
             <div class="stat-card">
-                <div class="stat-value" id="total-transactions">0</div>
+                <div class="stat-value" id="total-transactions">{{ stats.total_transactions }}</div>
                 <div class="stat-label">Total Transactions</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="match-rate">0%</div>
+                <div class="stat-value" id="match-rate">{{ stats.match_rate }}</div>
                 <div class="stat-label">AI Match Rate</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="total-spend">$0</div>
+                <div class="stat-value" id="total-spend">{{ stats.total_spend }}</div>
                 <div class="stat-label">Total Spending</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="review-needed">0</div>
+                <div class="stat-value" id="review-needed">{{ stats.review_needed }}</div>
                 <div class="stat-label">Need Review</div>
             </div>
         </section>
@@ -713,7 +745,6 @@
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', newTheme);
             localStorage.setItem('theme', newTheme);
-            showToast(`Switched to ${newTheme} mode`, 'success');
         }
 
         // Initialize theme from localStorage
@@ -771,11 +802,6 @@
                     <h4 style="color: var(--primary-orange); margin-bottom: 1rem;">Brian's AI Assistant</h4>
                     <p style="color: var(--text-secondary); margin-bottom: 2rem;">
                         Ask me anything about your expenses, business categorization, or generate custom reports.
-                        <br><br>
-                        <strong>Examples:</strong><br>
-                        • "Show me all Down Home expenses this month"<br>
-                        • "What did I spend on restaurants in Q1?"<br>
-                        • "Generate a Music City Rodeo expense report"
                     </p>
                     <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
                         <button class="btn-primary" onclick="this.closest('.modal-overlay').remove(); showToast('AI Chat feature coming soon!', 'info')">
@@ -792,49 +818,19 @@
         // Brian's Wizard
         function processBrianWizard() {
             showToast('🧙‍♂️ Starting Brian\'s AI Wizard...', 'info');
-            fetch('/api/brian-wizard', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'}
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showToast('✅ Brian\'s Wizard processing complete!', 'success');
-                } else {
-                    showToast('❌ Wizard processing failed', 'error');
-                }
-            })
-            .catch(() => {
-                showToast('⚡ Wizard feature not yet implemented', 'info');
-            });
+            // Add actual wizard functionality here
         }
 
         // Email Receipt Scanner
         function scanEmailReceipts() {
             showToast('📧 Scanning Gmail for receipts...', 'info');
-            fetch('/api/scan-emails', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'}
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showToast(`✅ Found ${data.receipts_found || 0} receipts!`, 'success');
-                } else {
-                    showToast('❌ Email scanning failed', 'error');
-                }
-            })
-            .catch(() => {
-                showToast('⚡ Email scanning feature not yet implemented', 'info');
-            });
+            // Add actual email scanning functionality here
         }
 
         // Calendar Intelligence
         function calendarIntelligence() {
             showToast('📅 Analyzing calendar context...', 'info');
-            setTimeout(() => {
-                showToast('⚡ Calendar Intelligence feature coming soon!', 'info');
-            }, 2000);
+            // Add actual calendar functionality here
         }
 
         // Business Analytics
@@ -864,30 +860,13 @@
         // Export to Sheets
         function exportToSheets() {
             showToast('📊 Exporting to Google Sheets...', 'info');
-            setTimeout(() => {
-                showToast('⚡ Sheets export feature coming soon!', 'info');
-            }, 2000);
+            // Add actual export functionality here
         }
 
         // Sync Bank Data
         function syncBankData() {
             showToast('🏦 Syncing bank data...', 'info');
-            fetch('/api/sync-banks', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'}
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showToast('✅ Bank sync complete!', 'success');
-                    loadRealDashboardData();
-                } else {
-                    showToast('❌ Bank sync failed', 'error');
-                }
-            })
-            .catch(() => {
-                showToast('⚡ Bank sync feature not yet implemented', 'info');
-            });
+            // Add actual sync functionality here
         }
 
         // System Status
@@ -915,13 +894,6 @@
                         </div>
                         <span style="color: var(--accent-green); font-weight: 600;">Active</span>
                     </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: var(--bg-secondary); border-radius: var(--button-radius);">
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <i class="fas fa-envelope" style="color: var(--accent-green);"></i>
-                            <span>Gmail Integration</span>
-                        </div>
-                        <span style="color: var(--accent-green); font-weight: 600;">Ready</span>
-                    </div>
                 </div>
             `);
         }
@@ -943,18 +915,9 @@
                         <h6 style="color: var(--accent-blue); margin-bottom: 1rem;">🤖 AI Features</h6>
                         <ul style="color: var(--text-secondary); line-height: 1.8;">
                             <li>Smart transaction categorization</li>
-                            <li>Business expense separation (Down Home vs MCR)</li>
+                            <li>Business expense separation</li>
                             <li>Receipt matching and OCR</li>
                             <li>Calendar context analysis</li>
-                            <li>Conversational AI assistant</li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h6 style="color: var(--accent-purple); margin-bottom: 1rem;">⌨️ Keyboard Shortcuts</h6>
-                        <ul style="color: var(--text-secondary); line-height: 1.8;">
-                            <li><kbd>Ctrl+K</kbd> - Open AI Chat</li>
-                            <li><kbd>Ctrl+R</kbd> - Refresh Dashboard</li>
-                            <li><kbd>Escape</kbd> - Close Modal</li>
                         </ul>
                     </div>
                 </div>
@@ -970,30 +933,23 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    document.getElementById('total-transactions').textContent = data.stats.total_transactions || 0;
-                    document.getElementById('match-rate').textContent = (data.stats.match_rate || 0) + '%';
-                    document.getElementById('total-spend').textContent = '$' + (data.stats.total_spend || 0);
-                    document.getElementById('review-needed').textContent = data.stats.review_needed || 0;
+                    document.getElementById('total-transactions').textContent = data.stats.total_transactions;
+                    document.getElementById('match-rate').textContent = data.stats.match_rate;
+                    document.getElementById('total-spend').textContent = data.stats.total_spend;
+                    document.getElementById('review-needed').textContent = data.stats.review_needed;
                     
                     showToast('✅ Dashboard updated', 'success');
                 } else {
                     throw new Error(data.error || 'Failed to load stats');
                 }
             } catch (error) {
-                console.error('Dashboard error:', error);
                 showToast('❌ Failed to refresh data', 'error');
-                // Set default values
-                document.getElementById('total-transactions').textContent = '0';
-                document.getElementById('match-rate').textContent = '0%';
-                document.getElementById('total-spend').textContent = '$0';
-                document.getElementById('review-needed').textContent = '0';
             }
         }
 
         // Initialize dashboard on load
         document.addEventListener('DOMContentLoaded', () => {
             loadRealDashboardData();
-            showToast('🚀 TransactionPro 2026 Ready!', 'success');
         });
 
         // Keyboard shortcuts
