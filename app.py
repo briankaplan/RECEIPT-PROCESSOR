@@ -1518,6 +1518,106 @@ def enhanced_bank_sync_with_certificates():
             logger.error(f"Update expense error: {e}")
             return jsonify({'success': False, 'error': str(e)}), 500
 
+    @app.route('/api/brian/health', methods=['GET'])
+    def api_brian_health():
+        """Brian's Financial Wizard health check with real connection and data status"""
+        try:
+            from brian_financial_wizard import BrianFinancialWizard
+            wizard = BrianFinancialWizard()
+            # Check MongoDB connection
+            db_connected = mongo_client.connected if hasattr(mongo_client, 'connected') else False
+            # Check if any expenses exist
+            expenses_count = 0
+            if db_connected:
+                expenses_count = mongo_client.db.transactions.count_documents({})
+            status = 'ready' if db_connected else 'offline'
+            message = 'Ready' if db_connected else 'Not connected'
+            if db_connected and expenses_count == 0:
+                status = 'waiting_for_data'
+                message = 'Waiting for expense data'
+            elif db_connected and expenses_count > 0:
+                status = 'operational'
+                message = f'Connected, {expenses_count} expenses loaded'
+            return jsonify({
+                'status': status,
+                'healthy': db_connected,
+                'service': "Brian's Financial Wizard",
+                'expenses_count': expenses_count,
+                'message': message,
+                'version': '2026.1',
+                'features': [
+                    'AI Expense Categorization',
+                    'Down Home Media Integration',
+                    'Music City Rodeo Integration',
+                    'Smart Business Logic'
+                ],
+                'timestamp': datetime.utcnow().isoformat()
+            })
+        except ImportError:
+            return jsonify({
+                'status': 'degraded',
+                'healthy': False,
+                'error': "Brian's Wizard module not found",
+                'timestamp': datetime.utcnow().isoformat()
+            }), 200
+        except Exception as e:
+            return jsonify({
+                'status': 'error',
+                'healthy': False,
+                'error': str(e),
+                'timestamp': datetime.utcnow().isoformat()
+            }), 200
+
+    @app.route('/api/calendar/health', methods=['GET'])
+    def api_calendar_health():
+        """Calendar intelligence health check with real connection and data status"""
+        try:
+            # Try to import and initialize analyzer
+            try:
+                from calendar_context_analyzer import CalendarContextAnalyzer
+                analyzer = CalendarContextAnalyzer()
+                credentials_found = os.path.exists(getattr(analyzer, 'credentials_path', ''))
+                calendar_service_connected = hasattr(analyzer, 'calendar_service') and analyzer.calendar_service is not None
+                calendars_accessible = 0
+                if calendar_service_connected:
+                    try:
+                        calendar_list = analyzer.calendar_service.calendarList().list().execute()
+                        calendars_accessible = len(calendar_list.get('items', []))
+                    except Exception:
+                        calendars_accessible = 0
+                status = 'operational' if calendar_service_connected and calendars_accessible > 0 else 'waiting_for_data' if calendar_service_connected else 'needs_setup'
+                message = 'Calendar connected' if calendars_accessible > 0 else 'Waiting for calendar data' if calendar_service_connected else 'Needs setup or credentials'
+                return jsonify({
+                    'status': status,
+                    'healthy': calendar_service_connected,
+                    'service': 'Calendar Intelligence',
+                    'calendars_accessible': calendars_accessible,
+                    'credentials_found': credentials_found,
+                    'message': message,
+                    'version': '2026.1',
+                    'features': [
+                        'Business Context Analysis',
+                        'Travel Detection',
+                        'Meeting Correlation',
+                        'Google Calendar Integration'
+                    ],
+                    'timestamp': datetime.utcnow().isoformat()
+                })
+            except ImportError:
+                return jsonify({
+                    'status': 'degraded',
+                    'healthy': False,
+                    'error': 'Calendar analyzer module not found',
+                    'timestamp': datetime.utcnow().isoformat()
+                }), 200
+        except Exception as e:
+            return jsonify({
+                'status': 'error',
+                'healthy': False,
+                'error': str(e),
+                'timestamp': datetime.utcnow().isoformat()
+            }), 200
+
     return app
 
 # ============================================================================
