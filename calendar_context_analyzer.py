@@ -77,90 +77,153 @@ class CalendarContextAnalyzer:
     """
     
     def __init__(self):
-        self.credentials_path = os.getenv('GOOGLE_CALENDAR_CREDENTIALS', 'credentials/service_account.json')
+        self.credentials_path = os.getenv('GOOGLE_CALENDAR_CREDENTIALS', 'credentials/service-acct-dh.json')
         self.calendar_service = None
-        self.primary_calendar_id = os.getenv('GOOGLE_CALENDAR_ID', 'primary')
         
-        # Brian's business context
-        self.business_keywords = {
-            "down_home": [
-                "client", "production", "director", "crew", "editing", "post-production",
-                "strategic consulting", "business development", "soho house", "media",
-                "video production", "content creation", "location scout", "equipment"
-            ],
-            "mcr": [
-                "rodeo", "arena", "cowboy", "country music", "nfr", "vegas", "music city",
-                "event planning", "venue", "entertainment", "western", "bull riding",
-                "nashville", "country", "music industry"
-            ],
-            "business_general": [
-                "meeting", "conference", "networking", "client", "vendor", "supplier",
-                "business lunch", "industry event", "trade show", "workshop"
-            ]
+        # OAuth2 Service Account authentication (required for Calendar API)
+        self.service_account_email = None
+        
+        # Calendar IDs to access
+        self.calendars = {
+            'brian_downhome': os.getenv('BRIAN_DOWNHOME_CALENDAR_ID', 'brian@downhome.com'),
+            'primary': 'primary'
         }
         
-        self.travel_keywords = [
-            "flight", "airport", "hotel", "travel", "trip", "destination",
-            "business trip", "conference", "client visit", "site visit"
-        ]
+        # Set primary calendar
+        self.primary_calendar_id = self.calendars['brian_downhome']
         
-        self.expense_correlation_patterns = {
-            "meals": ["lunch", "dinner", "breakfast", "meal", "restaurant", "catering"],
-            "transportation": ["uber", "lyft", "taxi", "rental car", "parking", "gas"],
-            "accommodation": ["hotel", "airbnb", "lodging", "accommodation"],
-            "equipment": ["camera", "microphone", "lighting", "computer", "software"],
-            "office": ["supplies", "office", "equipment", "software", "subscription"]
+        # Brian's business context
+        self.business_context = {
+            'business_hours': {'start': 8, 'end': 18},
+            'keywords': {
+                'travel': ['flight', 'hotel', 'conference', 'meeting', 'trip', 'travel'],
+                'business': ['client', 'meeting', 'conference', 'presentation', 'work'],
+                'personal': ['vacation', 'personal', 'family', 'birthday', 'holiday']
+            }
         }
         
         self._initialize_calendar_service()
         logger.info("📅 Calendar Context Analyzer initialized")
     
     def _initialize_calendar_service(self):
-        """Initialize Google Calendar service"""
+        """Initialize Google Calendar service with OAuth2 service account authentication"""
         if not GOOGLE_CALENDAR_AVAILABLE:
             logger.warning("Google Calendar not available - install google-api-python-client")
             return
         
         try:
             if os.path.exists(self.credentials_path):
+                from google.oauth2.service_account import Credentials
                 credentials = Credentials.from_service_account_file(
                     self.credentials_path,
                     scopes=['https://www.googleapis.com/auth/calendar.readonly']
                 )
+                self.service_account_email = credentials.service_account_email
                 self.calendar_service = build('calendar', 'v3', credentials=credentials)
-                logger.info("✅ Google Calendar service initialized")
+                logger.info("✅ Google Calendar service initialized with OAuth2")
+                logger.info(f"📧 Service account email: {self.service_account_email}")
+                
+                # Test calendar access
+                self._test_oauth2_calendar_access()
+                
             else:
-                logger.warning(f"Calendar credentials not found at {self.credentials_path}")
+                logger.warning(f"❌ Calendar credentials not found: {self.credentials_path}")
+                logger.info("📝 Calendar integration will be disabled")
+                
         except Exception as e:
-            logger.error(f"Failed to initialize Calendar service: {e}")
+            logger.error(f"❌ Failed to initialize Google Calendar service: {e}")
+            self.calendar_service = None
     
-    def sync_calendar_events(self, days_back: int = 30, days_forward: int = 30) -> List[CalendarEvent]:
-        """
-        Sync calendar events and analyze business context
-        """
+    def _test_oauth2_calendar_access(self):
+        """Test OAuth2 calendar access and provide setup instructions"""
+        if not self.calendar_service:
+            return
+            
+        try:
+            # Try to list calendars
+            calendar_list = self.calendar_service.calendarList().list().execute()
+            calendars = calendar_list.get('items', [])
+            
+            logger.info(f"📅 Found {len(calendars)} accessible calendars")
+            
+            if len(calendars) == 0:
+                logger.warning("⚠️ No calendars accessible to service account")
+                logger.warning("   Calendar sharing may not be configured properly")
+                logger.info("📝 SETUP REQUIRED: Share brian@downhome.com calendar with service account")
+                logger.info("   1. Go to https://calendar.google.com")
+                logger.info("   2. Open Settings > Calendars > brian@downhome.com")
+                logger.info(f"   3. Share with: {self.service_account_email}")
+                logger.info("   4. Grant 'See all event details' permission")
+            else:
+                for calendar in calendars:
+                    logger.info(f"   📅 {calendar.get('summary', 'Unknown')} ({calendar.get('id', 'No ID')})")
+                    
+        except Exception as e:
+            logger.warning(f"⚠️ Calendar access test failed: {e}")
+            logger.info("💡 This might be due to:")
+            logger.info("   1. Calendar not shared with service account")
+            logger.info("   2. Insufficient permissions")
+            logger.info("   3. Service account setup issues")
+    
+    def get_events_in_range(self, start_date: datetime, end_date: datetime, max_results: int = 500) -> List[Dict]:
+        """Get calendar events in the specified date range"""
         if not self.calendar_service:
             logger.warning("Calendar service not available")
             return []
         
         try:
-            # Calculate time range
-            now = datetime.utcnow()
-            time_min = (now - timedelta(days=days_back)).isoformat() + 'Z'
-            time_max = (now + timedelta(days=days_forward)).isoformat() + 'Z'
+            # Format dates properly for Google Calendar API
+            time_min = start_date.isoformat() + 'Z'
+            time_max = end_date.isoformat() + 'Z'
             
-            # Fetch events
+            logger.info(f"📅 Fetching events from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+            
+            # Try to get events from the brian@downhome.com calendar
             events_result = self.calendar_service.events().list(
                 calendarId=self.primary_calendar_id,
                 timeMin=time_min,
                 timeMax=time_max,
-                maxResults=500,
+                maxResults=max_results,
                 singleEvents=True,
                 orderBy='startTime'
             ).execute()
             
             events = events_result.get('items', [])
+            logger.info(f"📅 Successfully retrieved {len(events)} events from calendar")
             
-            # Process and analyze events
+            # Process events and add business context
+            processed_events = []
+            for event in events:
+                try:
+                    processed_event = self._process_event(event)
+                    if processed_event:
+                        processed_events.append(processed_event)
+                except Exception as e:
+                    logger.warning(f"Failed to process event {event.get('id', 'unknown')}: {e}")
+                    continue
+            
+            logger.info(f"📅 Successfully processed {len(processed_events)} events")
+            return processed_events
+            
+        except Exception as e:
+            logger.error(f"Calendar API error: {e}")
+            # Don't fail completely - return empty list but log the issue
+            return []
+    
+    def sync_calendar_events(self, days_back: int = 30, days_forward: int = 30) -> List[Dict]:
+        """
+        Sync calendar events and analyze business context
+        """
+        try:
+            # Calculate time range
+            now = datetime.utcnow()
+            start_date = now - timedelta(days=days_back)
+            end_date = now + timedelta(days=days_forward)
+            
+            # Get events using the new method
+            events = self.get_events_in_range(start_date, end_date)
+            
+            # Analyze events for business context
             analyzed_events = []
             for event in events:
                 analyzed_event = self._analyze_calendar_event(event)
@@ -170,12 +233,39 @@ class CalendarContextAnalyzer:
             logger.info(f"📅 Synced {len(analyzed_events)} calendar events")
             return analyzed_events
             
-        except HttpError as e:
-            logger.error(f"Calendar API error: {e}")
-            return []
         except Exception as e:
             logger.error(f"Calendar sync error: {e}")
             return []
+    
+    def _process_event(self, event: Dict) -> Optional[Dict]:
+        """Process a single calendar event"""
+        try:
+            # Extract event details
+            event_id = event.get('id', '')
+            summary = event.get('summary', 'No title')
+            description = event.get('description', '')
+            location = event.get('location', '')
+            
+            # Extract start/end times
+            start = event.get('start', {})
+            end = event.get('end', {})
+            
+            start_time = start.get('dateTime') or start.get('date')
+            end_time = end.get('dateTime') or end.get('date')
+            
+            return {
+                'id': event_id,
+                'summary': summary,
+                'description': description,
+                'location': location,
+                'start_time': start_time,
+                'end_time': end_time,
+                'raw_event': event
+            }
+            
+        except Exception as e:
+            logger.warning(f"Failed to process event: {e}")
+            return None
     
     def _analyze_calendar_event(self, event: Dict) -> Optional[CalendarEvent]:
         """Analyze a single calendar event for business context"""

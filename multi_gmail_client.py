@@ -143,22 +143,72 @@ class MultiGmailClient:
             logger.error(f"Search failed: {e}")
             return []
 
-    def get_metadata(self, service, msg_id, user_id='me') -> Optional[Dict]:
-        try:
-            msg = service.users().messages().get(userId=user_id, id=msg_id, format='metadata').execute()
-            headers = msg.get('payload', {}).get('headers', [])
-            subject = next((h['value'] for h in headers if h['name'] == 'Subject'), '')
-            sender = next((h['value'] for h in headers if h['name'] == 'From'), '')
-            return {
-                'id': msg_id,
-                'subject': subject,
-                'from': sender
-            }
-        except Exception as e:
-            logger.error(f"Metadata fetch failed for {msg_id}: {e}")
-            return None
+    def get_metadata(self, service, msg_id, user_id='me', retries=3) -> Optional[Dict]:
+        """Get message metadata with enhanced retry logic for SSL/timeout issues"""
+        import time
+        import ssl
+        from socket import timeout as SocketTimeout
+        from urllib3.exceptions import ReadTimeoutError, ConnectionError
+        from googleapiclient.errors import HttpError
+        
+        for attempt in range(retries + 1):
+            try:
+                # Progressive delays between retries to avoid rate limiting
+                if attempt > 0:
+                    delay = min(2 ** attempt, 10)  # Exponential backoff, max 10 seconds
+                    time.sleep(delay)
+                    logger.debug(f"🔄 Retry {attempt + 1}/{retries + 1} for {msg_id[:10]}... after {delay}s delay")
+                
+                msg = service.users().messages().get(
+                    userId=user_id, 
+                    id=msg_id, 
+                    format='metadata'
+                ).execute()
+                
+                headers = msg.get('payload', {}).get('headers', [])
+                subject = next((h['value'] for h in headers if h['name'] == 'Subject'), '')
+                sender = next((h['value'] for h in headers if h['name'] == 'From'), '')
+                date = next((h['value'] for h in headers if h['name'] == 'Date'), '')
+                
+                return {
+                    'id': msg_id,
+                    'subject': subject,
+                    'from': sender,
+                    'date': date
+                }
+                
+            except (ssl.SSLError, SocketTimeout, ReadTimeoutError, ConnectionError) as network_error:
+                error_type = type(network_error).__name__
+                if attempt < retries:
+                    logger.warning(f"⚠️ {error_type} for {msg_id[:10]}... (attempt {attempt + 1}/{retries + 1})")
+                    continue
+                else:
+                    logger.error(f"❌ Final {error_type} for {msg_id[:10]}... after {retries + 1} attempts")
+                    return None
+                    
+            except HttpError as api_error:
+                # Handle specific API errors
+                if api_error.resp.status == 429:  # Rate limit
+                    if attempt < retries:
+                        wait_time = min(30, 5 * (attempt + 1))
+                        logger.warning(f"⚠️ Rate limited, waiting {wait_time}s before retry")
+                        time.sleep(wait_time)
+                        continue
+                    else:
+                        logger.error(f"❌ Rate limit exceeded for {msg_id[:10]}...")
+                        return None
+                else:
+                    logger.error(f"❌ API error for {msg_id[:10]}...: {api_error}")
+                    return None
+                    
+            except Exception as e:
+                error_msg = str(e)[:50] + "..." if len(str(e)) > 50 else str(e)
+                logger.error(f"❌ Unexpected error for {msg_id[:10]}...: {type(e).__name__}: {error_msg}")
+                return None
+        
+        return None
 
-    def fetch_receipt_metadata_parallel(self, days=365, max_per_account=200) -> List[Dict]:
+    def fetch_receipt_metadata_parallel(self, days=30, max_per_account=50) -> List[Dict]:
         """OPTIMIZED: Fetch receipt metadata from all accounts with better performance"""
         import time
         start_time = time.time()
@@ -200,35 +250,52 @@ class MultiGmailClient:
         return all_receipts
     
     def _process_account_messages(self, account_email: str, service, days: int, max_messages: int) -> List[Dict]:
-        """Process messages for a single account"""
+        """Process messages for a single account with improved error handling"""
         try:
             # Search for receipt messages
             msg_ids = self.search_receipt_ids(service, days=days)
             
-            # Limit messages per account
-            if len(msg_ids) > max_messages:
-                msg_ids = msg_ids[:max_messages]
-                logger.info(f"📧 {account_email}: Limited to {max_messages} most recent messages")
+            # Limit messages per account (more conservative)
+            max_safe_messages = min(max_messages, 30)  # Reduced from 50 to 30
+            if len(msg_ids) > max_safe_messages:
+                msg_ids = msg_ids[:max_safe_messages]
+                logger.info(f"📧 {account_email}: Limited to {max_safe_messages} most recent messages")
             
             logger.info(f"📧 {account_email}: Processing {len(msg_ids)} messages")
             
             account_receipts = []
             
-            # Process messages in parallel for this account
-            with ThreadPoolExecutor(max_workers=15) as executor:
-                futures = [
-                    executor.submit(self.get_metadata, service, msg_id) 
-                    for msg_id in msg_ids
-                ]
+            # Process messages in smaller batches with conservative settings
+            batch_size = 5  # Reduced from 10 to 5
+            max_workers = 2  # Reduced from 5 to 2 workers
+            
+            for i in range(0, len(msg_ids), batch_size):
+                batch = msg_ids[i:i + batch_size]
+                batch_num = i//batch_size + 1
+                total_batches = (len(msg_ids) + batch_size - 1) // batch_size
                 
-                for future in as_completed(futures):
-                    try:
-                        metadata = future.result(timeout=10)  # 10-second timeout per message
-                        if metadata:
-                            metadata['account'] = account_email  # Add account info
-                            account_receipts.append(metadata)
-                    except Exception as e:
-                        logger.warning(f"⚠️ Message metadata failed: {e}")
+                logger.info(f"📧 {account_email}: Processing batch {batch_num}/{total_batches} ({len(batch)} messages)")
+                
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    futures = [
+                        executor.submit(self.get_metadata, service, msg_id) 
+                        for msg_id in batch
+                    ]
+                    
+                    for future in as_completed(futures):
+                        try:
+                            metadata = future.result(timeout=45)  # Increased timeout to 45 seconds
+                            if metadata:
+                                metadata['account'] = account_email  # Add account info
+                                account_receipts.append(metadata)
+                        except Exception as e:
+                            logger.warning(f"⚠️ Message metadata failed: {type(e).__name__}")
+                
+                # Longer delay between batches to avoid overwhelming the API
+                if i + batch_size < len(msg_ids):
+                    import time
+                    time.sleep(2)  # Increased from 1 to 2 seconds
+                    logger.debug(f"📧 {account_email}: Waiting 2s before next batch...")
             
             logger.info(f"✅ {account_email}: Retrieved {len(account_receipts)} receipt metadata")
             return account_receipts

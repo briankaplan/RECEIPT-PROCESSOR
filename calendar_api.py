@@ -67,6 +67,118 @@ def calendar_health():
             "error": str(e)
         }), 500
 
+@calendar_bp.route('/debug', methods=['GET'])
+def calendar_debug():
+    """Debug calendar access with different calendar IDs"""
+    try:
+        init_calendar_analyzer()
+        
+        if not calendar_analyzer or not calendar_analyzer.calendar_service:
+            return jsonify({
+                "error": "Calendar service not available",
+                "details": "Calendar analyzer or service not initialized"
+            }), 500
+        
+        debug_info = {
+            "service_account_email": getattr(calendar_analyzer, 'service_account_email', 'Unknown'),
+            "credentials_path": calendar_analyzer.credentials_path,
+            "calendar_tests": []
+        }
+        
+        # Test different calendar IDs
+        calendar_ids_to_test = [
+            'brian@downhome.com',
+            'primary',
+            'YnJpYW5AZG93bmhvbWUuY29t',  # Base64 encoded version you mentioned
+            calendar_analyzer.primary_calendar_id
+        ]
+        
+        for calendar_id in calendar_ids_to_test:
+            test_result = {
+                "calendar_id": calendar_id,
+                "calendar_info": None,
+                "events_sample": None,
+                "error": None,
+                "access_role": None
+            }
+            
+            try:
+                # Test 1: Get calendar metadata
+                calendar_info = calendar_analyzer.calendar_service.calendars().get(
+                    calendarId=calendar_id
+                ).execute()
+                test_result["calendar_info"] = {
+                    "summary": calendar_info.get('summary', 'No summary'),
+                    "description": calendar_info.get('description', 'No description'),
+                    "timeZone": calendar_info.get('timeZone', 'Unknown'),
+                    "accessRole": calendar_info.get('accessRole', 'Unknown'),
+                    "id": calendar_info.get('id', 'Unknown')
+                }
+                
+                # Test 2: Try to get recent events
+                from datetime import datetime, timedelta
+                now = datetime.utcnow()
+                time_min = (now - timedelta(days=30)).isoformat() + 'Z'
+                time_max = (now + timedelta(days=7)).isoformat() + 'Z'
+                
+                events_result = calendar_analyzer.calendar_service.events().list(
+                    calendarId=calendar_id,
+                    timeMin=time_min,
+                    timeMax=time_max,
+                    maxResults=5,
+                    singleEvents=True,
+                    orderBy='startTime'
+                ).execute()
+                
+                events = events_result.get('items', [])
+                test_result["events_sample"] = {
+                    "count": len(events),
+                    "events": []
+                }
+                
+                for event in events[:3]:  # Show first 3 events
+                    event_info = {
+                        "summary": event.get('summary', 'No title'),
+                        "start": event.get('start', {}).get('dateTime', event.get('start', {}).get('date', 'No time')),
+                        "end": event.get('end', {}).get('dateTime', event.get('end', {}).get('date', 'No time'))
+                    }
+                    test_result["events_sample"]["events"].append(event_info)
+                
+            except Exception as e:
+                test_result["error"] = str(e)
+            
+            debug_info["calendar_tests"].append(test_result)
+        
+        # Also list all accessible calendars
+        try:
+            calendar_list = calendar_analyzer.calendar_service.calendarList().list().execute()
+            calendars = calendar_list.get('items', [])
+            debug_info["accessible_calendars"] = []
+            
+            for calendar in calendars:
+                debug_info["accessible_calendars"].append({
+                    "id": calendar.get('id', 'Unknown'),
+                    "summary": calendar.get('summary', 'No summary'),
+                    "accessRole": calendar.get('accessRole', 'Unknown'),
+                    "selected": calendar.get('selected', False),
+                    "primary": calendar.get('primary', False)
+                })
+                
+        except Exception as e:
+            debug_info["calendar_list_error"] = str(e)
+        
+        return jsonify({
+            "success": True,
+            "debug_info": debug_info
+        })
+        
+    except Exception as e:
+        logger.error(f"Calendar debug failed: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
 @calendar_bp.route('/sync-events', methods=['POST'])
 def sync_calendar_events():
     """Sync calendar events and analyze business context"""
@@ -79,10 +191,16 @@ def sync_calendar_events():
                 "synced_events": 0
             }), 400
         
-        # Get sync parameters
-        data = request.get_json() or {}
-        days_back = data.get('days_back', 30)
-        days_forward = data.get('days_forward', 30)
+        # Handle both JSON and form data to prevent 415 errors
+        if request.is_json and request.get_json():
+            data = request.get_json()
+        elif request.form:
+            data = request.form.to_dict()
+        else:
+            data = {}
+        
+        days_back = int(data.get('days_back', 30))
+        days_forward = int(data.get('days_forward', 30))
         
         # Sync events
         events = calendar_analyzer.sync_calendar_events(days_back, days_forward)

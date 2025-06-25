@@ -70,7 +70,21 @@ def scan_emails():
     Scan emails for receipts with automatic AI categorization
     """
     try:
-        data = request.get_json()
+        # Handle both JSON and form data to prevent 415 errors
+        if request.is_json and request.get_json():
+            data = request.get_json()
+        elif request.form:
+            data = request.form.to_dict()
+            # Convert form data to expected format
+            data['email_accounts'] = []  # Form data won't have complex structures
+            data['days_back'] = int(data.get('days_back', 30))
+            data['auto_download'] = data.get('auto_download', 'true').lower() == 'true'
+        else:
+            data = {
+                'email_accounts': [],
+                'days_back': 30,
+                'auto_download': True
+            }
         
         # Email scanning parameters
         email_accounts = data.get('email_accounts', [])

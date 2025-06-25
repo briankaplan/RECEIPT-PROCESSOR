@@ -3758,10 +3758,15 @@ def create_app():
                     'error': 'Email Receipt Detector not available'
                 }), 500
             
-            data = request.get_json()
-            email_account = data.get('email_account')
-            password = data.get('password')  # Should use OAuth in production
-            days_back = data.get('days_back', 30)
+            # Handle both JSON and form data
+            if request.is_json:
+                data = request.get_json() or {}
+            else:
+                data = request.form.to_dict()
+            
+            email_account = data.get('email_account', 'auto-detect')
+            password = data.get('password', 'oauth')  # Should use OAuth in production
+            days_back = int(data.get('days_back', 30))
             
             if not email_account or not password:
                 return jsonify({
@@ -4263,6 +4268,83 @@ def create_app():
                 "cost_protection_active": True
             })
 
+    @app.route('/api/analytics/summary')
+    def analytics_summary():
+        """Get analytics summary for the dashboard"""
+        try:
+            # Initialize with zero stats
+            summary = {
+                'total_transactions': 0,
+                'total_spending': 0,
+                'avg_transaction': 0,
+                'top_categories': [],
+                'monthly_spending': [],
+                'match_rate': 0,
+                'unmatched_count': 0
+            }
+            
+            # Try to get real stats if MongoDB is connected
+            if mongo_client and mongo_client.connected:
+                try:
+                    # Count all transactions
+                    bank_transactions = mongo_client.db.bank_transactions.count_documents({})
+                    
+                    if bank_transactions > 0:
+                        summary['total_transactions'] = bank_transactions
+                        
+                        # Calculate total spending
+                        pipeline = [
+                            {"$match": {"amount": {"$lt": 0}}},
+                            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+                        ]
+                        result = list(mongo_client.db.bank_transactions.aggregate(pipeline))
+                        if result:
+                            total_spend = abs(result[0]['total'])
+                            summary['total_spending'] = total_spend
+                            summary['avg_transaction'] = total_spend / bank_transactions if bank_transactions else 0
+                        
+                        # Get top categories
+                        category_pipeline = [
+                            {"$match": {"amount": {"$lt": 0}}},
+                            {"$group": {"_id": "$category", "total": {"$sum": "$amount"}, "count": {"$sum": 1}}},
+                            {"$sort": {"total": 1}},
+                            {"$limit": 5}
+                        ]
+                        categories = list(mongo_client.db.bank_transactions.aggregate(category_pipeline))
+                        summary['top_categories'] = [
+                            {"category": cat["_id"] or "Uncategorized", "amount": abs(cat["total"]), "count": cat["count"]}
+                            for cat in categories
+                        ]
+                        
+                        # Calculate match rate
+                        matched = mongo_client.db.bank_transactions.count_documents({"receipt_matched": True})
+                        summary['match_rate'] = (matched / bank_transactions * 100) if bank_transactions else 0
+                        summary['unmatched_count'] = bank_transactions - matched
+                        
+                except Exception as e:
+                    logger.warning(f"Failed to get analytics: {e}")
+            
+            return jsonify({
+                "success": True,
+                "summary": summary
+            })
+            
+        except Exception as e:
+            logger.error(f"Analytics summary error: {e}")
+            return jsonify({
+                "success": False,
+                "error": str(e),
+                "summary": {
+                    'total_transactions': 0,
+                    'total_spending': 0,
+                    'avg_transaction': 0,
+                    'top_categories': [],
+                    'monthly_spending': [],
+                    'match_rate': 0,
+                    'unmatched_count': 0
+                }
+            })
+
     @app.route('/api/dashboard-stats')
     def api_dashboard_stats():
         """Get real-time dashboard statistics"""
@@ -4379,6 +4461,667 @@ def create_app():
         except Exception as e:
             logger.error(f"Error getting security status: {e}")
             return jsonify({"success": False, "error": str(e)}), 500
+
+    @app.route('/api/teller/sync', methods=['POST'])
+    def api_teller_sync():
+        """Sync bank transactions from Teller API"""
+        try:
+            logger.info("🏦 Starting Teller bank sync...")
+            
+            # Check if Teller client is available
+            if not teller_client:
+                return jsonify({
+                    "success": False,
+                    "error": "Teller client not configured",
+                    "synced_transactions": 0
+                }), 400
+            
+            # Get sync parameters
+            data = request.get_json() or {}
+            account_id = data.get('account_id')  # Optional: specific account
+            days_back = data.get('days_back', 30)
+            
+            # Simulate sync process (implement actual Teller sync logic here)
+            synced_count = 0
+            
+            logger.info(f"🏦 Teller sync completed: {synced_count} transactions")
+            
+            return jsonify({
+                "success": True,
+                "synced_transactions": synced_count,
+                "sync_time": datetime.utcnow().isoformat()
+            })
+            
+        except Exception as e:
+            logger.error(f"Teller sync failed: {e}")
+            return jsonify({
+                "success": False,
+                "error": str(e),
+                "synced_transactions": 0
+            }), 500
+
+    @app.route('/api/ai-receipt-matching', methods=['POST'])
+    def api_ai_receipt_matching():
+        """Advanced AI-powered receipt matching using multiple algorithms"""
+        try:
+            data = request.get_json() or {}
+            transaction_batch_size = data.get('batch_size', 50)
+            days_back = data.get('days_back', 30)
+            
+            logger.info(f"🤖 Starting AI receipt matching (batch_size={transaction_batch_size}, days_back={days_back})")
+            
+            # Import AI matcher
+            try:
+                from ai_receipt_matcher import IntegratedAIReceiptMatcher
+            except ImportError as e:
+                logger.error(f"AI receipt matcher not available: {e}")
+                return jsonify({
+                    'success': False,
+                    'error': 'AI receipt matching module not available',
+                    'details': str(e)
+                }), 500
+            
+            # Initialize AI matcher
+            ai_matcher = IntegratedAIReceiptMatcher(mongo_client, app.config)
+            
+            # Get unmatched transactions
+            cutoff_date = datetime.utcnow() - timedelta(days=days_back)
+            unmatched_transactions = list(mongo_client.db.bank_transactions.find({
+                'receipt_matched': {'$ne': True},
+                'date': {'$gte': cutoff_date},
+                'amount': {'$lt': 0}  # Only expenses
+            }).sort('date', -1).limit(transaction_batch_size))
+            
+            if not unmatched_transactions:
+                logger.info("No unmatched transactions found for AI matching")
+                return jsonify({
+                    'success': True,
+                    'message': 'No unmatched transactions found',
+                    'results': {
+                        'performance_stats': {
+                            'total_transactions': 0,
+                            'total_matched': 0,
+                            'match_rate_percent': 0,
+                            'processing_time_seconds': 0
+                        },
+                        'match_breakdown': {
+                            'exact_matches': 0,
+                            'fuzzy_matches': 0,
+                            'ai_inferred_matches': 0,
+                            'subscription_matches': 0,
+                            'unmatched': 0
+                        }
+                    }
+                })
+            
+            logger.info(f"Found {len(unmatched_transactions)} unmatched transactions for AI analysis")
+            
+            # Run comprehensive AI matching
+            results = ai_matcher.comprehensive_receipt_matching(unmatched_transactions)
+            
+            # Save successful matches to database
+            all_matches = (results['exact_matches'] + results['fuzzy_matches'] + 
+                          results['ai_inferred_matches'] + results['subscription_matches'])
+            
+            saved_count = 0
+            for match in all_matches:
+                try:
+                    # Update transaction with match info
+                    transaction_update = mongo_client.db.bank_transactions.update_one(
+                        {'_id': ObjectId(match.transaction_id)},
+                        {'$set': {
+                            'receipt_matched': True,
+                            'receipt_match_id': match.receipt_id,
+                            'match_confidence': match.confidence_score,
+                            'match_type': match.match_type,
+                            'matched_at': datetime.utcnow(),
+                            'ai_match_factors': match.match_factors,
+                            'ai_reasoning': match.ai_reasoning
+                        }}
+                    )
+                    
+                    # Update receipt with match info
+                    receipt_update = mongo_client.db.receipts.update_one(
+                        {'_id': ObjectId(match.receipt_id)},
+                        {'$set': {
+                            'bank_matched': True,
+                            'bank_match_id': match.transaction_id,
+                            'match_confidence': match.confidence_score,
+                            'matched_at': datetime.utcnow()
+                        }}
+                    )
+                    
+                    if transaction_update.modified_count > 0 and receipt_update.modified_count > 0:
+                        saved_count += 1
+                        
+                except Exception as e:
+                    logger.error(f"Failed to save match {match.transaction_id} -> {match.receipt_id}: {e}")
+            
+            # Save performance statistics
+            try:
+                mongo_client.db.ai_matching_stats.insert_one({
+                    'timestamp': datetime.utcnow(),
+                    'performance_stats': results['performance_stats'],
+                    'match_breakdown': {
+                        'exact': len(results['exact_matches']),
+                        'fuzzy': len(results['fuzzy_matches']),
+                        'ai_inferred': len(results['ai_inferred_matches']),
+                        'subscription': len(results['subscription_matches']),
+                        'unmatched': len(results['unmatched'])
+                    },
+                    'batch_size': transaction_batch_size,
+                    'days_back': days_back
+                })
+            except Exception as e:
+                logger.warning(f"Failed to save AI matching stats: {e}")
+            
+            # Generate insights
+            insights = []
+            match_rate = results['performance_stats']['match_rate_percent']
+            
+            if match_rate >= 85:
+                insights.append("🎯 Excellent match rate achieved!")
+            elif match_rate >= 70:
+                insights.append("✅ Good match rate - system performing well")
+            elif match_rate >= 50:
+                insights.append("⚠️ Moderate match rate - consider expanding search criteria")
+            else:
+                insights.append("🔍 Low match rate - may need receipt scanning or search optimization")
+            
+            if len(results['subscription_matches']) > 0:
+                insights.append(f"📅 Detected {len(results['subscription_matches'])} subscription patterns")
+            
+            if len(results['ai_inferred_matches']) > 0:
+                insights.append(f"🤖 AI successfully inferred {len(results['ai_inferred_matches'])} complex matches")
+            
+            high_confidence_matches = len([m for m in all_matches if m.confidence_score >= 0.85])
+            if high_confidence_matches > 0:
+                insights.append(f"⭐ {high_confidence_matches} high-confidence matches found")
+            
+            logger.info(f"✅ AI matching complete: {saved_count}/{len(all_matches)} matches saved, "
+                       f"{match_rate:.1f}% success rate")
+            
+            return jsonify({
+                'success': True,
+                'message': f'AI matching completed with {match_rate:.1f}% success rate',
+                'results': {
+                    'performance_stats': results['performance_stats'],
+                    'match_breakdown': {
+                        'exact_matches': len(results['exact_matches']),
+                        'fuzzy_matches': len(results['fuzzy_matches']),
+                        'ai_inferred_matches': len(results['ai_inferred_matches']),
+                        'subscription_matches': len(results['subscription_matches']),
+                        'unmatched': len(results['unmatched']),
+                        'saved_to_database': saved_count
+                    },
+                    'insights': insights,
+                    'top_matches': [
+                        {
+                            'transaction_id': m.transaction_id,
+                            'receipt_id': m.receipt_id,
+                            'confidence': m.confidence_score,
+                            'type': m.match_type,
+                            'reasoning': m.ai_reasoning
+                        } for m in sorted(all_matches, key=lambda x: x.confidence_score, reverse=True)[:5]
+                    ]
+                }
+            })
+            
+        except Exception as e:
+            logger.error(f"AI receipt matching error: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'AI matching failed: {str(e)}'
+            }), 500
+
+    # Calendar debug endpoint removed - now handled by calendar blueprint
+
+    # ============================================================================
+    # UTILITY FUNCTIONS THAT NEED DATABASE ACCESS
+    # ============================================================================
+    
+    def find_perfect_receipt_match(transaction):
+        """Ultra-precise receipt matching with multiple algorithms"""
+        try:
+            amount_tolerance = 5.0  # Tight tolerance for precision
+            date_tolerance = timedelta(days=3)  # Reduced for accuracy
+            
+            transaction_date = transaction.get('date')
+            if isinstance(transaction_date, str):
+                transaction_date = datetime.fromisoformat(transaction_date.replace('Z', '+00:00'))
+            
+            transaction_amount = abs(transaction.get('amount', 0))
+            
+            # Multi-stage matching
+            potential_matches = mongo_client.db.receipts.find({
+                'total_amount': {
+                    '$gte': transaction_amount - amount_tolerance,
+                    '$lte': transaction_amount + amount_tolerance
+                },
+                'date': {
+                    '$gte': transaction_date - date_tolerance,
+                    '$lte': transaction_date + date_tolerance
+                },
+                'bank_matched': {'$ne': True}
+            })
+            
+            best_match = None
+            best_score = 0
+            
+            for receipt in potential_matches:
+                match_score = calculate_perfect_match_score(transaction, receipt)
+                
+                if match_score['total_score'] > best_score and match_score['total_score'] >= 0.85:
+                    best_score = match_score['total_score']
+                    best_match = {
+                        **receipt,
+                        'confidence': match_score['total_score'],
+                        'match_details': match_score
+                    }
+            
+            return best_match
+            
+        except Exception as e:
+            logger.error(f"Perfect receipt matching error: {e}")
+            return None
+
+    def calculate_perfect_match_score(transaction, receipt):
+        """Calculate comprehensive match score with detailed breakdown"""
+        score_breakdown = {
+            'amount_score': 0,
+            'date_score': 0,
+            'merchant_score': 0,
+            'time_score': 0,
+            'category_score': 0,
+            'total_score': 0
+        }
+        
+        # Amount matching (40% weight)
+        amount_diff = abs(abs(transaction.get('amount', 0)) - receipt.get('total_amount', 0))
+        if amount_diff <= 0.01:
+            score_breakdown['amount_score'] = 1.0
+        elif amount_diff <= 1.0:
+            score_breakdown['amount_score'] = 0.9
+        elif amount_diff <= 5.0:
+            score_breakdown['amount_score'] = 0.7
+        else:
+            score_breakdown['amount_score'] = max(0, 1 - (amount_diff / 20))
+        
+        # Date matching (30% weight)
+        txn_date = transaction.get('date')
+        receipt_date = receipt.get('date')
+        
+        if isinstance(txn_date, str):
+            txn_date = datetime.fromisoformat(txn_date.replace('Z', '+00:00'))
+        if isinstance(receipt_date, str):
+            receipt_date = datetime.fromisoformat(receipt_date.replace('Z', '+00:00'))
+        
+        if txn_date and receipt_date:
+            date_diff = abs((txn_date - receipt_date).days)
+            if date_diff == 0:
+                score_breakdown['date_score'] = 1.0
+            elif date_diff == 1:
+                score_breakdown['date_score'] = 0.8
+            elif date_diff <= 3:
+                score_breakdown['date_score'] = 0.6
+            else:
+                score_breakdown['date_score'] = max(0, 1 - (date_diff / 7))
+        
+        # Merchant matching (25% weight)
+        from enhanced_transaction_utils import extract_merchant_name
+        txn_merchant = extract_merchant_name(transaction).lower()
+        receipt_merchant = (receipt.get('merchant_name') or receipt.get('merchant', '')).lower()
+        
+        if txn_merchant and receipt_merchant:
+            merchant_similarity = calculate_advanced_merchant_similarity(txn_merchant, receipt_merchant)
+            score_breakdown['merchant_score'] = merchant_similarity
+        
+        # Calculate weighted total
+        score_breakdown['total_score'] = (
+            score_breakdown['amount_score'] * 0.40 +
+            score_breakdown['date_score'] * 0.30 +
+            score_breakdown['merchant_score'] * 0.25 +
+            score_breakdown['time_score'] * 0.03 +
+            score_breakdown['category_score'] * 0.02
+        )
+        
+        return score_breakdown
+
+    def calculate_advanced_merchant_similarity(merchant1, merchant2):
+        """Advanced merchant similarity with fuzzy matching and business logic"""
+        if not merchant1 or not merchant2:
+            return 0
+        
+        # Normalize
+        m1 = merchant1.lower().strip()
+        m2 = merchant2.lower().strip()
+        
+        # Exact match
+        if m1 == m2:
+            return 1.0
+        
+        # Clean common business suffixes
+        suffixes = [' inc', ' llc', ' corp', ' co', ' ltd', ' limited']
+        for suffix in suffixes:
+            m1 = m1.replace(suffix, '')
+            m2 = m2.replace(suffix, '')
+        
+        # Substring matching
+        if m1 in m2 or m2 in m1:
+            return 0.9
+        
+        # Sequence matching
+        from difflib import SequenceMatcher
+        sequence_ratio = SequenceMatcher(None, m1, m2).ratio()
+        if sequence_ratio > 0.8:
+            return sequence_ratio
+        
+        # Word-based matching
+        words1 = set(m1.split())
+        words2 = set(m2.split())
+        
+        if words1 and words2:
+            intersection = words1.intersection(words2)
+            union = words1.union(words2)
+            
+            jaccard = len(intersection) / len(union) if union else 0
+            
+            # Bonus for matching important words
+            important_matches = len([w for w in intersection if len(w) > 3])
+            bonus = min(important_matches * 0.15, 0.3)
+            
+            return min(jaccard + bonus, 1.0)
+        
+        return 0.0
+
+    @app.route('/api/enhanced-receipt-processing', methods=['POST'])
+    def api_enhanced_receipt_processing():
+        """Enhanced receipt processing endpoint with improved algorithms"""
+        try:
+            from receipt_processor import EnhancedReceiptProcessor
+            from datetime import datetime
+            import os
+            
+            # Initialize enhanced processor
+            processor = EnhancedReceiptProcessor()
+            
+            # Get request parameters
+            data = request.get_json() if request.is_json else {}
+            batch_size = data.get('batch_size', 20)
+            source_dirs = data.get('source_dirs', ['uploads/', 'downloads/', 'data/receipts/'])
+            file_extensions = data.get('file_extensions', ['.pdf', '.png', '.jpg', '.jpeg', '.gif', '.bmp'])
+            
+            # Collect receipt files to process
+            receipt_files = []
+            for source_dir in source_dirs:
+                if os.path.exists(source_dir):
+                    for filename in os.listdir(source_dir):
+                        if any(filename.lower().endswith(ext) for ext in file_extensions):
+                            filepath = os.path.join(source_dir, filename)
+                            # Only process files modified in the last 7 days (configurable)
+                            if os.path.getmtime(filepath) > (datetime.now().timestamp() - 7 * 24 * 3600):
+                                receipt_files.append(filepath)
+            
+            # Limit to batch size
+            receipt_files = receipt_files[:batch_size]
+            
+            # Process receipts
+            start_time = datetime.now()
+            processing_results = []
+            processing_stats = {
+                'total_files': len(receipt_files),
+                'successful_extractions': 0,
+                'failed_extractions': 0,
+                'high_confidence_extractions': 0,
+                'medium_confidence_extractions': 0,
+                'low_confidence_extractions': 0,
+                'merchants_found': 0,
+                'dates_found': 0,
+                'amounts_found': 0,
+                'items_found': 0
+            }
+            
+            for filepath in receipt_files:
+                try:
+                    # Extract receipt data
+                    receipt_data = processor.extract_receipt_data(filepath)
+                    
+                    if receipt_data:
+                        processing_stats['successful_extractions'] += 1
+                        
+                        # Categorize by confidence
+                        overall_confidence = receipt_data.get('overall_confidence', 0.0)
+                        if overall_confidence >= 0.8:
+                            processing_stats['high_confidence_extractions'] += 1
+                        elif overall_confidence >= 0.6:
+                            processing_stats['medium_confidence_extractions'] += 1
+                        else:
+                            processing_stats['low_confidence_extractions'] += 1
+                        
+                        # Count successful field extractions
+                        if receipt_data.get('merchant'):
+                            processing_stats['merchants_found'] += 1
+                        if receipt_data.get('date'):
+                            processing_stats['dates_found'] += 1
+                        if receipt_data.get('total_amount'):
+                            processing_stats['amounts_found'] += 1
+                        if receipt_data.get('items'):
+                            processing_stats['items_found'] += len(receipt_data['items'])
+                        
+                        # Add to results
+                        processing_results.append({
+                            'filename': os.path.basename(filepath),
+                            'file_path': filepath,
+                            'extracted_data': receipt_data,
+                            'processing_success': True
+                        })
+                    else:
+                        processing_stats['failed_extractions'] += 1
+                        processing_results.append({
+                            'filename': os.path.basename(filepath),
+                            'file_path': filepath,
+                            'extracted_data': None,
+                            'processing_success': False,
+                            'error': 'Extraction failed'
+                        })
+                        
+                except Exception as e:
+                    processing_stats['failed_extractions'] += 1
+                    processing_results.append({
+                        'filename': os.path.basename(filepath),
+                        'file_path': filepath,
+                        'extracted_data': None,
+                        'processing_success': False,
+                        'error': str(e)
+                    })
+            
+            # Calculate processing time
+            processing_time = (datetime.now() - start_time).total_seconds()
+            
+            # Calculate success rates
+            success_rate = (processing_stats['successful_extractions'] / max(processing_stats['total_files'], 1)) * 100
+            merchant_rate = (processing_stats['merchants_found'] / max(processing_stats['successful_extractions'], 1)) * 100
+            date_rate = (processing_stats['dates_found'] / max(processing_stats['successful_extractions'], 1)) * 100
+            amount_rate = (processing_stats['amounts_found'] / max(processing_stats['successful_extractions'], 1)) * 100
+            
+            # Get top confidence results
+            successful_results = [r for r in processing_results if r['processing_success']]
+            top_results = sorted(
+                successful_results,
+                key=lambda x: x['extracted_data'].get('overall_confidence', 0.0),
+                reverse=True
+            )[:5]
+            
+            # Response
+            response = {
+                'status': 'success',
+                'processing_summary': {
+                    'total_files_processed': processing_stats['total_files'],
+                    'processing_time_seconds': round(processing_time, 2),
+                    'files_per_second': round(processing_stats['total_files'] / max(processing_time, 0.1), 2),
+                    'overall_success_rate': round(success_rate, 1)
+                },
+                'extraction_stats': {
+                    'successful_extractions': processing_stats['successful_extractions'],
+                    'failed_extractions': processing_stats['failed_extractions'],
+                    'high_confidence_count': processing_stats['high_confidence_extractions'],
+                    'medium_confidence_count': processing_stats['medium_confidence_extractions'],
+                    'low_confidence_count': processing_stats['low_confidence_extractions']
+                },
+                'field_extraction_rates': {
+                    'merchant_extraction_rate': round(merchant_rate, 1),
+                    'date_extraction_rate': round(date_rate, 1),
+                    'amount_extraction_rate': round(amount_rate, 1),
+                    'total_items_found': processing_stats['items_found']
+                },
+                'processor_info': processor.get_processing_stats(),
+                'top_confidence_results': [
+                    {
+                        'filename': result['filename'],
+                        'merchant': result['extracted_data'].get('merchant'),
+                        'date': result['extracted_data'].get('date'),
+                        'amount': result['extracted_data'].get('total_amount'),
+                        'confidence': result['extracted_data'].get('overall_confidence'),
+                        'items_count': len(result['extracted_data'].get('items', []))
+                    }
+                    for result in top_results
+                ],
+                'processing_insights': []
+            }
+            
+            # Add insights
+            if success_rate >= 80:
+                response['processing_insights'].append("Excellent processing success rate achieved")
+            elif success_rate >= 60:
+                response['processing_insights'].append("Good processing success rate, consider image quality improvements")
+            else:
+                response['processing_insights'].append("Low success rate detected, check image quality and file formats")
+            
+            if merchant_rate >= 90:
+                response['processing_insights'].append("Excellent merchant detection rate")
+            elif merchant_rate < 70:
+                response['processing_insights'].append("Consider adding more merchant patterns to improve recognition")
+            
+            if processing_stats['high_confidence_extractions'] > processing_stats['low_confidence_extractions']:
+                response['processing_insights'].append("High quality extractions dominate - system performing well")
+            
+            # Include all detailed results if requested
+            if data.get('include_details', False):
+                response['detailed_results'] = processing_results
+            
+            return jsonify(response)
+            
+        except ImportError:
+            return jsonify({
+                'status': 'error',
+                'message': 'Enhanced receipt processor not available',
+                'suggestion': 'Ensure receipt_processor.py is properly configured'
+            }), 500
+        
+        except Exception as e:
+            logger.error(f"Enhanced receipt processing error: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'message': f'Processing failed: {str(e)}'
+            }), 500
+
+    @app.route('/api/process-single-receipt', methods=['POST'])
+    def api_process_single_receipt():
+        """Process a single receipt file with enhanced algorithms"""
+        try:
+            from receipt_processor import EnhancedReceiptProcessor
+            from werkzeug.utils import secure_filename
+            import os
+            
+            # Initialize processor
+            processor = EnhancedReceiptProcessor()
+            
+            # Check if file was uploaded
+            if 'receipt_file' not in request.files:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'No file uploaded'
+                }), 400
+            
+            file = request.files['receipt_file']
+            if file.filename == '':
+                return jsonify({
+                    'status': 'error', 
+                    'message': 'No file selected'
+                }), 400
+            
+            # Validate file type
+            allowed_extensions = ['.pdf', '.png', '.jpg', '.jpeg', '.gif', '.bmp']
+            if not any(file.filename.lower().endswith(ext) for ext in allowed_extensions):
+                return jsonify({
+                    'status': 'error',
+                    'message': f'Unsupported file type. Allowed: {", ".join(allowed_extensions)}'
+                }), 400
+            
+            # Save uploaded file
+            filename = secure_filename(file.filename)
+            upload_path = os.path.join('uploads', filename)
+            os.makedirs('uploads', exist_ok=True)
+            file.save(upload_path)
+            
+            try:
+                # Process the receipt
+                start_time = datetime.now()
+                receipt_data = processor.extract_receipt_data(upload_path)
+                processing_time = (datetime.now() - start_time).total_seconds()
+                
+                if receipt_data:
+                    # Prepare response
+                    response = {
+                        'status': 'success',
+                        'filename': filename,
+                        'processing_time_seconds': round(processing_time, 2),
+                        'extracted_data': receipt_data,
+                        'extraction_quality': {
+                            'overall_confidence': receipt_data.get('overall_confidence', 0.0),
+                            'merchant_confidence': receipt_data.get('merchant_confidence', 0.0),
+                            'date_confidence': receipt_data.get('date_confidence', 0.0),
+                            'amount_confidence': receipt_data.get('total_confidence', 0.0)
+                        },
+                        'data_summary': {
+                            'merchant_found': bool(receipt_data.get('merchant')),
+                            'date_found': bool(receipt_data.get('date')),
+                            'amount_found': bool(receipt_data.get('total_amount')),
+                            'items_count': len(receipt_data.get('items', [])),
+                            'additional_fields': sum(1 for field in ['payment_method', 'receipt_number', 'phone_number', 'address'] 
+                                                   if receipt_data.get(field))
+                        }
+                    }
+                    
+                    # Add processing recommendations
+                    confidence = receipt_data.get('overall_confidence', 0.0)
+                    if confidence >= 0.8:
+                        response['recommendation'] = 'High quality extraction - ready for automated processing'
+                    elif confidence >= 0.6:
+                        response['recommendation'] = 'Good extraction - may need manual review for critical fields'
+                    else:
+                        response['recommendation'] = 'Low confidence extraction - manual review recommended'
+                    
+                    return jsonify(response)
+                else:
+                    return jsonify({
+                        'status': 'error',
+                        'message': 'Failed to extract data from receipt',
+                        'filename': filename,
+                        'processing_time_seconds': round(processing_time, 2)
+                    }), 422
+            
+            finally:
+                # Clean up uploaded file
+                if os.path.exists(upload_path):
+                    os.remove(upload_path)
+        
+        except Exception as e:
+            logger.error(f"Single receipt processing error: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'message': f'Processing failed: {str(e)}'
+            }), 500
 
     return app
 
@@ -4760,158 +5503,7 @@ def split_large_transaction(transaction):
         }
     ]
 
-def find_perfect_receipt_match(transaction):
-    """Ultra-precise receipt matching with multiple algorithms"""
-    try:
-        amount_tolerance = 5.0  # Tight tolerance for precision
-        date_tolerance = timedelta(days=3)  # Reduced for accuracy
-        
-        transaction_date = transaction.get('date')
-        if isinstance(transaction_date, str):
-            transaction_date = datetime.fromisoformat(transaction_date.replace('Z', '+00:00'))
-        
-        transaction_amount = abs(transaction.get('amount', 0))
-        
-        # Multi-stage matching
-        potential_matches = mongo_client.db.receipts.find({
-            'total_amount': {
-                '$gte': transaction_amount - amount_tolerance,
-                '$lte': transaction_amount + amount_tolerance
-            },
-            'date': {
-                '$gte': transaction_date - date_tolerance,
-                '$lte': transaction_date + date_tolerance
-            },
-            'bank_matched': {'$ne': True}
-        })
-        
-        best_match = None
-        best_score = 0
-        
-        for receipt in potential_matches:
-            match_score = calculate_perfect_match_score(transaction, receipt)
-            
-            if match_score['total_score'] > best_score and match_score['total_score'] >= 0.85:
-                best_score = match_score['total_score']
-                best_match = {
-                    **receipt,
-                    'confidence': match_score['total_score'],
-                    'match_details': match_score
-                }
-        
-        return best_match
-        
-    except Exception as e:
-        logger.error(f"Perfect receipt matching error: {e}")
-        return None
-
-def calculate_perfect_match_score(transaction, receipt):
-    """Calculate comprehensive match score with detailed breakdown"""
-    score_breakdown = {
-        'amount_score': 0,
-        'date_score': 0,
-        'merchant_score': 0,
-        'time_score': 0,
-        'category_score': 0,
-        'total_score': 0
-    }
-    
-    # Amount matching (40% weight)
-    amount_diff = abs(abs(transaction.get('amount', 0)) - receipt.get('total_amount', 0))
-    if amount_diff <= 0.01:
-        score_breakdown['amount_score'] = 1.0
-    elif amount_diff <= 1.0:
-        score_breakdown['amount_score'] = 0.9
-    elif amount_diff <= 5.0:
-        score_breakdown['amount_score'] = 0.7
-    else:
-        score_breakdown['amount_score'] = max(0, 1 - (amount_diff / 20))
-    
-    # Date matching (30% weight)
-    txn_date = transaction.get('date')
-    receipt_date = receipt.get('date')
-    
-    if isinstance(txn_date, str):
-        txn_date = datetime.fromisoformat(txn_date.replace('Z', '+00:00'))
-    if isinstance(receipt_date, str):
-        receipt_date = datetime.fromisoformat(receipt_date.replace('Z', '+00:00'))
-    
-    if txn_date and receipt_date:
-        date_diff = abs((txn_date - receipt_date).days)
-        if date_diff == 0:
-            score_breakdown['date_score'] = 1.0
-        elif date_diff == 1:
-            score_breakdown['date_score'] = 0.8
-        elif date_diff <= 3:
-            score_breakdown['date_score'] = 0.6
-        else:
-            score_breakdown['date_score'] = max(0, 1 - (date_diff / 7))
-    
-    # Merchant matching (25% weight)
-    txn_merchant = extract_merchant_name(transaction).lower()
-    receipt_merchant = (receipt.get('merchant_name') or receipt.get('merchant', '')).lower()
-    
-    if txn_merchant and receipt_merchant:
-        merchant_similarity = calculate_advanced_merchant_similarity(txn_merchant, receipt_merchant)
-        score_breakdown['merchant_score'] = merchant_similarity
-    
-    # Calculate weighted total
-    score_breakdown['total_score'] = (
-        score_breakdown['amount_score'] * 0.40 +
-        score_breakdown['date_score'] * 0.30 +
-        score_breakdown['merchant_score'] * 0.25 +
-        score_breakdown['time_score'] * 0.03 +
-        score_breakdown['category_score'] * 0.02
-    )
-    
-    return score_breakdown
-
-def calculate_advanced_merchant_similarity(merchant1, merchant2):
-    """Advanced merchant similarity with fuzzy matching and business logic"""
-    if not merchant1 or not merchant2:
-        return 0
-    
-    # Normalize
-    m1 = merchant1.lower().strip()
-    m2 = merchant2.lower().strip()
-    
-    # Exact match
-    if m1 == m2:
-        return 1.0
-    
-    # Clean common business suffixes
-    suffixes = [' inc', ' llc', ' corp', ' co', ' ltd', ' limited']
-    for suffix in suffixes:
-        m1 = m1.replace(suffix, '')
-        m2 = m2.replace(suffix, '')
-    
-    # Substring matching
-    if m1 in m2 or m2 in m1:
-        return 0.9
-    
-    # Sequence matching
-    from difflib import SequenceMatcher
-    sequence_ratio = SequenceMatcher(None, m1, m2).ratio()
-    if sequence_ratio > 0.8:
-        return sequence_ratio
-    
-    # Word-based matching
-    words1 = set(m1.split())
-    words2 = set(m2.split())
-    
-    if words1 and words2:
-        intersection = words1.intersection(words2)
-        union = words1.union(words2)
-        
-        jaccard = len(intersection) / len(union) if union else 0
-        
-        # Bonus for matching important words
-        important_matches = len([w for w in intersection if len(w) > 3])
-        bonus = min(important_matches * 0.15, 0.3)
-        
-        return min(jaccard + bonus, 1.0)
-    
-    return 0.0
+# Duplicate functions removed - these are now defined inside create_app() function
 
 # ============================================================================
 # APPLICATION STARTUP

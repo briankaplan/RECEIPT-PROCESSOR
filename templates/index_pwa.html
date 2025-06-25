@@ -381,7 +381,371 @@
             letter-spacing: 0.5px;
         }
 
+        /* Action Panel - Command Center */
+        .action-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 24px;
+            margin-bottom: 2rem;
+            overflow: hidden;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 2rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .panel-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+        }
+
+        .panel-title i {
+            color: var(--primary-orange);
+            font-size: 1.2rem;
+        }
+
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            padding: 2rem;
+        }
+
+        .neo-action-btn {
+            background: var(--bg-glass);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            min-height: 120px;
+        }
+
+        .neo-action-btn:hover {
+            transform: translateY(-4px) scale(1.02);
+            border-color: var(--primary-orange);
+            box-shadow: 0 10px 40px rgba(255, 107, 53, 0.2);
+        }
+
+        .neo-action-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--gradient-primary);
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+
+        .neo-action-btn:hover::before {
+            transform: translateX(0);
+        }
+
+        .action-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            font-size: 1.2rem;
+            color: var(--primary-orange);
+            margin-bottom: 0.5rem;
+        }
+
+        .action-title {
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .action-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        /* Filter Panel */
+        .filter-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 24px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .neo-input, .neo-select {
+            background: var(--bg-glass);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .neo-input:focus, .neo-select:focus {
+            outline: none;
+            border-color: var(--primary-orange);
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+        }
+
+        .search-group {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            color: var(--text-secondary);
+            z-index: 1;
+        }
+
+        .search-input {
+            padding-left: 2.5rem;
+        }
+
+        /* Table Container */
+        .table-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 24px;
+            margin-bottom: 2rem;
+            overflow: hidden;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .neo-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: transparent;
+        }
+
+        .table-header th {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-weight: 700;
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-subtle);
+            font-size: 0.9rem;
+        }
+
+        .neo-table tbody tr {
+            border-bottom: 1px solid var(--border-subtle);
+            transition: all 0.2s ease;
+        }
+
+        .neo-table tbody tr:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .neo-table td {
+            padding: 1rem;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        /* Mobile Cards */
+        .mobile-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            padding: 1rem;
+        }
+
+        .transaction-card {
+            background: var(--bg-glass);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .transaction-card:hover {
+            border-color: var(--primary-orange);
+            transform: translateY(-2px);
+        }
+
+        /* Badges */
+        .neo-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-subtle);
+        }
+
+        /* Navigation */
+        .nav-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .nav-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .nav-sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 320px;
+            height: 100%;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border-subtle);
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            transform: translateX(-100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+        }
+
+        .nav-sidebar.active {
+            transform: translateX(0);
+        }
+
+        .nav-header {
+            padding: 2rem;
+            border-bottom: 1px solid var(--border-subtle);
+            background: var(--bg-secondary);
+        }
+
+        .nav-logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-menu {
+            padding: 1.5rem 0;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 2rem;
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-tertiary);
+            color: var(--primary-orange);
+        }
+
+        .nav-item.active {
+            background: var(--bg-tertiary);
+            color: var(--primary-orange);
+            border-right: 3px solid var(--primary-orange);
+        }
+
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+        }
+
+        .nav-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .nav-section-title {
+            padding: 0.5rem 2rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border-subtle);
+            margin-bottom: 0.5rem;
+        }
+
         /* Animations */
+        .animate-fade-scale {
+            animation: fadeScale 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            opacity: 0;
+            transform: scale(0.95) translateY(20px);
+        }
+
+        @keyframes fadeScale {
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
         @keyframes pulse-glow {
             0% { opacity: 0.7; }
             100% { opacity: 1; }
@@ -498,6 +862,11 @@
             </a>
             
             <div class="header-controls">
+                <button class="neo-btn menu-toggle" onclick="toggleNavigation()" aria-label="Open menu" title="Navigation Menu">
+                    <i class="fas fa-bars"></i>
+                    <span class="d-none d-md-inline">Menu</span>
+                </button>
+                
                 <div class="status-indicator online" id="connection-status">
                     <div class="status-pulse online"></div>
                     <span>AI Online</span>
@@ -518,6 +887,106 @@
             </div>
         </div>
     </header>
+
+    <!-- Navigation Sidebar -->
+    <div class="nav-overlay" id="nav-overlay" onclick="closeNavigation()"></div>
+    <nav class="nav-sidebar" id="nav-sidebar">
+        <div class="nav-header">
+            <div class="nav-logo">
+                <i class="fas fa-brain"></i> TransactionPro
+            </div>
+            <button class="neo-btn" onclick="closeNavigation()" style="float: right; margin-top: -10px;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="nav-menu">
+            <!-- Dashboard Section -->
+            <div class="nav-section">
+                <div class="nav-section-title">Dashboard</div>
+                <a class="nav-item active" href="/" onclick="navigateTo('dashboard')">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Analytics Dashboard</span>
+                </a>
+                <a class="nav-item" href="/transaction_manager" onclick="navigateTo('transactions')">
+                    <i class="fas fa-brain"></i>
+                    <span>AI Transaction Manager</span>
+                </a>
+            </div>
+            
+            <!-- Data Sources -->
+            <div class="nav-section">
+                <div class="nav-section-title">Data Sources</div>
+                <a class="nav-item" href="/connect" onclick="navigateTo('banks')">
+                    <i class="fas fa-university"></i>
+                    <span>Bank Connections</span>
+                </a>
+                <a class="nav-item" href="#" onclick="scanEmailReceipts()">
+                    <i class="fas fa-envelope"></i>
+                    <span>Gmail Receipt Scanner</span>
+                </a>
+                <a class="nav-item" href="/scanner" onclick="navigateTo('scanner')">
+                    <i class="fas fa-camera"></i>
+                    <span>Receipt Scanner</span>
+                </a>
+                <a class="nav-item" href="#" onclick="showGooglePhotos()">
+                    <i class="fas fa-images"></i>
+                    <span>Google Photos</span>
+                </a>
+            </div>
+            
+            <!-- AI Features -->
+            <div class="nav-section">
+                <div class="nav-section-title">AI Intelligence</div>
+                <a class="nav-item" href="#" onclick="processBrianWizard()">
+                    <i class="fas fa-magic"></i>
+                    <span>Brian's AI Wizard</span>
+                </a>
+                <a class="nav-item" href="#" onclick="calendarIntelligence()">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Calendar Context</span>
+                </a>
+                <a class="nav-item" href="#" onclick="startAIConversation()">
+                    <i class="fas fa-comments"></i>
+                    <span>AI Chat Assistant</span>
+                </a>
+            </div>
+            
+            <!-- Business Tools -->
+            <div class="nav-section">
+                <div class="nav-section-title">Business Tools</div>
+                <a class="nav-item" href="#" onclick="exportToSheets()">
+                    <i class="fas fa-file-spreadsheet"></i>
+                    <span>Export to Sheets</span>
+                </a>
+                <a class="nav-item" href="#" onclick="showBusinessAnalytics()">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Business Analytics</span>
+                </a>
+                <a class="nav-item" href="#" onclick="showEntityFilters()">
+                    <i class="fas fa-building"></i>
+                    <span>Entity Management</span>
+                </a>
+            </div>
+            
+            <!-- Settings -->
+            <div class="nav-section">
+                <div class="nav-section-title">Configuration</div>
+                <a class="nav-item" href="/settings" onclick="navigateTo('settings')">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings & Setup</span>
+                </a>
+                <a class="nav-item" href="#" onclick="showSystemStatus()">
+                    <i class="fas fa-heartbeat"></i>
+                    <span>System Status</span>
+                </a>
+                <a class="nav-item" href="#" onclick="showHelp()">
+                    <i class="fas fa-question-circle"></i>
+                    <span>Help & Support</span>
+                </a>
+            </div>
+        </div>
+    </nav>
 
     <div class="main-container">
         <div class="content-wrapper">
@@ -676,10 +1145,10 @@
                         <div class="action-desc">Auto-detect receipts from Gmail accounts</div>
                     </button>
                     
-                    <button class="neo-action-btn" onclick="syncBankData()">
+                    <button class="neo-action-btn" onclick="syncBankData()" id="sync-bank-btn">
                         <i class="fas fa-university action-icon"></i>
                         <div class="action-title">Sync Banks</div>
-                        <div class="action-desc">Real-time Teller API synchronization</div>
+                        <div class="action-desc" id="sync-bank-desc">Real-time Teller API synchronization</div>
                     </button>
                     
                     <button class="neo-action-btn" onclick="calendarIntelligence()">
@@ -3775,6 +4244,595 @@
         }
 
         // ============================================================================
+        // 🏦 COMMAND CENTER FUNCTIONS - Real Functionality
+        // ============================================================================
+        
+        async function syncBankData() {
+            const button = document.getElementById('sync-bank-btn');
+            const desc = document.getElementById('sync-bank-desc');
+            const originalDesc = desc.textContent;
+            
+            try {
+                // Update UI to show syncing
+                button.style.opacity = '0.7';
+                button.style.pointerEvents = 'none';
+                desc.textContent = 'Syncing with Teller API...';
+                
+                showToast('🏦 Bank Sync Started', 'Fetching latest transactions from all connected accounts', 'info');
+                
+                const response = await fetch('/api/teller/sync-all', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('✅ Bank Sync Complete', `Synced ${data.transaction_count} transactions from ${data.account_count} accounts`, 'success');
+                    desc.textContent = `Last sync: ${new Date().toLocaleTimeString()}`;
+                    
+                    // Refresh dashboard with new data
+                    await loadRealDashboardData();
+                } else {
+                    throw new Error(data.error || 'Sync failed');
+                }
+                
+            } catch (error) {
+                console.error('Bank sync failed:', error);
+                showToast('❌ Bank Sync Failed', error.message || 'Check connection and try again', 'error');
+                desc.textContent = originalDesc;
+            } finally {
+                // Re-enable button
+                button.style.opacity = '1';
+                button.style.pointerEvents = 'auto';
+            }
+        }
+        
+        async function scanEmailReceipts() {
+            try {
+                showToast('📧 Gmail Scan Started', 'Scanning all Gmail accounts for receipts...', 'info');
+                
+                const response = await fetch('/api/scan-emails-for-receipts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email_account: 'auto-detect',
+                        days_back: 30
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('✅ Gmail Scan Complete', `Found ${data.receipt_count} receipts, matched ${data.matched_count} transactions`, 'success');
+                    
+                    // Show results modal
+                    showModal('gmail-scan-results', '📧 Gmail Scan Results', `
+                        <div style="display: grid; gap: 1.5rem;">
+                            <div class="scan-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                                <div style="text-align: center; padding: 1rem; background: var(--bg-secondary); border-radius: 12px;">
+                                    <div style="font-size: 2rem; font-weight: 800; color: var(--primary-orange);">${data.receipt_count}</div>
+                                    <div style="color: var(--text-secondary);">Receipts Found</div>
+                                </div>
+                                <div style="text-align: center; padding: 1rem; background: var(--bg-secondary); border-radius: 12px;">
+                                    <div style="font-size: 2rem; font-weight: 800; color: var(--accent-green);">${data.matched_count}</div>
+                                    <div style="color: var(--text-secondary);">Auto-Matched</div>
+                                </div>
+                                <div style="text-align: center; padding: 1rem; background: var(--bg-secondary); border-radius: 12px;">
+                                    <div style="font-size: 2rem; font-weight: 800; color: var(--accent-cyan);">${data.accounts_scanned}</div>
+                                    <div style="color: var(--text-secondary);">Accounts Scanned</div>
+                                </div>
+                            </div>
+                            
+                            ${data.new_receipts && data.new_receipts.length > 0 ? `
+                                <div>
+                                    <h6 style="color: var(--primary-orange); margin-bottom: 1rem;">
+                                        <i class="fas fa-receipt"></i> New Receipts Found
+                                    </h6>
+                                    <div style="max-height: 300px; overflow-y: auto;">
+                                        ${data.new_receipts.slice(0, 10).map(receipt => `
+                                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 0.5rem;">
+                                                <div>
+                                                    <strong>${receipt.merchant}</strong> - ${receipt.amount}<br>
+                                                    <small style="color: var(--text-secondary);">${receipt.date}</small>
+                                                </div>
+                                                <button class="neo-btn" style="font-size: 0.8rem;" onclick="viewReceipt('${receipt.url}')">
+                                                    <i class="fas fa-eye"></i> View
+                                                </button>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `);
+                    
+                    // Refresh dashboard
+                    await loadRealDashboardData();
+                    
+                } else {
+                    throw new Error(data.error || 'Gmail scan failed');
+                }
+                
+            } catch (error) {
+                console.error('Gmail scan failed:', error);
+                showToast('❌ Gmail Scan Failed', error.message || 'Check Gmail connection and try again', 'error');
+            }
+        }
+        
+        async function processBrianWizard() {
+            try {
+                showToast('🧙‍♂️ Brian\'s Wizard Activated', 'AI is analyzing all uncategorized transactions...', 'info');
+                
+                const response = await fetch('/api/brian/categorize-all', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('✅ AI Categorization Complete', `Processed ${data.processed_count} transactions for Down Home & MCR`, 'success');
+                    
+                    // Show categorization results
+                    showModal('categorization-results', '🧙‍♂️ Brian\'s AI Results', `
+                        <div style="display: grid; gap: 1.5rem;">
+                            <div class="categorization-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                                <div style="text-align: center; padding: 1rem; background: var(--bg-secondary); border-radius: 12px;">
+                                    <div style="font-size: 2rem; font-weight: 800; color: var(--primary-orange);">${data.processed_count}</div>
+                                    <div style="color: var(--text-secondary);">Transactions Processed</div>
+                                </div>
+                                <div style="text-align: center; padding: 1rem; background: var(--bg-secondary); border-radius: 12px;">
+                                    <div style="font-size: 2rem; font-weight: 800; color: var(--accent-green);">${data.categorized_count}</div>
+                                    <div style="color: var(--text-secondary);">Auto-Categorized</div>
+                                </div>
+                                <div style="text-align: center; padding: 1rem; background: var(--bg-secondary); border-radius: 12px;">
+                                    <div style="font-size: 2rem; font-weight: 800; color: var(--accent-cyan);">${data.business_separated}</div>
+                                    <div style="color: var(--text-secondary);">Business Separated</div>
+                                </div>
+                            </div>
+                            
+                            <div style="padding: 1rem; background: var(--bg-tertiary); border-radius: 12px; border-left: 4px solid var(--primary-orange);">
+                                <h6 style="color: var(--primary-orange); margin-bottom: 0.5rem;">
+                                    <i class="fas fa-brain"></i> AI Insights
+                                </h6>
+                                <p style="color: var(--text-secondary); margin: 0;">
+                                    Brian's AI has automatically separated business expenses between Down Home Media and Music City Rodeo based on merchant patterns and calendar context.
+                                </p>
+                            </div>
+                        </div>
+                    `);
+                    
+                    // Refresh dashboard
+                    await loadRealDashboardData();
+                    
+                } else {
+                    throw new Error(data.error || 'AI processing failed');
+                }
+                
+            } catch (error) {
+                console.error('Brian\'s wizard failed:', error);
+                showToast('❌ AI Processing Failed', error.message || 'Try again or contact support', 'error');
+            }
+        }
+        
+        async function calendarIntelligence() {
+            try {
+                showToast('📅 Calendar Intelligence', 'Analyzing calendar events for expense matching...', 'info');
+                
+                const response = await fetch('/api/calendar/analyze-expenses', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('✅ Calendar Analysis Complete', `Matched ${data.matched_count} expenses to calendar events`, 'success');
+                    
+                    // Show calendar insights
+                    showModal('calendar-insights', '📅 Calendar Intelligence Results', `
+                        <div style="display: grid; gap: 1.5rem;">
+                            <div class="calendar-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                                <div style="text-align: center; padding: 1rem; background: var(--bg-secondary); border-radius: 12px;">
+                                    <div style="font-size: 2rem; font-weight: 800; color: var(--primary-orange);">${data.events_analyzed}</div>
+                                    <div style="color: var(--text-secondary);">Events Analyzed</div>
+                                </div>
+                                <div style="text-align: center; padding: 1rem; background: var(--bg-secondary); border-radius: 12px;">
+                                    <div style="font-size: 2rem; font-weight: 800; color: var(--accent-green);">${data.matched_count}</div>
+                                    <div style="color: var(--text-secondary);">Expense Matches</div>
+                                </div>
+                                <div style="text-align: center; padding: 1rem; background: var(--bg-secondary); border-radius: 12px;">
+                                    <div style="font-size: 2rem; font-weight: 800; color: var(--accent-cyan);">${data.travel_detected}</div>
+                                    <div style="color: var(--text-secondary);">Travel Detected</div>
+                                </div>
+                            </div>
+                            
+                            ${data.matches && data.matches.length > 0 ? `
+                                <div>
+                                    <h6 style="color: var(--primary-orange); margin-bottom: 1rem;">
+                                        <i class="fas fa-link"></i> Expense Matches Found
+                                    </h6>
+                                    <div style="max-height: 300px; overflow-y: auto;">
+                                        ${data.matches.slice(0, 10).map(match => `
+                                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 0.5rem;">
+                                                <div>
+                                                    <strong>${match.merchant}</strong> - ${match.amount}<br>
+                                                    <small style="color: var(--text-secondary);">📅 ${match.event_title}</small>
+                                                </div>
+                                                <span class="neo-badge" style="background: var(--accent-green);">${match.confidence}% Match</span>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `);
+                    
+                    // Refresh dashboard
+                    await loadRealDashboardData();
+                    
+                } else {
+                    throw new Error(data.error || 'Calendar analysis failed');
+                }
+                
+            } catch (error) {
+                console.error('Calendar intelligence failed:', error);
+                showToast('❌ Calendar Analysis Failed', error.message || 'Check calendar connection and try again', 'error');
+            }
+        }
+        
+        async function exportToSheets() {
+            try {
+                showToast('📊 Google Sheets Export', 'Preparing comprehensive expense report...', 'info');
+                
+                const response = await fetch('/api/sheets/export-all', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('✅ Export Complete', `Exported ${data.row_count} transactions to Google Sheets`, 'success');
+                    
+                    // Show export results with link
+                    showModal('export-results', '📊 Google Sheets Export Complete', `
+                        <div style="display: grid; gap: 1.5rem;">
+                            <div style="text-align: center; padding: 2rem; background: var(--bg-secondary); border-radius: 12px;">
+                                <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
+                                <h6 style="color: var(--accent-green); margin-bottom: 1rem;">Export Successful!</h6>
+                                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                                    ${data.row_count} transactions exported to Google Sheets
+                                </p>
+                                <a href="${data.sheet_url}" target="_blank" class="neo-btn-primary" style="text-decoration: none; display: inline-block; padding: 1rem 2rem; border-radius: 12px;">
+                                    <i class="fas fa-external-link-alt"></i> Open Google Sheets
+                                </a>
+                            </div>
+                            
+                            <div style="padding: 1rem; background: var(--bg-tertiary); border-radius: 12px; border-left: 4px solid var(--accent-green);">
+                                <h6 style="color: var(--accent-green); margin-bottom: 0.5rem;">
+                                    <i class="fas fa-info-circle"></i> Export Details
+                                </h6>
+                                <ul style="color: var(--text-secondary); margin: 0; padding-left: 1rem;">
+                                    <li>Date range: ${data.date_range}</li>
+                                    <li>Categories included: ${data.categories_included}</li>
+                                    <li>Business entities separated: ${data.entities_separated}</li>
+                                    <li>Receipt links included: ${data.receipts_included ? 'Yes' : 'No'}</li>
+                                </ul>
+                            </div>
+                        </div>
+                    `);
+                    
+                } else {
+                    throw new Error(data.error || 'Export failed');
+                }
+                
+            } catch (error) {
+                console.error('Google Sheets export failed:', error);
+                showToast('❌ Export Failed', error.message || 'Check Google Sheets connection and try again', 'error');
+            }
+        }
+        
+        function showBusinessAnalytics() {
+            // Navigate to analytics view or show analytics modal
+            showModal('business-analytics', '📈 Business Analytics Dashboard', `
+                <div style="display: grid; gap: 1.5rem;">
+                    <div class="analytics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                        <div style="text-align: center; padding: 1.5rem; background: var(--bg-secondary); border-radius: 12px; border-left: 4px solid var(--accent-blue);">
+                            <div style="font-size: 2rem; font-weight: 800; color: var(--accent-blue);">$0</div>
+                            <div style="color: var(--text-secondary);">Down Home Media</div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">This Month</div>
+                        </div>
+                        <div style="text-align: center; padding: 1.5rem; background: var(--bg-secondary); border-radius: 12px; border-left: 4px solid var(--accent-green);">
+                            <div style="font-size: 2rem; font-weight: 800; color: var(--accent-green);">$0</div>
+                            <div style="color: var(--text-secondary);">Music City Rodeo</div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">This Month</div>
+                        </div>
+                        <div style="text-align: center; padding: 1.5rem; background: var(--bg-secondary); border-radius: 12px; border-left: 4px solid var(--primary-orange);">
+                            <div style="font-size: 2rem; font-weight: 800; color: var(--primary-orange);">$0</div>
+                            <div style="color: var(--text-secondary);">Personal</div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">This Month</div>
+                        </div>
+                    </div>
+                    
+                    <div style="padding: 1rem; background: var(--bg-tertiary); border-radius: 12px; border-left: 4px solid var(--primary-orange);">
+                        <h6 style="color: var(--primary-orange); margin-bottom: 0.5rem;">
+                            <i class="fas fa-chart-bar"></i> Real-Time Analytics
+                        </h6>
+                        <p style="color: var(--text-secondary); margin: 0;">
+                            Connect your bank accounts and process transactions to see detailed business analytics and performance comparisons.
+                        </p>
+                    </div>
+                    
+                    <div style="display: flex; gap: 1rem;">
+                        <button class="neo-btn-primary" style="flex: 1;" onclick="window.location.href='/transaction_manager'">
+                            <i class="fas fa-brain"></i> View Transaction Manager
+                        </button>
+                        <button class="neo-btn" style="flex: 1;" onclick="closeModal()">
+                            <i class="fas fa-times"></i> Close
+                        </button>
+                    </div>
+                </div>
+            `);
+        }
+        
+        // ============================================================================
+        // 🧭 NAVIGATION SYSTEM - Sidebar & Page Routing
+        // ============================================================================
+        
+        function toggleNavigation() {
+            const overlay = document.getElementById('nav-overlay');
+            const sidebar = document.getElementById('nav-sidebar');
+            
+            overlay.classList.add('active');
+            sidebar.classList.add('active');
+            
+            // Add event listener for escape key
+            document.addEventListener('keydown', handleEscapeKey);
+        }
+        
+        function closeNavigation() {
+            const overlay = document.getElementById('nav-overlay');
+            const sidebar = document.getElementById('nav-sidebar');
+            
+            overlay.classList.remove('active');
+            sidebar.classList.remove('active');
+            
+            // Remove event listener
+            document.removeEventListener('keydown', handleEscapeKey);
+        }
+        
+        function handleEscapeKey(event) {
+            if (event.key === 'Escape') {
+                closeNavigation();
+            }
+        }
+        
+        function navigateTo(page) {
+            // Update active navigation item
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Close navigation
+            closeNavigation();
+            
+            // Handle page navigation
+            switch(page) {
+                case 'dashboard':
+                    // Already on dashboard
+                    break;
+                case 'transactions':
+                    window.location.href = '/transaction_manager';
+                    break;
+                case 'banks':
+                    window.location.href = '/connect';
+                    break;
+                case 'scanner':
+                    window.location.href = '/scanner';
+                    break;
+                case 'settings':
+                    window.location.href = '/settings';
+                    break;
+                default:
+                    console.log('Navigate to:', page);
+            }
+        }
+        
+        function showSystemStatus() {
+            closeNavigation();
+            showModal('system-status-modal', '⚡ System Status', `
+                <div style="display: grid; gap: 1rem;">
+                    <div class="status-grid" style="display: grid; gap: 1rem;">
+                        <div class="status-item" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: var(--bg-secondary); border-radius: 12px;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-database" style="color: var(--accent-green);"></i>
+                                <span>MongoDB Database</span>
+                            </div>
+                            <div class="status-indicator online">
+                                <div class="status-pulse online"></div>
+                                <span>Connected</span>
+                            </div>
+                        </div>
+                        
+                        <div class="status-item" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: var(--bg-secondary); border-radius: 12px;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-university" style="color: var(--primary-orange);"></i>
+                                <span>Teller Banking API</span>
+                            </div>
+                            <div class="status-indicator online">
+                                <div class="status-pulse online"></div>
+                                <span>Active</span>
+                            </div>
+                        </div>
+                        
+                        <div class="status-item" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: var(--bg-secondary); border-radius: 12px;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-brain" style="color: var(--accent-blue);"></i>
+                                <span>Brian's AI Wizard</span>
+                            </div>
+                            <div class="status-indicator online">
+                                <div class="status-pulse online"></div>
+                                <span>Ready</span>
+                            </div>
+                        </div>
+                        
+                        <div class="status-item" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: var(--bg-secondary); border-radius: 12px;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-envelope" style="color: var(--accent-green);"></i>
+                                <span>Gmail Integration</span>
+                            </div>
+                            <div class="status-indicator online">
+                                <div class="status-pulse online"></div>
+                                <span>Connected</span>
+                            </div>
+                        </div>
+                        
+                        <div class="status-item" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: var(--bg-secondary); border-radius: 12px;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-calendar-alt" style="color: var(--primary-orange);"></i>
+                                <span>Calendar Intelligence</span>
+                            </div>
+                            <div class="status-indicator online">
+                                <div class="status-pulse online"></div>
+                                <span>Active</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="padding: 1rem; background: var(--bg-tertiary); border-radius: 12px; border-left: 4px solid var(--accent-green);">
+                        <h6 style="color: var(--accent-green); margin-bottom: 0.5rem;">
+                            <i class="fas fa-check-circle"></i> All Systems Operational
+                        </h6>
+                        <p style="color: var(--text-secondary); margin: 0; font-size: 0.9rem;">
+                            TransactionPro is running at full capacity with all integrations active.
+                        </p>
+                    </div>
+                </div>
+            `);
+        }
+        
+        function showHelp() {
+            closeNavigation();
+            showModal('help-modal', '💡 Help & Support', `
+                <div style="display: grid; gap: 1.5rem;">
+                    <div class="help-section">
+                        <h6 style="color: var(--primary-orange); margin-bottom: 1rem;">
+                            <i class="fas fa-rocket"></i> Getting Started
+                        </h6>
+                        <ol style="color: var(--text-secondary); line-height: 1.6;">
+                            <li>Connect your bank accounts via <strong>Bank Connections</strong></li>
+                            <li>Set up Gmail scanning in <strong>Settings</strong></li>
+                            <li>Let Brian's AI Wizard categorize your transactions</li>
+                            <li>Use the <strong>AI Transaction Manager</strong> for detailed control</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="help-section">
+                        <h6 style="color: var(--accent-blue); margin-bottom: 1rem;">
+                            <i class="fas fa-magic"></i> AI Features
+                        </h6>
+                        <ul style="color: var(--text-secondary); line-height: 1.6;">
+                            <li><strong>Smart Categorization:</strong> AI automatically sorts expenses</li>
+                            <li><strong>Receipt Matching:</strong> Links transactions to email receipts</li>
+                            <li><strong>Calendar Context:</strong> Matches expenses to meeting/travel data</li>
+                            <li><strong>Business Intelligence:</strong> Separates personal vs business expenses</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="help-section">
+                        <h6 style="color: var(--accent-green); margin-bottom: 1rem;">
+                            <i class="fas fa-keyboard"></i> Keyboard Shortcuts
+                        </h6>
+                        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
+                            <div><code>Ctrl/Cmd + M</code></div>
+                            <div>Open navigation menu</div>
+                            <div><code>Escape</code></div>
+                            <div>Close modals/navigation</div>
+                            <div><code>Ctrl/Cmd + R</code></div>
+                            <div>Refresh dashboard data</div>
+                        </div>
+                    </div>
+                    
+                    <div style="padding: 1rem; background: var(--bg-tertiary); border-radius: 12px; border-left: 4px solid var(--primary-orange);">
+                        <h6 style="color: var(--primary-orange); margin-bottom: 0.5rem;">
+                            <i class="fas fa-question-circle"></i> Need More Help?
+                        </h6>
+                        <p style="color: var(--text-secondary); margin: 0; font-size: 0.9rem;">
+                            Use the AI Chat Assistant for personalized help with your specific questions.
+                        </p>
+                    </div>
+                </div>
+            `);
+        }
+        
+        function showEntityFilters() {
+            closeNavigation();
+            showModal('entity-filters-modal', '🏢 Entity Management', `
+                <div style="display: grid; gap: 1.5rem;">
+                    <div class="entity-grid" style="display: grid; gap: 1rem;">
+                        <div class="entity-card" style="padding: 1rem; background: var(--bg-secondary); border-radius: 12px; border-left: 4px solid var(--primary-orange);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <h6 style="color: var(--primary-orange); margin: 0;">
+                                    <i class="fas fa-user"></i> Personal
+                                </h6>
+                                <span style="color: var(--accent-green); font-weight: 600;">Active</span>
+                            </div>
+                            <p style="color: var(--text-secondary); margin: 0; font-size: 0.9rem;">
+                                Personal expenses and transactions
+                            </p>
+                        </div>
+                        
+                        <div class="entity-card" style="padding: 1rem; background: var(--bg-secondary); border-radius: 12px; border-left: 4px solid var(--accent-blue);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <h6 style="color: var(--accent-blue); margin: 0;">
+                                    <i class="fas fa-home"></i> Down Home Media
+                                </h6>
+                                <span style="color: var(--accent-green); font-weight: 600;">Active</span>
+                            </div>
+                            <p style="color: var(--text-secondary); margin: 0; font-size: 0.9rem;">
+                                Down Home Media business expenses
+                            </p>
+                        </div>
+                        
+                        <div class="entity-card" style="padding: 1rem; background: var(--bg-secondary); border-radius: 12px; border-left: 4px solid var(--accent-green);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <h6 style="color: var(--accent-green); margin: 0;">
+                                    <i class="fas fa-music"></i> Music City Rodeo
+                                </h6>
+                                <span style="color: var(--accent-green); font-weight: 600;">Active</span>
+                            </div>
+                            <p style="color: var(--text-secondary); margin: 0; font-size: 0.9rem;">
+                                Music City Rodeo business expenses
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 1rem;">
+                        <button class="neo-btn-primary" style="flex: 1;" onclick="applyEntityFilter('all')">
+                            <i class="fas fa-filter"></i> Show All Entities
+                        </button>
+                        <button class="neo-btn" style="flex: 1;" onclick="closeModal()">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                    </div>
+                </div>
+            `);
+        }
+        
+        function applyEntityFilter(entity) {
+            // Update the entity filter dropdown
+            const entityFilter = document.getElementById('entity-filter');
+            if (entityFilter) {
+                entityFilter.value = entity === 'all' ? '' : entity;
+                applyFilters();
+            }
+            closeModal();
+            showToast('🏢 Entity Filter Applied', `Showing ${entity === 'all' ? 'all entities' : entity} transactions`, 'success');
+        }
+        
+        // ============================================================================
         // 🎨 THEME SYSTEM - Light/Dark Mode Toggle
         // ============================================================================
         
@@ -3810,10 +4868,448 @@
             showToast('🎨 Theme Changed', `Switched to ${theme === 'light' ? 'Light' : 'Dark'} mode`, 'success');
         }
         
-        // Initialize theme when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeTheme();
-        });
+        // ============================================================================
+        // 📊 REAL DATA LOADING SYSTEM - No Fake Numbers!
+        // ============================================================================
+        
+        async function loadRealDashboardData() {
+            try {
+                showToast('📊 Loading Real Data', 'Fetching actual transaction data...', 'info');
+                
+                // Load dashboard stats
+                const statsResponse = await fetch('/api/dashboard-stats');
+                const statsData = await statsResponse.json();
+                
+                if (statsData.success) {
+                    updateDashboardStats(statsData.data);
+                }
+                
+                // Load real transactions
+                const transactionsResponse = await fetch('/api/transactions?limit=10');
+                const transactionsData = await transactionsResponse.json();
+                
+                if (transactionsData.success) {
+                    updateRecentTransactions(transactionsData.data);
+                    showToast('✅ Real Data Loaded', 'All dashboard data is now live', 'success');
+                } else {
+                    showToast('⚠️ No Transaction Data', 'Connect banks to see real transactions', 'warning');
+                }
+                
+            } catch (error) {
+                console.error('Failed to load real data:', error);
+                showToast('❌ Data Load Failed', 'Check connection and try again', 'error');
+            }
+        }
+        
+        function updateDashboardStats(stats) {
+            // Update each stat card with real data
+            document.getElementById('total-transactions').textContent = stats.total_transactions || '0';
+            document.getElementById('match-rate').textContent = stats.match_rate || '0%';
+            document.getElementById('total-spend').textContent = formatCurrency(stats.total_spend || 0);
+            document.getElementById('review-needed').textContent = stats.review_needed || '0';
+            document.getElementById('realtime-processed').textContent = stats.realtime_processed || '0';
+            
+            // Update connection status
+            const connectionStatus = document.getElementById('connection-status');
+            if (stats.total_transactions > 0) {
+                connectionStatus.querySelector('span').textContent = 'Live Data';
+                connectionStatus.classList.add('online');
+            } else {
+                connectionStatus.querySelector('span').textContent = 'Setup Needed';
+                connectionStatus.classList.remove('online');
+            }
+        }
+        
+        function updateRecentTransactions(transactions) {
+            const tbody = document.getElementById('transactions-tbody');
+            
+            if (!transactions || transactions.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                            <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
+                            <strong>No transactions found</strong><br>
+                            <small>Connect your bank accounts to see real transaction data</small>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = transactions.slice(0, 10).map(transaction => `
+                <tr style="cursor: pointer;" onclick="editTransaction('${transaction._id}')">
+                    <td>
+                        <input type="checkbox" class="form-check-input" data-transaction-id="${transaction._id}" style="accent-color: var(--primary-orange);">
+                    </td>
+                    <td>
+                        <div style="display: flex; flex-direction: column;">
+                            <strong style="color: var(--text-primary);">${formatDate(transaction.date)}</strong>
+                            <div style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.25rem;">
+                                ${transaction.merchant || transaction.description || 'Unknown Merchant'}
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span style="color: ${transaction.amount > 0 ? 'var(--accent-green)' : 'var(--text-primary)'}; font-weight: 600;">
+                            ${formatCurrency(Math.abs(transaction.amount))}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="neo-badge" style="background: ${getCategoryColor(transaction.category)};">
+                            ${transaction.category || 'Uncategorized'}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="neo-badge" style="background: ${getEntityColor(transaction.business)};">
+                            ${transaction.business || 'Personal'}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="status-indicator ${transaction.receipt_matched ? 'online' : ''}">
+                            <div class="status-pulse ${transaction.receipt_matched ? 'online' : ''}"></div>
+                            <span>${transaction.receipt_matched ? 'Matched' : 'Pending'}</span>
+                        </div>
+                    </td>
+                    <td>
+                        ${transaction.receipt_url ? `
+                            <button class="neo-btn" style="font-size: 0.8rem; padding: 0.25rem 0.5rem;" onclick="viewReceipt('${transaction.receipt_url}')">
+                                <i class="fas fa-receipt"></i>
+                            </button>
+                        ` : `
+                            <span style="color: var(--text-secondary); font-size: 0.8rem;">No Receipt</span>
+                        `}
+                    </td>
+                    <td>
+                        <span class="neo-badge" style="background: var(--bg-tertiary);">
+                            ${transaction.source || 'Teller'}
+                        </span>
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 0.25rem;">
+                            <button class="neo-btn" style="font-size: 0.8rem; padding: 0.25rem 0.5rem;" onclick="editTransaction('${transaction._id}')" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="neo-btn" style="font-size: 0.8rem; padding: 0.25rem 0.5rem;" onclick="categorizeSingle('${transaction._id}')" title="AI Categorize">
+                                <i class="fas fa-magic"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        // Helper functions for formatting
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD'
+            }).format(amount);
+        }
+        
+        function formatDate(date) {
+            return new Date(date).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: '2-digit'
+            });
+        }
+        
+        function getCategoryColor(category) {
+            const colors = {
+                'food': 'rgba(255, 107, 53, 0.2)',
+                'transport': 'rgba(59, 130, 246, 0.2)',
+                'shopping': 'rgba(245, 101, 101, 0.2)',
+                'tech': 'rgba(139, 92, 246, 0.2)',
+                'health': 'rgba(34, 197, 94, 0.2)',
+                'business': 'rgba(251, 191, 36, 0.2)',
+                'default': 'rgba(107, 114, 128, 0.2)'
+            };
+            return colors[category?.toLowerCase()] || colors.default;
+        }
+        
+        function getEntityColor(entity) {
+            const colors = {
+                'down-home': 'rgba(59, 130, 246, 0.2)',
+                'music-city-rodeo': 'rgba(34, 197, 94, 0.2)',
+                'personal': 'rgba(255, 107, 53, 0.2)',
+                'default': 'rgba(107, 114, 128, 0.2)'
+            };
+            return colors[entity?.toLowerCase()] || colors.default;
+        }
+        
+        // Real-time refresh functions
+        async function refreshAllData() {
+            showToast('🔄 Refreshing', 'Loading latest data...', 'info');
+            await loadRealDashboardData();
+        }
+        
+        async function processAllTransactions() {
+            try {
+                showToast('🧙‍♂️ AI Processing', 'Brian\'s wizard is analyzing all transactions...', 'info');
+                
+                const response = await fetch('/api/brian/process-all', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('✅ AI Processing Complete', `Processed ${data.processed_count} transactions`, 'success');
+                    await loadRealDashboardData(); // Refresh with new data
+                } else {
+                    showToast('❌ Processing Failed', data.error || 'Unknown error', 'error');
+                }
+                
+            } catch (error) {
+                console.error('AI processing failed:', error);
+                showToast('❌ Processing Failed', 'Check connection and try again', 'error');
+            }
+        }
+        
+                 // ============================================================================
+         // 🔧 TRANSACTION INTERACTION FUNCTIONS
+         // ============================================================================
+         
+         function viewReceipt(receiptUrl) {
+             if (!receiptUrl) {
+                 showToast('❌ No Receipt', 'No receipt available for this transaction', 'warning');
+                 return;
+             }
+             
+             // Open receipt in modal or new tab
+             if (receiptUrl.includes('gmail') || receiptUrl.includes('google')) {
+                 window.open(receiptUrl, '_blank');
+             } else {
+                 showModal('receipt-viewer', '🧾 Receipt View', `
+                     <div style="text-align: center;">
+                         <img src="${receiptUrl}" style="max-width: 100%; max-height: 500px; border-radius: 12px;" alt="Receipt" />
+                         <div style="margin-top: 1rem;">
+                             <a href="${receiptUrl}" target="_blank" class="neo-btn-primary">
+                                 <i class="fas fa-external-link-alt"></i> Open Full Size
+                             </a>
+                         </div>
+                     </div>
+                 `);
+             }
+         }
+         
+         async function editTransaction(transactionId) {
+             try {
+                 // Fetch transaction details
+                 const response = await fetch(`/api/transactions/${transactionId}`);
+                 const data = await response.json();
+                 
+                 if (!data.success) {
+                     throw new Error(data.error || 'Failed to load transaction');
+                 }
+                 
+                 const transaction = data.data;
+                 
+                 showModal('edit-transaction', '✏️ Edit Transaction', `
+                     <form id="edit-transaction-form" style="display: grid; gap: 1rem;">
+                         <div class="form-group">
+                             <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Merchant</label>
+                             <input type="text" id="edit-merchant" class="neo-input" value="${transaction.merchant || ''}" />
+                         </div>
+                         
+                         <div class="form-group">
+                             <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Category</label>
+                             <select id="edit-category" class="neo-select">
+                                 <option value="">Select Category</option>
+                                 <option value="food" ${transaction.category === 'food' ? 'selected' : ''}>🍕 Food & Dining</option>
+                                 <option value="transport" ${transaction.category === 'transport' ? 'selected' : ''}>🚗 Transportation</option>
+                                 <option value="shopping" ${transaction.category === 'shopping' ? 'selected' : ''}>🛍️ Shopping</option>
+                                 <option value="tech" ${transaction.category === 'tech' ? 'selected' : ''}>💻 Technology</option>
+                                 <option value="health" ${transaction.category === 'health' ? 'selected' : ''}>🏥 Healthcare</option>
+                                 <option value="entertainment" ${transaction.category === 'entertainment' ? 'selected' : ''}>🎬 Entertainment</option>
+                                 <option value="business" ${transaction.category === 'business' ? 'selected' : ''}>💼 Business</option>
+                             </select>
+                         </div>
+                         
+                         <div class="form-group">
+                             <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Business Entity</label>
+                             <select id="edit-business" class="neo-select">
+                                 <option value="personal" ${transaction.business === 'personal' ? 'selected' : ''}>👤 Personal</option>
+                                 <option value="down-home" ${transaction.business === 'down-home' ? 'selected' : ''}>🏠 Down Home Media</option>
+                                 <option value="music-city-rodeo" ${transaction.business === 'music-city-rodeo' ? 'selected' : ''}>🤠 Music City Rodeo</option>
+                             </select>
+                         </div>
+                         
+                         <div class="form-group">
+                             <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Notes</label>
+                             <textarea id="edit-notes" class="neo-input" rows="3" placeholder="Add notes or description...">${transaction.notes || ''}</textarea>
+                         </div>
+                         
+                         <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                             <button type="button" class="neo-btn-primary" style="flex: 1;" onclick="saveTransactionEdit('${transactionId}')">
+                                 <i class="fas fa-save"></i> Save Changes
+                             </button>
+                             <button type="button" class="neo-btn" style="flex: 1;" onclick="closeModal()">
+                                 <i class="fas fa-times"></i> Cancel
+                             </button>
+                         </div>
+                     </form>
+                 `);
+                 
+             } catch (error) {
+                 console.error('Failed to load transaction for editing:', error);
+                 showToast('❌ Edit Failed', error.message || 'Could not load transaction details', 'error');
+             }
+         }
+         
+         async function saveTransactionEdit(transactionId) {
+             try {
+                 const merchant = document.getElementById('edit-merchant').value;
+                 const category = document.getElementById('edit-category').value;
+                 const business = document.getElementById('edit-business').value;
+                 const notes = document.getElementById('edit-notes').value;
+                 
+                 const response = await fetch(`/api/transactions/${transactionId}`, {
+                     method: 'PUT',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify({
+                         merchant,
+                         category,
+                         business,
+                         notes
+                     })
+                 });
+                 
+                 const data = await response.json();
+                 
+                 if (data.success) {
+                     showToast('✅ Transaction Updated', 'Changes saved successfully', 'success');
+                     closeModal();
+                     await loadRealDashboardData(); // Refresh data
+                 } else {
+                     throw new Error(data.error || 'Save failed');
+                 }
+                 
+             } catch (error) {
+                 console.error('Failed to save transaction:', error);
+                 showToast('❌ Save Failed', error.message || 'Could not save changes', 'error');
+             }
+         }
+         
+         async function categorizeSingle(transactionId) {
+             try {
+                 showToast('🧙‍♂️ AI Categorizing', 'Brian\'s wizard is analyzing this transaction...', 'info');
+                 
+                 const response = await fetch(`/api/brian/categorize-single/${transactionId}`, {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json' }
+                 });
+                 
+                 const data = await response.json();
+                 
+                 if (data.success) {
+                     showToast('✅ AI Categorized', `Transaction categorized as ${data.category} for ${data.business}`, 'success');
+                     await loadRealDashboardData(); // Refresh data
+                 } else {
+                     throw new Error(data.error || 'AI categorization failed');
+                 }
+                 
+             } catch (error) {
+                 console.error('AI categorization failed:', error);
+                 showToast('❌ AI Failed', error.message || 'Could not categorize transaction', 'error');
+             }
+         }
+         
+         // Filtering functions
+         async function applyFilters() {
+             const searchTerm = document.getElementById('search-input')?.value || '';
+             const entityFilter = document.getElementById('entity-filter')?.value || '';
+             const filterType = document.getElementById('filter-type')?.value || 'all';
+             const categoryFilter = document.getElementById('category-filter')?.value || '';
+             
+             try {
+                 showToast('🔍 Applying Filters', 'Searching transactions...', 'info');
+                 
+                 const params = new URLSearchParams({
+                     search: searchTerm,
+                     entity: entityFilter,
+                     type: filterType,
+                     category: categoryFilter,
+                     limit: '50'
+                 });
+                 
+                 const response = await fetch(`/api/transactions?${params}`);
+                 const data = await response.json();
+                 
+                 if (data.success) {
+                     updateRecentTransactions(data.data);
+                     showToast('✅ Filters Applied', `Found ${data.data.length} matching transactions`, 'success');
+                 } else {
+                     throw new Error(data.error || 'Filter failed');
+                 }
+                 
+             } catch (error) {
+                 console.error('Filter failed:', error);
+                 showToast('❌ Filter Failed', error.message || 'Could not apply filters', 'error');
+             }
+         }
+         
+         function clearFilters() {
+             document.getElementById('search-input').value = '';
+             document.getElementById('entity-filter').value = '';
+             document.getElementById('filter-type').value = 'all';
+             document.getElementById('category-filter').value = '';
+             
+             loadRealDashboardData(); // Reload without filters
+             showToast('🔄 Filters Cleared', 'Showing all transactions', 'info');
+         }
+         
+         function refreshTransactions() {
+             loadRealDashboardData();
+         }
+         
+         function showBulkActions() {
+             showModal('bulk-actions', '⚡ Bulk Actions', `
+                 <div style="display: grid; gap: 1rem;">
+                     <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                         Select transactions using the checkboxes, then choose an action:
+                     </p>
+                     
+                     <button class="neo-btn-primary" onclick="bulkCategorize()">
+                         <i class="fas fa-magic"></i> AI Categorize Selected
+                     </button>
+                     
+                     <button class="neo-btn" onclick="bulkExport()">
+                         <i class="fas fa-download"></i> Export Selected
+                     </button>
+                     
+                     <button class="neo-btn" onclick="bulkDelete()">
+                         <i class="fas fa-trash"></i> Delete Selected
+                     </button>
+                     
+                     <button class="neo-btn" onclick="closeModal()">
+                         <i class="fas fa-times"></i> Cancel
+                     </button>
+                 </div>
+             `);
+         }
+         
+         // Initialize everything when page loads
+         document.addEventListener('DOMContentLoaded', function() {
+             initializeTheme();
+             loadRealDashboardData(); // Load real data immediately
+             
+             // Set up auto-refresh every 30 seconds for real-time feel
+             setInterval(loadRealDashboardData, 30000);
+             
+             // Add keyboard shortcuts
+             document.addEventListener('keydown', function(event) {
+                 if ((event.ctrlKey || event.metaKey) && event.key === 'm') {
+                     event.preventDefault();
+                     toggleNavigation();
+                 }
+                 if ((event.ctrlKey || event.metaKey) && event.key === 'r' && !event.shiftKey) {
+                     event.preventDefault();
+                     refreshAllData();
+                 }
+             });
+         });
     </script>
 </body>
 </html> 
