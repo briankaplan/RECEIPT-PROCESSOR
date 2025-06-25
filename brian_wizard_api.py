@@ -699,35 +699,39 @@ def get_top_merchants(transactions):
     )[:10]
 
 def handle_missing_receipt_conversation(analysis):
-    """Handle missing receipt search and upload workflow"""
+    """Handle missing receipt conversation flow"""
     return jsonify({
         'success': True,
-        'ai_message': "I'll help you find those missing receipts! Let me search through your emails and photos...",
-        'actions_taken': [
-            'Scanning Gmail accounts for receipt emails',
-            'Checking Google Photos for receipt images', 
-            'Analyzing transaction patterns for auto-matching'
-        ],
-        'next_steps': ['Upload any receipts I find', 'Ask about any I cannot locate']
+        'ai_message': "I can help you find missing receipts! Let me search your emails and photos for any receipt images.",
+        'next_actions': [
+            {'action': 'search_gmail', 'label': '📧 Search Gmail for Receipts'},
+            {'action': 'search_photos', 'label': '📷 Search Google Photos'},
+            {'action': 'manual_upload', 'label': '📁 Upload Receipts Manually'}
+        ]
+    })
+
+def handle_business_separation_conversation(analysis):
+    """Handle business separation conversation flow"""
+    return jsonify({
+        'success': True,
+        'ai_message': "I'll help you separate your business expenses! I can generate separate reports for Down Home Media and Music City Rodeo.",
+        'next_actions': [
+            {'action': 'separate_down_home', 'label': '🏢 Down Home Media Report'},
+            {'action': 'separate_mcr', 'label': '🎵 Music City Rodeo Report'},
+            {'action': 'separate_all', 'label': '📊 All Business Reports'}
+        ]
     })
 
 def initiate_expense_conversation():
-    """Start the expense conversation workflow"""
+    """Initiate general expense conversation"""
     return jsonify({
         'success': True,
-        'ai_message': "🧙‍♂️ **Hi Brian! I'm your AI Financial Wizard.**\n\nWould you like me to help with your expenses? I can:\n\n• Generate comprehensive expense reports\n• Find and organize receipts automatically\n• Separate Down Home, Music City Rodeo, and personal expenses\n• Identify missing receipts and help you find them\n\n**What date range do you need?** (e.g., 'July 1, 2024 - July 1, 2025')",
-        'suggested_responses': [
-            'Generate reports for this year',
-            'July 1, 2024 - July 1, 2025, all 3 businesses separate',
-            'Last quarter, Down Home only', 
-            'This month, all businesses'
-        ],
-        'capabilities': [
-            'Natural language date parsing',
-            'Automatic business type separation', 
-            'Missing receipt detection',
-            'Gmail and Google Photos integration',
-            'Tax-ready report generation'
+        'ai_message': "Hi! I'm Brian's AI Assistant. I can help you with:\n\n• Expense categorization\n• Receipt matching\n• Business expense reports\n• Tax preparation\n\nWhat would you like me to help you with today?",
+        'quick_actions': [
+            {'action': 'expense_report', 'label': '📊 Generate Expense Report'},
+            {'action': 'receipt_matching', 'label': '🔍 Match Receipts'},
+            {'action': 'business_separation', 'label': '🏢 Separate Business Expenses'},
+            {'action': 'tax_prep', 'label': '🧾 Tax Preparation'}
         ]
     })
 

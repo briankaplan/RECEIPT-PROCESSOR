@@ -3,7 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bank Connection - FinanceFlow 2026</title>
+    <title>Bank Connection - TransactionPro 2026</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#ff6b35">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="TransactionPro 2026">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/generated-icon.png">
     
     <!-- CDN Links -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -12,6 +23,21 @@
     
     <!-- Teller Connect SDK -->
     <script src="https://cdn.teller.io/connect/connect.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registered:', registration);
+                    })
+                    .catch(error => {
+                        console.log('❌ Service Worker registration failed:', error);
+                    });
+            });
+        }
+    </script>
     
     <style>
         :root {
@@ -43,6 +69,8 @@
             --gradient-card: linear-gradient(135deg, #242b3d 0%, #2a3441 100%);
             
             --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --radius-medium: 16px;
+            --radius-large: 24px;
         }
 
         * {
@@ -59,10 +87,209 @@
             min-height: 100vh;
         }
 
+        /* Unified App Header */
+        .app-header {
+            background: var(--bg-secondary);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .app-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        .app-logo i {
+            font-size: 2rem;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-medium);
+            transition: var(--transition-smooth);
+            font-weight: 500;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            color: var(--text-primary);
+            background: var(--bg-glass);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-glass);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-medium);
+            color: var(--accent-green);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Global Notification System */
+        .notification-container {
+            position: fixed;
+            top: 100px;
+            right: 2rem;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .notification {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-medium);
+            padding: 1rem 1.5rem;
+            color: var(--text-primary);
+            box-shadow: var(--shadow-card);
+            backdrop-filter: blur(20px);
+            transform: translateX(100%);
+            transition: var(--transition-smooth);
+            max-width: 400px;
+            position: relative;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            border-color: var(--accent-green);
+            background: rgba(105, 240, 174, 0.1);
+        }
+
+        .notification.error {
+            border-color: var(--accent-red);
+            background: rgba(255, 82, 82, 0.1);
+        }
+
+        .notification.warning {
+            border-color: var(--primary-orange);
+            background: rgba(255, 107, 53, 0.1);
+        }
+
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .notification-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .notification-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 4px;
+            transition: var(--transition-smooth);
+        }
+
+        .notification-close:hover {
+            color: var(--text-primary);
+            background: var(--bg-glass);
+        }
+
+        .notification-message {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 2rem;
+        }
+
+        .page-header {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-card);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
         }
 
         .header {
@@ -635,7 +862,44 @@
     </style>
 </head>
 <body>
+    <!-- Unified App Header -->
+    <header class="app-header">
+        <div class="header-content">
+            <div class="header-left">
+                <a href="/" class="app-logo">
+                    <i class="fas fa-chart-line"></i>
+                    <span>TransactionPro</span>
+                </a>
+                <nav class="nav-links">
+                    <a href="/" class="nav-link">Dashboard</a>
+                    <a href="/transactions" class="nav-link">Transactions</a>
+                    <a href="/scanner" class="nav-link">Scanner</a>
+                    <a href="/connect" class="nav-link active">Connect</a>
+                    <a href="/settings" class="nav-link">Settings</a>
+                </nav>
+            </div>
+            <div class="header-actions">
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span>Live</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Global Notification Container -->
+    <div class="notification-container" id="notification-container"></div>
+
     <div class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1 class="page-title">
+                <i class="fas fa-university"></i>
+                Bank Connections
+            </h1>
+            <p class="page-subtitle">Connect your financial accounts for seamless transaction processing</p>
+        </div>
+
         <div class="header">
             <h1><i class="fas fa-university"></i> Bank Connection</h1>
                 <a href="/" class="back-btn">
@@ -828,7 +1092,6 @@
             applicationId: 'app_pbvpiocruhfnvkhf1k000',
             environment: 'development', // Use development for real banking data
             selectAccount: 'single',
-            enrollmentId: null,
             products: ['transactions'],
             onInit: () => {
                 console.log('🏦 Teller Connect initialized');
@@ -879,23 +1142,31 @@
         // Handle successful Teller connection
         async function handleTellerSuccess(authorization) {
             console.log('🎉 Chase bank connected successfully');
+            console.log('📊 Authorization data:', authorization);
             
             try {
                 showProcessing('Saving Connection...', 'Securing your bank connection');
+                
+                // Prepare the data with debug logging
+                const tokenData = {
+                    accessToken: authorization.accessToken,
+                    userId: authorization.user?.id || 'user_' + Date.now(),
+                    enrollmentId: authorization.enrollment?.id,
+                    institution: authorization.enrollment?.institution || 'Chase'
+                };
+                
+                console.log('📤 Sending token data:', tokenData);
                 
                 // Save the authorization to our backend
                 const response = await fetch('/teller/save-token', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        access_token: authorization.accessToken,
-                        user_id: authorization.user?.id || 'user_' + Date.now(),
-                        account_id: authorization.enrollment?.id,
-                        institution: authorization.enrollment?.institution || 'Chase'
-                    })
+                    body: JSON.stringify(tokenData)
                 });
 
+                console.log('📥 Response status:', response.status);
                 const result = await response.json();
+                console.log('📥 Response data:', result);
                 
                 if (result.success) {
                     showProcessing('Syncing Transactions...', 'Importing your transaction history');
@@ -908,7 +1179,7 @@
                     
                     // Update UI
                     updateConnectionStatus(true);
-            loadConnectedAccounts();
+                    loadConnectedAccounts();
                     loadConnectionStats();
                     
                 } else {
@@ -1224,6 +1495,13 @@
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🏦 Bank connection page loaded');
             
+            // Force cache refresh
+            if (window.performance && window.performance.navigation.type === window.performance.navigation.TYPE_BACK_FORWARD) {
+                console.log('🔄 Cache refresh detected, reloading page');
+                window.location.reload(true);
+                return;
+            }
+            
             // Check if Teller Connect SDK is available
             if (typeof TellerConnect === 'undefined') {
                 console.error('❌ Teller Connect SDK not loaded - checking again in 2 seconds...');
@@ -1243,9 +1521,6 @@
                 console.log('✅ Teller Connect SDK loaded successfully');
                 initializeTellerConnect();
             }
-            
-            // Load current settings
-            loadCurrentSettings();
         });
 
         function initializeTellerConnect() {

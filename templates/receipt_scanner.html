@@ -3,17 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>FinanceFlow Scanner - iPhone Quality</title>
+    <title>Receipt Scanner - TransactionPro 2026</title>
     
     <!-- PWA Meta Tags -->
-    <link rel="apple-touch-icon" href="/static/generated-icon.png">
+    <meta name="theme-color" content="#ff6b35">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="TransactionPro 2026">
+    
+    <!-- PWA Manifest -->
     <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/generated-icon.png">
     
     <!-- CDN Links -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registered:', registration);
+                    })
+                    .catch(error => {
+                        console.log('❌ Service Worker registration failed:', error);
+                    });
+            });
+        }
+    </script>
     
     <style>
         :root {
@@ -47,6 +67,9 @@
             --border-radius-medium: 12px;
             --border-radius-large: 20px;
             --border-radius-xl: 28px;
+            
+            /* Transitions */
+            --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         * {
@@ -68,10 +91,182 @@
             -moz-osx-font-smoothing: grayscale;
         }
 
+        /* Unified App Header */
+        .app-header {
+            background: var(--bg-glass);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-light);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .app-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        .app-logo i {
+            font-size: 2rem;
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: var(--border-radius-medium);
+            transition: var(--transition-smooth);
+            font-weight: 500;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            color: var(--text-primary);
+            background: var(--bg-glass);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-glass);
+            border: 1px solid var(--border-light);
+            border-radius: var(--border-radius-medium);
+            color: var(--accent-green);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Global Notification System */
+        .notification-container {
+            position: fixed;
+            top: 100px;
+            right: 2rem;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .notification {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: var(--border-radius-medium);
+            padding: 1rem 1.5rem;
+            color: var(--text-primary);
+            box-shadow: var(--shadow-card);
+            backdrop-filter: blur(20px);
+            transform: translateX(100%);
+            transition: var(--transition-smooth);
+            max-width: 400px;
+            position: relative;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            border-color: var(--accent-green);
+            background: rgba(52, 199, 89, 0.1);
+        }
+
+        .notification.error {
+            border-color: var(--accent-red);
+            background: rgba(255, 59, 48, 0.1);
+        }
+
+        .notification.warning {
+            border-color: var(--accent-orange);
+            background: rgba(255, 149, 0, 0.1);
+        }
+
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .notification-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .notification-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 4px;
+            transition: var(--transition-smooth);
+        }
+
+        .notification-close:hover {
+            color: var(--text-primary);
+            background: var(--bg-glass);
+        }
+
+        .notification-message {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
         /* iPhone-Style Header */
         .scanner-header {
             position: sticky;
-            top: 0;
+            top: 80px;
             z-index: 100;
             background: var(--bg-glass);
             backdrop-filter: blur(20px);
@@ -79,7 +274,7 @@
             padding: 20px 24px 16px;
         }
 
-        .header-content {
+        .scanner-header-content {
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -103,13 +298,13 @@
             opacity: 0.6;
         }
 
-        .header-title {
+        .scanner-title {
             font-size: 17px;
             font-weight: var(--font-weight-semibold);
             color: var(--text-primary);
         }
 
-        .header-action {
+        .scanner-action {
             width: 44px;
             height: 44px;
             background: var(--accent-blue);
@@ -125,7 +320,7 @@
             box-shadow: var(--shadow-button);
         }
 
-        .header-action:hover {
+        .scanner-action:hover {
             transform: scale(1.05);
         }
 
@@ -518,7 +713,7 @@
             opacity: 0;
             transform: translate(-50%, 20px);
             transition: all 0.3s ease;
-            }
+        }
             
         .toast.show {
             opacity: 1;
@@ -538,18 +733,46 @@
 </head>
 
 <body>
-    <!-- Scanner Header -->
-    <div class="scanner-header">
+    <!-- Unified App Header -->
+    <header class="app-header">
         <div class="header-content">
-            <button class="back-button" onclick="window.history.back()">
-                <i class="fas fa-chevron-left"></i> Back
-                </button>
-            <div class="header-title">Receipt Scanner</div>
-            <button class="header-action" onclick="toggleFlash()">
-                <i class="fas fa-bolt" id="flash-icon"></i>
-            </button>
+            <div class="header-left">
+                <a href="/" class="app-logo">
+                    <i class="fas fa-chart-line"></i>
+                    <span>TransactionPro</span>
+                </a>
+                <nav class="nav-links">
+                    <a href="/" class="nav-link">Dashboard</a>
+                    <a href="/transactions" class="nav-link">Transactions</a>
+                    <a href="/scanner" class="nav-link active">Scanner</a>
+                    <a href="/connect" class="nav-link">Connect</a>
+                    <a href="/settings" class="nav-link">Settings</a>
+                </nav>
+            </div>
+            <div class="header-actions">
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span>Live</span>
+                </div>
             </div>
         </div>
+    </header>
+
+    <!-- Global Notification Container -->
+    <div class="notification-container" id="notification-container"></div>
+
+    <!-- Scanner Header -->
+    <div class="scanner-header">
+        <div class="scanner-header-content">
+            <button class="back-button" onclick="window.history.back()">
+                <i class="fas fa-chevron-left"></i> Back
+            </button>
+            <div class="scanner-title">Receipt Scanner</div>
+            <button class="scanner-action" onclick="toggleFlash()">
+                <i class="fas fa-bolt" id="flash-icon"></i>
+            </button>
+        </div>
+    </div>
 
     <!-- Main Scanner Interface -->
     <div class="scanner-container">
@@ -636,6 +859,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             console.log('📷 Receipt Scanner Initialized');
             checkCameraPermission();
+            showToast('📱 Receipt Scanner ready', 'success');
         });
 
         // Camera Functions
@@ -933,13 +1157,36 @@
         }
 
         function showToast(message, type = 'info') {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.className = `toast ${type} show`;
+            const container = document.getElementById('notification-container');
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
             
+            notification.innerHTML = `
+                <div class="notification-header">
+                    <span class="notification-title">${type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                    <button class="notification-close" onclick="this.parentElement.parentElement.remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="notification-message">${message}</div>
+            `;
+            
+            container.appendChild(notification);
+            
+            // Trigger animation
+            setTimeout(() => notification.classList.add('show'), 100);
+            
+            // Auto remove after 5 seconds
             setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
+                if (notification.parentElement) {
+                    notification.classList.remove('show');
+                    setTimeout(() => {
+                        if (notification.parentElement) {
+                            notification.parentElement.removeChild(notification);
+                        }
+                    }, 300);
+                }
+            }, 5000);
         }
 
         // Cleanup on page unload

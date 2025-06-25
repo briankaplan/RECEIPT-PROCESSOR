@@ -77,22 +77,16 @@ class CalendarContextAnalyzer:
     """
     
     def __init__(self):
-        self.credentials_path = os.getenv('GOOGLE_CALENDAR_CREDENTIALS', 'credentials/service-acct-dh.json')
+        # Always use the environment variable if set, otherwise default to 'brian@downhome.com'
+        self.credentials_path = os.getenv('GOOGLE_CALENDAR_CREDENTIALS', 'credentials/service_account.json')
         self.calendar_service = None
-        
-        # OAuth2 Service Account authentication (required for Calendar API)
         self.service_account_email = None
-        
-        # Calendar IDs to access
         self.calendars = {
             'brian_downhome': os.getenv('BRIAN_DOWNHOME_CALENDAR_ID', 'brian@downhome.com'),
             'primary': 'primary'
         }
-        
-        # Set primary calendar
         self.primary_calendar_id = self.calendars['brian_downhome']
-        
-        # Brian's business context
+        logger.info(f"📅 Using calendar ID: {self.primary_calendar_id}")
         self.business_context = {
             'business_hours': {'start': 8, 'end': 18},
             'keywords': {
@@ -101,7 +95,6 @@ class CalendarContextAnalyzer:
                 'personal': ['vacation', 'personal', 'family', 'birthday', 'holiday']
             }
         }
-        
         self._initialize_calendar_service()
         logger.info("📅 Calendar Context Analyzer initialized")
     
@@ -147,23 +140,103 @@ class CalendarContextAnalyzer:
             logger.info(f"📅 Found {len(calendars)} accessible calendars")
             
             if len(calendars) == 0:
-                logger.warning("⚠️ No calendars accessible to service account")
-                logger.warning("   Calendar sharing may not be configured properly")
-                logger.info("📝 SETUP REQUIRED: Share brian@downhome.com calendar with service account")
-                logger.info("   1. Go to https://calendar.google.com")
-                logger.info("   2. Open Settings > Calendars > brian@downhome.com")
-                logger.info(f"   3. Share with: {self.service_account_email}")
-                logger.info("   4. Grant 'See all event details' permission")
+                logger.warning("⚠️ No calendars in calendar list - trying direct access...")
+                # Try alternative approaches
+                if self._try_alternative_calendar_access():
+                    logger.info("🎉 Calendar access working via direct access!")
+                    return
+                else:
+                    logger.warning("⚠️ No calendars accessible to service account")
+                    logger.warning("   Calendar sharing may not be configured properly")
+                    logger.info("📝 SETUP REQUIRED: Share brian@downhome.com calendar with service account")
+                    logger.info("   1. Go to https://calendar.google.com")
+                    logger.info("   2. Open Settings > Calendars > brian@downhome.com")
+                    logger.info(f"   3. Share with: {self.service_account_email}")
+                    logger.info("   4. Grant 'See all event details' permission")
             else:
+                logger.info("🎉 Calendar access working! Found calendars:")
                 for calendar in calendars:
                     logger.info(f"   📅 {calendar.get('summary', 'Unknown')} ({calendar.get('id', 'No ID')})")
                     
+                # Update primary calendar to first accessible one if needed
+                if calendars and self.primary_calendar_id not in [cal.get('id') for cal in calendars]:
+                    first_calendar = calendars[0]
+                    self.primary_calendar_id = first_calendar.get('id')
+                    logger.info(f"🔄 Updated primary calendar to: {self.primary_calendar_id}")
+                    
         except Exception as e:
-            logger.warning(f"⚠️ Calendar access test failed: {e}")
-            logger.info("💡 This might be due to:")
-            logger.info("   1. Calendar not shared with service account")
-            logger.info("   2. Insufficient permissions")
-            logger.info("   3. Service account setup issues")
+            logger.warning(f"⚠️ Calendar list failed: {e}")
+            logger.info("🔄 Trying direct calendar access...")
+            
+            # Try alternative approaches even on error
+            if self._try_alternative_calendar_access():
+                logger.info("🎉 Calendar access working via direct access!")
+            else:
+                logger.error("❌ All calendar access methods failed")
+    
+    def _try_alternative_calendar_access(self):
+        """Try alternative methods to access calendars"""
+        logger.info("🔄 Trying alternative calendar access methods...")
+        
+        # Method 1: Try to access the calendar directly by ID
+        try:
+            calendar_info = self.calendar_service.calendars().get(
+                calendarId=self.primary_calendar_id
+            ).execute()
+            logger.info(f"✅ Direct calendar access successful for: {calendar_info.get('summary', 'Unknown')}")
+            return True
+        except Exception as e:
+            logger.warning(f"❌ Direct calendar access failed: {e}")
+        
+        # Method 2: Try 'primary' calendar
+        try:
+            calendar_info = self.calendar_service.calendars().get(
+                calendarId='primary'
+            ).execute()
+            logger.info(f"✅ Primary calendar access successful for: {calendar_info.get('summary', 'Unknown')}")
+            self.primary_calendar_id = 'primary'
+            return True
+        except Exception as e:
+            logger.warning(f"❌ Primary calendar access failed: {e}")
+        
+        # Method 3: Try to list all calendars with different scopes
+        try:
+            # Try with different calendar list parameters
+            calendar_list = self.calendar_service.calendarList().list(
+                showDeleted=False,
+                showHidden=False
+            ).execute()
+            calendars = calendar_list.get('items', [])
+            if calendars:
+                logger.info(f"✅ Found {len(calendars)} calendars with alternative method")
+                for cal in calendars:
+                    logger.info(f"   📅 {cal.get('summary', 'Unknown')} ({cal.get('id', 'No ID')})")
+                return True
+        except Exception as e:
+            logger.warning(f"❌ Alternative calendar list failed: {e}")
+        
+        # Method 4: Try to get events directly (sometimes works even if calendar list doesn't)
+        try:
+            from datetime import datetime, timedelta
+            now = datetime.utcnow()
+            time_min = (now - timedelta(days=1)).isoformat() + 'Z'
+            time_max = (now + timedelta(days=1)).isoformat() + 'Z'
+            
+            events_result = self.calendar_service.events().list(
+                calendarId=self.primary_calendar_id,
+                timeMin=time_min,
+                timeMax=time_max,
+                maxResults=1,
+                singleEvents=True
+            ).execute()
+            
+            logger.info(f"✅ Direct event access successful - found {len(events_result.get('items', []))} events")
+            return True
+        except Exception as e:
+            logger.warning(f"❌ Direct event access failed: {e}")
+        
+        logger.error("❌ All alternative calendar access methods failed")
+        return False
     
     def get_events_in_range(self, start_date: datetime, end_date: datetime, max_results: int = 500) -> List[Dict]:
         """Get calendar events in the specified date range"""
@@ -178,7 +251,7 @@ class CalendarContextAnalyzer:
             
             logger.info(f"📅 Fetching events from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
             
-            # Try to get events from the brian@downhome.com calendar
+            # Try to get events from the primary calendar
             events_result = self.calendar_service.events().list(
                 calendarId=self.primary_calendar_id,
                 timeMin=time_min,

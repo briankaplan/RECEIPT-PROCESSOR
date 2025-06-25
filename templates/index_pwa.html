@@ -710,6 +710,13 @@
             </h3>
             <div class="business-grid">
                 <div class="business-card">
+                    <div class="business-icon">👤</div>
+                    <div class="business-info">
+                        <div class="business-name">Personal</div>
+                        <div class="business-amount" data-business="personal">$0.00</div>
+                    </div>
+                </div>
+                <div class="business-card">
                     <div class="business-icon">🏢</div>
                     <div class="business-info">
                         <div class="business-name">Down Home Media</div>
@@ -1284,14 +1291,26 @@
         }
 
         function updateBusinessStats(breakdown) {
+            const personalElement = document.querySelector('[data-business="personal"]');
             const downHomeElement = document.querySelector('[data-business="down-home"]');
             const mcrElement = document.querySelector('[data-business="mcr"]');
             
-            if (downHomeElement) {
-                downHomeElement.textContent = '$' + (breakdown.down_home || '0.00');
+            if (personalElement) {
+                const personalData = breakdown.personal || breakdown.Personal || { amount: 0 };
+                const amount = typeof personalData === 'object' ? personalData.amount : personalData;
+                personalElement.textContent = '$' + (amount || '0.00');
             }
+            
+            if (downHomeElement) {
+                const downHomeData = breakdown.down_home || breakdown['Down Home'] || { amount: 0 };
+                const amount = typeof downHomeData === 'object' ? downHomeData.amount : downHomeData;
+                downHomeElement.textContent = '$' + (amount || '0.00');
+            }
+            
             if (mcrElement) {
-                mcrElement.textContent = '$' + (breakdown.mcr || '0.00');
+                const mcrData = breakdown.mcr || breakdown.MCR || { amount: 0 };
+                const amount = typeof mcrData === 'object' ? mcrData.amount : mcrData;
+                mcrElement.textContent = '$' + (amount || '0.00');
             }
         }
 

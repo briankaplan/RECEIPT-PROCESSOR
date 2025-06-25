@@ -3,8 +3,38 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Settings - Brian's Financial Intelligence</title>
+    <title>Settings - TransactionPro 2026</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#ff6b35">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="TransactionPro 2026">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/generated-icon.png">
+    
+    <!-- CDN Links -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registered:', registration);
+                    })
+                    .catch(error => {
+                        console.log('❌ Service Worker registration failed:', error);
+                    });
+            });
+        }
+    </script>
+    
     <style>
         /* Ultra-Modern Dark Theme Variables */
         :root {
@@ -22,6 +52,12 @@
             --border-subtle: rgba(55, 65, 81, 0.6);
             --gradient-primary: linear-gradient(135deg, #ff6b35 0%, #f59e0b 100%);
             --font-mono: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+            
+            --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --shadow-button: 0 4px 16px rgba(0, 0, 0, 0.2);
+            --radius-medium: 16px;
+            --radius-large: 24px;
+            --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         /* Light Theme Overrides */
@@ -57,24 +93,197 @@
             min-height: 100vh;
         }
 
+        /* Unified App Header */
+        .app-header {
+            background: var(--bg-secondary);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .app-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        .app-logo i {
+            font-size: 2rem;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-medium);
+            transition: var(--transition-smooth);
+            font-weight: 500;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            color: var(--text-primary);
+            background: var(--bg-glass);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-glass);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-medium);
+            color: var(--accent-green);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Global Notification System */
+        .notification-container {
+            position: fixed;
+            top: 100px;
+            right: 2rem;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .notification {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-medium);
+            padding: 1rem 1.5rem;
+            color: var(--text-primary);
+            box-shadow: var(--shadow-card);
+            backdrop-filter: blur(20px);
+            transform: translateX(100%);
+            transition: var(--transition-smooth);
+            max-width: 400px;
+            position: relative;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            border-color: var(--accent-green);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .notification.error {
+            border-color: var(--accent-red);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .notification.warning {
+            border-color: var(--primary-orange);
+            background: rgba(255, 107, 53, 0.1);
+        }
+
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .notification-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .notification-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 4px;
+            transition: var(--transition-smooth);
+        }
+
+        .notification-close:hover {
+            color: var(--text-primary);
+            background: var(--bg-glass);
+        }
+
+        .notification-message {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
         .container {
             max-width: 1400px;
             margin: 0 auto;
             padding: 2rem;
         }
 
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 3rem;
-            padding-bottom: 2rem;
-            border-bottom: 1px solid var(--border-subtle);
+        .page-header {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-card);
+            border: 1px solid var(--border-subtle);
         }
 
-        .header h1 {
-            font-size: 2.5rem;
-            font-weight: 800;
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
             background: var(--gradient-primary);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -84,22 +293,9 @@
             gap: 1rem;
         }
 
-        .back-btn {
-            background: var(--bg-glass);
-            border: 1px solid var(--border-subtle);
-            color: var(--text-primary);
-            padding: 1rem 2rem;
-            border-radius: 16px;
-            font-weight: 600;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(20px);
-        }
-
-        .back-btn:hover {
-            background: var(--primary-orange);
-            color: var(--bg-primary);
-            transform: translateY(-2px);
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
         }
 
         .settings-grid {
@@ -425,17 +621,42 @@
     </style>
   </head>
   <body>
-    <div class="container">
-        <div class="header">
-            <h1><i class="fas fa-cog"></i> System Configuration</h1>
-            <div style="display: flex; gap: 1rem; align-items: center;">
-                <button id="theme-toggle" class="back-btn" onclick="toggleTheme()" style="padding: 1rem;">
-                    <i id="theme-icon" class="fas fa-sun"></i>
-                </button>
-                <a href="/" class="back-btn">
-                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+    <!-- Unified App Header -->
+    <header class="app-header">
+        <div class="header-content">
+            <div class="header-left">
+                <a href="/" class="app-logo">
+                    <i class="fas fa-chart-line"></i>
+                    <span>TransactionPro</span>
                 </a>
+                <nav class="nav-links">
+                    <a href="/" class="nav-link">Dashboard</a>
+                    <a href="/transactions" class="nav-link">Transactions</a>
+                    <a href="/scanner" class="nav-link">Scanner</a>
+                    <a href="/connect" class="nav-link">Connect</a>
+                    <a href="/settings" class="nav-link active">Settings</a>
+                </nav>
             </div>
+            <div class="header-actions">
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span>Live</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Global Notification Container -->
+    <div class="notification-container" id="notification-container"></div>
+
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1 class="page-title">
+                <i class="fas fa-cog"></i>
+                Settings
+            </h1>
+            <p class="page-subtitle">Configure your TransactionPro experience and manage integrations</p>
         </div>
 
         <!-- Service Status Overview -->

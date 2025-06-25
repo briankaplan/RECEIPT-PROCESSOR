@@ -69,7 +69,7 @@ def calendar_health():
 
 @calendar_bp.route('/debug', methods=['GET'])
 def calendar_debug():
-    """Debug calendar access with different calendar IDs"""
+    """Debug calendar access with comprehensive testing"""
     try:
         init_calendar_analyzer()
         
@@ -82,15 +82,36 @@ def calendar_debug():
         debug_info = {
             "service_account_email": getattr(calendar_analyzer, 'service_account_email', 'Unknown'),
             "credentials_path": calendar_analyzer.credentials_path,
-            "calendar_tests": []
+            "primary_calendar_id": calendar_analyzer.primary_calendar_id,
+            "calendar_tests": [],
+            "accessible_calendars": [],
+            "alternative_access_results": []
         }
         
-        # Test different calendar IDs
+        # Test 1: List all accessible calendars
+        try:
+            calendar_list = calendar_analyzer.calendar_service.calendarList().list().execute()
+            calendars = calendar_list.get('items', [])
+            debug_info["accessible_calendars"] = []
+            
+            for calendar in calendars:
+                debug_info["accessible_calendars"].append({
+                    "id": calendar.get('id', 'Unknown'),
+                    "summary": calendar.get('summary', 'No summary'),
+                    "accessRole": calendar.get('accessRole', 'Unknown'),
+                    "selected": calendar.get('selected', False),
+                    "primary": calendar.get('primary', False)
+                })
+                
+        except Exception as e:
+            debug_info["calendar_list_error"] = str(e)
+        
+        # Test 2: Try direct calendar access
         calendar_ids_to_test = [
-            'brian@downhome.com',
+            calendar_analyzer.primary_calendar_id,
             'primary',
-            'YnJpYW5AZG93bmhvbWUuY29t',  # Base64 encoded version you mentioned
-            calendar_analyzer.primary_calendar_id
+            'brian@downhome.com',
+            'YnJpYW5AZG93bmhvbWUuY29t'  # Base64 encoded version
         ]
         
         for calendar_id in calendar_ids_to_test:
@@ -103,7 +124,7 @@ def calendar_debug():
             }
             
             try:
-                # Test 1: Get calendar metadata
+                # Test calendar metadata
                 calendar_info = calendar_analyzer.calendar_service.calendars().get(
                     calendarId=calendar_id
                 ).execute()
@@ -115,7 +136,7 @@ def calendar_debug():
                     "id": calendar_info.get('id', 'Unknown')
                 }
                 
-                # Test 2: Try to get recent events
+                # Test event access
                 from datetime import datetime, timedelta
                 now = datetime.utcnow()
                 time_min = (now - timedelta(days=30)).isoformat() + 'Z'
@@ -136,7 +157,7 @@ def calendar_debug():
                     "events": []
                 }
                 
-                for event in events[:3]:  # Show first 3 events
+                for event in events[:3]:
                     event_info = {
                         "summary": event.get('summary', 'No title'),
                         "start": event.get('start', {}).get('dateTime', event.get('start', {}).get('date', 'No time')),
@@ -149,27 +170,30 @@ def calendar_debug():
             
             debug_info["calendar_tests"].append(test_result)
         
-        # Also list all accessible calendars
+        # Test 3: Try alternative access methods
         try:
-            calendar_list = calendar_analyzer.calendar_service.calendarList().list().execute()
-            calendars = calendar_list.get('items', [])
-            debug_info["accessible_calendars"] = []
-            
-            for calendar in calendars:
-                debug_info["accessible_calendars"].append({
-                    "id": calendar.get('id', 'Unknown'),
-                    "summary": calendar.get('summary', 'No summary'),
-                    "accessRole": calendar.get('accessRole', 'Unknown'),
-                    "selected": calendar.get('selected', False),
-                    "primary": calendar.get('primary', False)
-                })
-                
+            # Try calendar list with different parameters
+            alt_calendar_list = calendar_analyzer.calendar_service.calendarList().list(
+                showDeleted=False,
+                showHidden=False
+            ).execute()
+            alt_calendars = alt_calendar_list.get('items', [])
+            debug_info["alternative_access_results"] = {
+                "method": "calendarList with showDeleted=False",
+                "calendars_found": len(alt_calendars),
+                "calendar_ids": [cal.get('id') for cal in alt_calendars]
+            }
         except Exception as e:
-            debug_info["calendar_list_error"] = str(e)
+            debug_info["alternative_access_error"] = str(e)
         
         return jsonify({
             "success": True,
-            "debug_info": debug_info
+            "debug_info": debug_info,
+            "summary": {
+                "accessible_calendars_count": len(debug_info["accessible_calendars"]),
+                "successful_calendar_tests": len([t for t in debug_info["calendar_tests"] if not t["error"]]),
+                "service_account": debug_info["service_account_email"]
+            }
         })
         
     except Exception as e:

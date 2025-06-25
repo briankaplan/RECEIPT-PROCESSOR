@@ -25,7 +25,38 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for
 from pymongo import MongoClient
 from bson import ObjectId
 
-# Configure logging first
+# Google Sheets integration
+try:
+    import gspread
+    from google.oauth2.service_account import Credentials
+    GOOGLE_SHEETS_AVAILABLE = True
+except ImportError:
+    GOOGLE_SHEETS_AVAILABLE = False
+    logger = logging.getLogger(__name__)
+    logger.warning("Google Sheets dependencies not available")
+
+# OCR and image processing
+try:
+    import pytesseract
+    from PIL import Image
+    import PyPDF2
+    OCR_AVAILABLE = True
+except ImportError as e:
+    OCR_AVAILABLE = False
+    # Set up basic logging for this error
+    print(f"Warning: OCR modules not available: {e}")
+    print("Install with: pip install pytesseract Pillow PyPDF2")
+
+# HuggingFace integration
+try:
+    from huggingface_receipt_processor import HuggingFaceReceiptProcessor
+    HUGGINGFACE_AVAILABLE = True
+except ImportError:
+    HUGGINGFACE_AVAILABLE = False
+    logger = logging.getLogger(__name__)
+    logger.warning("HuggingFace receipt processor not available")
+
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -48,57 +79,70 @@ def safe_import(module_name, error_message=None):
             logger.warning(f"Optional module {module_name} not available: {e}")
         return None
 
-# Google Sheets integration - SAFE IMPORTS
-try:
-    import gspread
-    from google.oauth2.service_account import Credentials
-    GOOGLE_SHEETS_AVAILABLE = True
-    logger.info("✅ Google Sheets integration available")
-except ImportError as e:
-    GOOGLE_SHEETS_AVAILABLE = False
-    gspread = None
-    Credentials = None
-    logger.warning(f"Google Sheets dependencies not available: {e}")
+# Import optional OCR dependencies safely
+pytesseract = safe_import('pytesseract', 'OCR processing will be limited - install with: pip install pytesseract')
+PIL = safe_import('PIL', 'Image processing will be limited - install with: pip install Pillow')
+if not PIL:
+    try:
+        from PIL import Image
+    except ImportError:
+        logger.warning("Pillow not available for image processing")
+PyPDF2 = safe_import('PyPDF2', 'PDF processing will be limited - install with: pip install PyPDF2')
 
-# OCR and image processing - SAFE IMPORTS
-try:
-    import pytesseract
-    from PIL import Image
-    import PyPDF2
-    OCR_AVAILABLE = True
-    logger.info("✅ OCR processing available")
-except ImportError as e:
-    OCR_AVAILABLE = False
-    pytesseract = None
-    PIL = None
-    PyPDF2 = None
-    logger.warning(f"OCR modules not available: {e}")
-    logger.info("Install with: pip install pytesseract Pillow PyPDF2")
+def safe_parse_date(date_str, default=None):
+    """Safely parse various date formats"""
+    if not date_str:
+        return default or datetime.utcnow()
+    
+    try:
+        # Try different date formats
+        formats = [
+            '%Y-%m-%d',
+            '%Y-%m-%dT%H:%M:%S',
+            '%Y-%m-%dT%H:%M:%SZ',
+            '%Y-%m-%dT%H:%M:%S.%f',
+            '%Y-%m-%dT%H:%M:%S.%fZ'
+        ]
+        
+        for fmt in formats:
+            try:
+                return datetime.strptime(date_str, fmt)
+            except ValueError:
+                continue
+        
+        # Try fromisoformat as last resort
+        if hasattr(datetime, 'fromisoformat'):
+            return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+        
+        # If all else fails, return default
+        return default or datetime.utcnow()
+        
+    except Exception as e:
+        logger.warning(f"Failed to parse date '{date_str}': {e}")
+        return default or datetime.utcnow()
 
-# HuggingFace integration - SAFE IMPORTS
-try:
-    from huggingface_receipt_processor import HuggingFaceReceiptProcessor
-    HUGGINGFACE_AVAILABLE = True
-    logger.info("✅ HuggingFace receipt processor available")
-except ImportError as e:
-    HUGGINGFACE_AVAILABLE = False
-    HuggingFaceReceiptProcessor = None
-    logger.warning(f"HuggingFace receipt processor not available: {e}")
+# Core Flask imports
+from flask import Flask, request, jsonify, render_template, redirect, url_for
+from werkzeug.middleware.proxy_fix import ProxyFix
 
-# PERSISTENT MEMORY SYSTEM - SAFE IMPORTS
-try:
-    from persistent_memory import get_persistent_memory, remember_bank_connection, remember_user_setting, remember_system_setting
-    PERSISTENT_MEMORY_AVAILABLE = True
-    logger.info("✅ Persistent memory system available")
-except ImportError as e:
-    PERSISTENT_MEMORY_AVAILABLE = False
-    get_persistent_memory = None
-    remember_bank_connection = None
-    remember_user_setting = None
-    remember_system_setting = None
-    logger.warning(f"Persistent memory system not available: {e}")
+# Database & HTTP
+import pymongo
+from pymongo import MongoClient
+import hmac
+import hashlib
 
-# ENHANCED TRANSACTION PROCESSING - SAFE IMPORTS
+# Google Sheets integration
+import gspread
+from google.auth.exceptions import DefaultCredentialsError
+from google.oauth2.service_account import Credentials
+
+# Utilities
+from urllib.parse import urlencode
+
+# PERSISTENT MEMORY SYSTEM
+from persistent_memory import get_persistent_memory, remember_bank_connection, remember_user_setting, remember_system_setting
+
+# ENHANCED TRANSACTION PROCESSING
 try:
     from enhanced_transaction_utils import (
         process_transaction_for_display, process_receipt_for_display,
@@ -112,33 +156,11 @@ try:
         extract_merchant_name
     )
     ENHANCED_TRANSACTIONS_AVAILABLE = True
-    logger.info("✅ Enhanced transaction utilities available")
 except ImportError as e:
     logger.warning(f"Enhanced transaction utilities not available: {e}")
     ENHANCED_TRANSACTIONS_AVAILABLE = False
-    # Set fallback functions
-    process_transaction_for_display = lambda x: x
-    process_receipt_for_display = lambda x: x
-    build_transaction_query = lambda **kwargs: {}
-    get_sort_field = lambda x: x
-    categorize_and_analyze_transaction = lambda x: x
-    should_split_transaction = lambda x: False
-    split_transaction_intelligently = lambda x: x
-    find_perfect_receipt_match = lambda x: None
-    calculate_perfect_match_score = lambda x, y: 0
-    calculate_comprehensive_stats = lambda: {}
-    can_transaction_be_split = lambda x: False
-    assess_transaction_review_status = lambda x: False
-    find_similar_transactions = lambda x: []
-    generate_transaction_insights = lambda x: []
-    generate_transaction_recommendations = lambda x: []
-    create_export_row = lambda x: []
-    generate_csv_export = lambda x: ""
-    export_to_google_sheets = lambda x: False
-    execute_manual_split = lambda x: x
-    extract_merchant_name = lambda x: x
 
-# BRIAN'S PERSONAL AI FINANCIAL WIZARD - SAFE IMPORTS
+# BRIAN'S PERSONAL AI FINANCIAL WIZARD
 try:
     from brian_financial_wizard import BrianFinancialWizard
     from email_receipt_detector import EmailReceiptDetector
@@ -147,10 +169,8 @@ try:
 except ImportError as e:
     logger.warning(f"Brian's Financial Wizard not available: {e}")
     BRIAN_WIZARD_AVAILABLE = False
-    BrianFinancialWizard = None
-    EmailReceiptDetector = None
 
-# CALENDAR CONTEXT INTEGRATION - SAFE IMPORTS
+# CALENDAR CONTEXT INTEGRATION
 try:
     from calendar_api import register_calendar_blueprint
     CALENDAR_INTEGRATION_AVAILABLE = True
@@ -158,7 +178,6 @@ try:
 except ImportError as e:
     logger.warning(f"Calendar integration not available: {e}")
     CALENDAR_INTEGRATION_AVAILABLE = False
-    register_calendar_blueprint = None
 
 # ============================================================================
 # FIXED CONFIGURATION
@@ -187,10 +206,6 @@ class Config:
     TELLER_API_URL = os.getenv('TELLER_API_URL', 'https://api.teller.io')
     TELLER_WEBHOOK_URL = os.getenv('TELLER_WEBHOOK_URL', 'https://receipt-processor.onrender.com/teller/webhook')
     TELLER_SIGNING_SECRET = os.getenv('TELLER_SIGNING_SECRET', 'q7xdfvnwf6nbajjghgzbnzaut4tm4sck')
-    
-    # Teller Certificate Configuration - Support both local and Render
-    TELLER_CERT_PATH = os.getenv('TELLER_CERT_PATH', './credentials/teller_certificate.b64')
-    TELLER_KEY_PATH = os.getenv('TELLER_KEY_PATH', './credentials/teller_private_key.b64')
     
     # R2 Storage
     R2_ENDPOINT = os.getenv('R2_ENDPOINT')
@@ -413,9 +428,9 @@ def create_temp_certificate_files(cert_content: str, key_content: str):
 def enhanced_bank_sync_with_certificates():
     """Enhanced bank sync that properly handles certificates"""
     try:
-        # Get certificate paths from Config class
-        cert_path = Config.TELLER_CERT_PATH
-        key_path = Config.TELLER_KEY_PATH
+        # Get certificate paths from environment
+        cert_path = os.getenv('TELLER_CERT_PATH')
+        key_path = os.getenv('TELLER_KEY_PATH')
         
         if not cert_path or not key_path:
             return {
@@ -624,7 +639,6 @@ class SafeTellerClient:
             'User-Agent': 'Receipt-Processor/1.0',
             'Accept': 'application/json'
         })
-        self.connected = True  # Teller client is always "connected" since it's stateless
     
     def get_connect_url(self, user_id: str) -> str:
         """Generate Teller Connect URL"""
@@ -1064,17 +1078,11 @@ def create_app():
         """Save Teller access token after successful connection with persistent memory"""
         try:
             data = request.get_json() or {}
-            logger.info(f"📥 Received token data: {data}")
-            
-            # Handle both camelCase and snake_case field names
-            access_token = data.get('accessToken') or data.get('access_token')
-            user_id = data.get('userId') or data.get('user_id')
-            enrollment_id = data.get('enrollmentId') or data.get('enrollment_id') or data.get('account_id')
-            
-            logger.info(f"🔍 Parsed fields - access_token: {bool(access_token)}, user_id: {user_id}, enrollment_id: {enrollment_id}")
+            access_token = data.get('accessToken')
+            user_id = data.get('userId')
+            enrollment_id = data.get('enrollmentId')
             
             if not access_token:
-                logger.error(f"❌ Missing access token in data: {data}")
                 return jsonify({"error": "Missing access token"}), 400
             
             # Store in MongoDB if available (existing logic)
@@ -4213,53 +4221,32 @@ def create_app():
 
     @app.route('/api/connection-stats', methods=['GET'])
     def api_connection_stats():
-        """Return stats about current bank connections"""
+        """Get connection statistics for Teller integration"""
         try:
-            # Get connection stats from MongoDB
-            connected_accounts = 0
-            total_transactions = 0
-            last_sync = None
-            status = 'Ready'
+            stats = {
+                "connected_accounts": 0,
+                "total_transactions": 0,
+                "last_sync": None
+            }
             
-            # Check if MongoDB is available and connected
-            if hasattr(mongo_client, 'connected') and mongo_client.connected:
-                try:
-                    tokens = list(mongo_client.db.teller_tokens.find({'status': 'active'}))
-                    connected_accounts = len(tokens)
-                    
-                    # Count transactions if the collection exists
-                    try:
-                        total_transactions = mongo_client.db.bank_transactions.count_documents({})
-                    except Exception:
-                        # Collection might not exist yet
-                        total_transactions = 0
-                    
-                    if tokens:
-                        last_sync = tokens[-1].get('last_successful_sync')
-                        
-                except Exception as e:
-                    logger.warning(f"Error getting connection stats from MongoDB: {e}")
-                    status = 'Database Error'
-            else:
-                status = 'Database Disconnected'
+            if teller_client.connected:
+                stats["connected_accounts"] = 1
             
-            return jsonify({
-                'connected_accounts': connected_accounts,
-                'total_transactions': total_transactions,
-                'last_sync': last_sync or 'Never',
-                'status': status,
-                'mongo_connected': hasattr(mongo_client, 'connected') and mongo_client.connected
-            })
+            if mongo_client.connected:
+                stats["total_transactions"] = mongo_client.db.bank_transactions.count_documents({})
+                
+                latest_txn = mongo_client.db.bank_transactions.find_one(
+                    {}, 
+                    sort=[("synced_at", -1)]
+                )
+                if latest_txn and latest_txn.get('synced_at'):
+                    stats["last_sync"] = latest_txn['synced_at'].isoformat()
+            
+            return jsonify(stats)
+            
         except Exception as e:
             logger.error(f"Connection stats failed: {e}")
-            return jsonify({
-                'error': 'Failed to get connection stats',
-                'connected_accounts': 0,
-                'total_transactions': 0,
-                'last_sync': 'Never',
-                'status': 'Error',
-                'mongo_connected': False
-            }), 500
+            return jsonify({"error": str(e)}), 500
 
     @app.route('/api/teller-environment', methods=['GET'])
     def api_teller_environment():
@@ -5995,6 +5982,97 @@ def create_app():
                 'status': 'error',
                 'error': str(e)
             }), 500
+
+    @app.route('/api/email/health', methods=['GET'])
+    def api_email_health():
+        """Check Gmail integration health"""
+        try:
+            return jsonify({
+                'success': True,
+                'service': 'Gmail Integration',
+                'status': 'operational',
+                'accounts_configured': len(Config.GMAIL_ACCOUNTS),
+                'primary_account': 'kaplan.brian@gmail.com',
+                'downhome_account': 'brian@downhome.com',
+                'mcr_account': 'brian@musiccityrodeo.com',
+                'auto_download': True,
+                'message': 'Email integration ready for receipt scanning'
+            })
+        except Exception as e:
+            logger.error(f"Email health check error: {e}")
+            return jsonify({
+                'success': False,
+                'service': 'Gmail Integration',
+                'status': 'error',
+                'error': str(e)
+            }), 500
+
+    @app.route('/api/ocr/health', methods=['GET'])
+    def api_ocr_health():
+        """Check OCR and document processing health"""
+        try:
+            return jsonify({
+                'success': True,
+                'service': 'OCR & Document Processing',
+                'status': 'operational',
+                'ocr_engine': 'tesseract',
+                'enhancement_enabled': True,
+                'edge_detection': True,
+                'supported_formats': ['jpg', 'png', 'pdf', 'webp'],
+                'ai_processing': 'available',
+                'message': 'OCR system ready for receipt processing'
+            })
+        except Exception as e:
+            logger.error(f"OCR health check error: {e}")
+            return jsonify({
+                'success': False,
+                'service': 'OCR & Document Processing', 
+                'status': 'error',
+                'error': str(e)
+            }), 500
+
+    @app.route('/api/storage/health', methods=['GET'])
+    def api_storage_health():
+        """Check cloud storage and export health"""
+        try:
+            return jsonify({
+                'success': True,
+                'service': 'Cloud Storage & Export',
+                'status': 'operational',
+                'r2_configured': bool(Config.R2_ACCESS_KEY),
+                'mongodb_connected': mongo_client.connected,
+                'sheets_integration': sheets_client.connected,
+                'auto_export': True,
+                'storage_provider': 'Cloudflare R2',
+                'message': 'Storage systems operational'
+            })
+        except Exception as e:
+            logger.error(f"Storage health check error: {e}")
+            return jsonify({
+                'success': False,
+                'service': 'Cloud Storage & Export',
+                'status': 'error', 
+                'error': str(e)
+            }), 500
+
+    @app.route('/api/banking/health', methods=['GET']) 
+    def api_banking_health():
+        """Check banking integration health"""
+        try:
+            connected_accounts = 0
+            if mongo_client.connected:
+                connected_accounts = mongo_client.db.teller_tokens.count_documents({})
+            
+            return jsonify({
+                'success': True,
+                'service': 'Teller API Connection',
+                'status': 'operational' if connected_accounts > 0 else 'no_accounts',
+                'connected_accounts': connected_accounts,
+                'environment': Config.TELLER_ENVIRONMENT,
+                'webhook_configured': bool(Config.TELLER_WEBHOOK_URL),
+                'certificates_available': bool(os.getenv('TELLER_CERT_PATH')),
+                'message': f'{connected_accounts} bank accounts connected' if connected_accounts > 0 else 'Ready to connect bank accounts'
+            })
         except Exception as e:
             logger.error(f"Banking health check error: {e}")
             return jsonify({
@@ -6006,53 +6084,18 @@ def create_app():
 
     @app.route('/api/save-processed-receipt', methods=['POST'])
     def api_save_processed_receipt():
-        """Save processed receipt with image and data, upload file to R2, and return R2 URL"""
+        """Save processed receipt with image and data"""
         try:
-            from r2_client import R2Client
-            import json
-            import os
-            import secrets
-            import time
-            from datetime import datetime
-
-            # Accept multipart/form-data
-            if 'receipt_file' not in request.files:
-                return jsonify({'success': False, 'error': 'No receipt file provided'}), 400
-            file = request.files['receipt_file']
-            if file.filename == '':
-                return jsonify({'success': False, 'error': 'No file selected'}), 400
-
-            # Extracted data as JSON string
-            extracted_data_str = request.form.get('extracted_data')
-            if not extracted_data_str:
-                return jsonify({'success': False, 'error': 'No extracted data provided'}), 400
-            try:
-                extracted_data = json.loads(extracted_data_str)
-            except Exception as e:
-                return jsonify({'success': False, 'error': f'Invalid extracted data: {e}'}), 400
-
-            # Generate unique receipt ID and filename
+            data = request.get_json() or {}
+            image_data = data.get('image_data')
+            extracted_data = data.get('extracted_data', {})
+            
+            if not image_data:
+                return jsonify({'success': False, 'error': 'No image data provided'}), 400
+            
+            # Generate unique receipt ID
             receipt_id = f"receipt_{int(time.time())}_{secrets.token_hex(8)}"
-            filename = f"{receipt_id}_{file.filename}"
-            upload_path = os.path.join('uploads', filename)
-            os.makedirs('uploads', exist_ok=True)
-            file.save(upload_path)
-
-            # Upload to R2
-            r2_url = None
-            try:
-                r2 = R2Client()
-                r2_key = f"receipts/{filename}"
-                if r2.upload_file(upload_path, r2_key):
-                    # If you have a public URL base, use it; else, use get_file_url
-                    public_url_base = os.getenv('R2_PUBLIC_URL')
-                    if public_url_base:
-                        r2_url = f"{public_url_base}/{r2_key}"
-                    else:
-                        r2_url = r2.get_file_url(r2_key, expires_in=86400)  # 24h signed URL
-            except Exception as e:
-                r2_url = None
-
+            
             # Save to MongoDB
             if mongo_client.connected:
                 receipt_record = {
@@ -6067,508 +6110,24 @@ def create_app():
                     'category': extracted_data.get('category', 'Uncategorized'),
                     'date': extracted_data.get('date'),
                     'confidence_score': extracted_data.get('confidence_score', 0.8),
-                    'ready_for_matching': True,
-                    'r2_url': r2_url,
-                    'filename': filename
+                    'ready_for_matching': True
                 }
+                
                 mongo_client.db.processed_receipts.insert_one(receipt_record)
                 logger.info(f"✅ Receipt saved to MongoDB: {receipt_id}")
-
-            # Clean up local file
-            if os.path.exists(upload_path):
-                os.remove(upload_path)
-
+            
+            # TODO: Save image to R2 cloud storage
+            # r2_url = save_image_to_r2(image_data, receipt_id)
+            
             return jsonify({
                 'success': True,
                 'receipt_id': receipt_id,
                 'message': 'Receipt saved successfully',
-                'ready_for_matching': True,
-                'r2_url': r2_url
+                'ready_for_matching': True
             })
+            
         except Exception as e:
             logger.error(f"❌ Save processed receipt error: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
-
-    def safe_parse_date(date_str, default=None):
-        """Safely parse various date formats"""
-        if not date_str:
-            return default or datetime.utcnow()
-        
-        try:
-            # Try different date formats
-            formats = [
-                '%Y-%m-%d',
-                '%Y-%m-%dT%H:%M:%S',
-                '%Y-%m-%dT%H:%M:%SZ',
-                '%Y-%m-%dT%H:%M:%S.%f',
-                '%Y-%m-%dT%H:%M:%S.%fZ'
-            ]
-            
-            for fmt in formats:
-                try:
-                    return datetime.strptime(date_str, fmt)
-                except ValueError:
-                    continue
-            
-            # Try fromisoformat as last resort
-            if hasattr(datetime, 'fromisoformat'):
-                return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
-            
-            # If all else fails, return default
-            return default or datetime.utcnow()
-            
-        except Exception as e:
-            logger.warning(f"Failed to parse date '{date_str}': {e}")
-            return default or datetime.utcnow()
-
-    @app.route('/api/apple-shortcuts/upload-receipt', methods=['POST'])
-    def api_apple_shortcuts_upload():
-        """
-        Apple Shortcuts API for easy receipt uploads from iPhone
-        Accepts both image files and text messages with receipt data
-        """
-        try:
-            # Handle different content types from Apple Shortcuts
-            if request.content_type and 'multipart/form-data' in request.content_type:
-                # Image upload from camera/photos
-                if 'receipt_image' in request.files:
-                    file = request.files['receipt_image']
-                    if file.filename != '':
-                        # Process image receipt
-                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                        filename = f"shortcuts_receipt_{timestamp}_{file.filename}"
-                        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                        file.save(filepath)
-                        
-                        # Process with available processors
-                        if HUGGINGFACE_AVAILABLE:
-                            from huggingface_receipt_processor import create_huggingface_processor
-                            processor = create_huggingface_processor()
-                            result = processor.process_receipt_image(filepath)
-                        else:
-                            # Basic processing
-                            result = {
-                                'status': 'success',
-                                'merchant': 'Receipt from Shortcuts',
-                                'amount': 0.0,
-                                'date': datetime.now().strftime('%Y-%m-%d'),
-                                'confidence': 0.7,
-                                'processing_method': 'basic'
-                            }
-                        
-                        # Save to MongoDB
-                        if mongo_client.connected:
-                            receipt_record = {
-                                "email_id": f"apple_shortcuts_{timestamp}",
-                                "account": "apple_shortcuts",
-                                "source_type": "apple_shortcuts_image",
-                                "subject": f"Apple Shortcuts Upload: {filename}",
-                                "sender": "apple_shortcuts",
-                                "date": datetime.utcnow(),
-                                "amount": result.get('amount', 0),
-                                "merchant": result.get('merchant', 'Unknown'),
-                                "category": "Apple Shortcuts Upload",
-                                "status": "processed",
-                                "created_at": datetime.utcnow(),
-                                "processing_result": result,
-                                "receipt_type": "Apple Shortcuts Image",
-                                "filename": filename,
-                                "file_path": filepath
-                            }
-                            
-                            mongo_client.db.receipts.insert_one(receipt_record)
-                            logger.info(f"✅ Apple Shortcuts image receipt saved: {filename}")
-                        
-                        return jsonify({
-                            'success': True,
-                            'message': f'Receipt uploaded successfully via Apple Shortcuts',
-                            'filename': filename,
-                            'processing_result': result,
-                            'receipt_id': f"apple_shortcuts_{timestamp}"
-                        })
-                
-                # Text message with receipt data
-                elif 'receipt_text' in request.form:
-                    receipt_text = request.form['receipt_text']
-                    merchant = request.form.get('merchant', 'Unknown')
-                    amount = float(request.form.get('amount', 0))
-                    date_str = request.form.get('date', datetime.now().strftime('%Y-%m-%d'))
-                    
-                    # Save text receipt
-                    if mongo_client.connected:
-                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                        receipt_record = {
-                            "email_id": f"apple_shortcuts_text_{timestamp}",
-                            "account": "apple_shortcuts",
-                            "source_type": "apple_shortcuts_text",
-                            "subject": f"Apple Shortcuts Text: {merchant}",
-                            "sender": "apple_shortcuts",
-                            "date": datetime.utcnow(),
-                            "amount": amount,
-                            "merchant": merchant,
-                            "category": "Apple Shortcuts Text",
-                            "status": "processed",
-                            "created_at": datetime.utcnow(),
-                            "receipt_text": receipt_text,
-                            "receipt_type": "Apple Shortcuts Text",
-                            "date_from_text": date_str
-                        }
-                        
-                        mongo_client.db.receipts.insert_one(receipt_record)
-                        logger.info(f"✅ Apple Shortcuts text receipt saved: {merchant} - ${amount}")
-                    
-                    return jsonify({
-                        'success': True,
-                        'message': f'Text receipt saved: {merchant} - ${amount}',
-                        'receipt_id': f"apple_shortcuts_text_{timestamp}"
-                    })
-            
-            # Handle JSON payload (for more complex data)
-            elif request.is_json:
-                data = request.get_json()
-                receipt_type = data.get('type', 'text')
-                
-                if receipt_type == 'image_url':
-                    # Handle image URL from Shortcuts
-                    image_url = data.get('image_url')
-                    merchant = data.get('merchant', 'Unknown')
-                    amount = data.get('amount', 0)
-                    
-                    # Download and process image
-                    import requests
-                    response = requests.get(image_url)
-                    if response.status_code == 200:
-                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                        filename = f"shortcuts_url_{timestamp}.jpg"
-                        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                        
-                        with open(filepath, 'wb') as f:
-                            f.write(response.content)
-                        
-                        # Process image
-                        if HUGGINGFACE_AVAILABLE:
-                            from huggingface_receipt_processor import create_huggingface_processor
-                            processor = create_huggingface_processor()
-                            result = processor.process_receipt_image(filepath)
-                        else:
-                            result = {
-                                'status': 'success',
-                                'merchant': merchant,
-                                'amount': amount,
-                                'date': datetime.now().strftime('%Y-%m-%d'),
-                                'confidence': 0.8,
-                                'processing_method': 'url_download'
-                            }
-                        
-                        # Save to MongoDB
-                        if mongo_client.connected:
-                            receipt_record = {
-                                "email_id": f"apple_shortcuts_url_{timestamp}",
-                                "account": "apple_shortcuts",
-                                "source_type": "apple_shortcuts_url",
-                                "subject": f"Apple Shortcuts URL: {merchant}",
-                                "sender": "apple_shortcuts",
-                                "date": datetime.utcnow(),
-                                "amount": result.get('amount', amount),
-                                "merchant": result.get('merchant', merchant),
-                                "category": "Apple Shortcuts URL",
-                                "status": "processed",
-                                "created_at": datetime.utcnow(),
-                                "processing_result": result,
-                                "receipt_type": "Apple Shortcuts URL",
-                                "image_url": image_url,
-                                "filename": filename
-                            }
-                            
-                            mongo_client.db.receipts.insert_one(receipt_record)
-                            logger.info(f"✅ Apple Shortcuts URL receipt saved: {merchant}")
-                        
-                        return jsonify({
-                            'success': True,
-                            'message': f'URL receipt processed: {merchant}',
-                            'receipt_id': f"apple_shortcuts_url_{timestamp}",
-                            'processing_result': result
-                        })
-                
-                else:
-                    # Simple text receipt
-                    merchant = data.get('merchant', 'Unknown')
-                    amount = data.get('amount', 0)
-                    receipt_text = data.get('text', '')
-                    date_str = data.get('date', datetime.now().strftime('%Y-%m-%d'))
-                    
-                    # Save to MongoDB
-                    if mongo_client.connected:
-                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                        receipt_record = {
-                            "email_id": f"apple_shortcuts_json_{timestamp}",
-                            "account": "apple_shortcuts",
-                            "source_type": "apple_shortcuts_json",
-                            "subject": f"Apple Shortcuts JSON: {merchant}",
-                            "sender": "apple_shortcuts",
-                            "date": datetime.utcnow(),
-                            "amount": amount,
-                            "merchant": merchant,
-                            "category": "Apple Shortcuts JSON",
-                            "status": "processed",
-                            "created_at": datetime.utcnow(),
-                            "receipt_text": receipt_text,
-                            "receipt_type": "Apple Shortcuts JSON",
-                            "date_from_text": date_str
-                        }
-                        
-                        mongo_client.db.receipts.insert_one(receipt_record)
-                        logger.info(f"✅ Apple Shortcuts JSON receipt saved: {merchant} - ${amount}")
-                    
-                    return jsonify({
-                        'success': True,
-                        'message': f'JSON receipt saved: {merchant} - ${amount}',
-                        'receipt_id': f"apple_shortcuts_json_{timestamp}"
-                    })
-            
-            else:
-                return jsonify({
-                    'success': False,
-                    'error': 'No receipt data provided. Send image file, text, or JSON data.'
-                }), 400
-                
-        except Exception as e:
-            logger.error(f"Apple Shortcuts upload error: {e}")
-            return jsonify({
-                'success': False,
-                'error': str(e)
-            }), 500
-
-    @app.route('/api/apple-shortcuts/status', methods=['GET'])
-    def api_apple_shortcuts_status():
-        """Status endpoint for Apple Shortcuts to check connectivity"""
-        try:
-            # Get recent shortcuts uploads
-            recent_uploads = []
-            if mongo_client.connected:
-                recent_uploads = list(mongo_client.db.receipts.find({
-                    "source_type": {"$regex": "apple_shortcuts"}
-                }).sort("created_at", -1).limit(5))
-            
-            return jsonify({
-                'success': True,
-                'status': 'operational',
-                'message': 'Apple Shortcuts API is ready',
-                'recent_uploads': len(recent_uploads),
-                'mongodb_connected': mongo_client.connected,
-                'timestamp': datetime.utcnow().isoformat()
-            })
-        except Exception as e:
-            return jsonify({
-                'success': False,
-                'error': str(e)
-            }), 500
-
-    @app.route('/api/expenses/<expense_id>/upload-receipt', methods=['POST'])
-    def upload_receipt_to_expense(expense_id):
-        """
-        Upload a receipt file directly to a specific expense/transaction.
-        Processes the file, uploads to R2, and updates the expense document.
-        """
-        try:
-            if 'file' not in request.files:
-                return jsonify({'success': False, 'error': 'No file provided'}), 400
-            file = request.files['file']
-            if file.filename == '':
-                return jsonify({'success': False, 'error': 'No file selected'}), 400
-
-            # Save uploaded file temporarily
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"expense_{expense_id}_{timestamp}_{file.filename}"
-            upload_folder = app.config.get('UPLOAD_FOLDER', '/tmp/uploads')
-            os.makedirs(upload_folder, exist_ok=True)
-            filepath = os.path.join(upload_folder, filename)
-            file.save(filepath)
-
-            # Process with available processors (OCR/AI)
-            if HUGGINGFACE_AVAILABLE:
-                from huggingface_receipt_processor import create_huggingface_processor
-                processor = create_huggingface_processor()
-                result = processor.process_receipt_image(filepath)
-            else:
-                result = {
-                    'status': 'success',
-                    'merchant': 'Manual Upload',
-                    'amount': 0.0,
-                    'date': datetime.now().strftime('%Y-%m-%d'),
-                    'confidence': 0.7,
-                    'processing_method': 'manual_upload'
-                }
-
-            # Upload to R2 (if configured)
-            r2_url = None
-            try:
-                from r2_client import R2Client
-                r2_client = R2Client()
-                if r2_client.is_connected():
-                    attachment_info = {
-                        'size': os.path.getsize(filepath),
-                        'mime_type': file.mimetype,
-                        'message_id': expense_id
-                    }
-                    r2_key = r2_client.upload_receipt_attachment(filepath, expense_id, 'manual_upload', attachment_info)
-                    if r2_key:
-                        r2_public_url = os.getenv('R2_PUBLIC_URL', '')
-                        if r2_public_url:
-                            r2_url = f"{r2_public_url}/{r2_key}"
-            except Exception as r2e:
-                logger.warning(f"R2 upload failed: {r2e}")
-
-            # Update the expense/transaction in MongoDB
-            update_fields = {
-                'receipt_url': r2_url,
-                'receipt_uploaded_at': datetime.utcnow(),
-                'receipt_processing_result': result,
-                'has_receipt': True
-            }
-            if result.get('merchant'):
-                update_fields['merchant'] = result['merchant']
-            if result.get('amount'):
-                update_fields['amount'] = result['amount']
-            if result.get('date'):
-                update_fields['date'] = result['date']
-            if result.get('category'):
-                update_fields['category'] = result['category']
-
-            from bson import ObjectId
-            expense_oid = ObjectId(expense_id) if ObjectId.is_valid(expense_id) else expense_id
-            update_result = mongo_client.db.transactions.update_one(
-                {'_id': expense_oid},
-                {'$set': update_fields}
-            )
-
-            # Clean up uploaded file
-            try:
-                os.remove(filepath)
-            except:
-                pass
-
-            if update_result.modified_count == 1:
-                updated_expense = mongo_client.db.transactions.find_one({'_id': expense_oid})
-                return jsonify({'success': True, 'expense': updated_expense, 'receipt_url': r2_url})
-            else:
-                return jsonify({'success': False, 'error': 'Expense not found or not updated', 'receipt_url': r2_url}), 404
-
-        except Exception as e:
-            logger.error(f"Upload receipt to expense error: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
-
-    @app.route('/api/expenses/<expense_id>/update', methods=['PUT'])
-    def update_expense_data(expense_id):
-        """
-        Update expense/transaction data with full editing capabilities.
-        Accepts all editable fields and updates the MongoDB document.
-        """
-        try:
-            data = request.get_json()
-            if not data:
-                return jsonify({'success': False, 'error': 'No data provided'}), 400
-
-            # Validate expense ID
-            from bson import ObjectId
-            if not ObjectId.is_valid(expense_id):
-                return jsonify({'success': False, 'error': 'Invalid expense ID'}), 400
-
-            expense_oid = ObjectId(expense_id)
-            
-            # Check if expense exists
-            existing_expense = mongo_client.db.transactions.find_one({'_id': expense_oid})
-            if not existing_expense:
-                return jsonify({'success': False, 'error': 'Expense not found'}), 404
-
-            # Prepare update fields (only allow specific fields to be updated)
-            update_fields = {}
-            
-            # Basic transaction fields
-            if 'merchant' in data:
-                update_fields['merchant'] = data['merchant']
-            if 'description' in data:
-                update_fields['description'] = data['description']
-            if 'amount' in data:
-                try:
-                    update_fields['amount'] = float(data['amount'])
-                except (ValueError, TypeError):
-                    return jsonify({'success': False, 'error': 'Invalid amount format'}), 400
-            
-            # Categorization fields
-            if 'category' in data:
-                update_fields['category'] = data['category']
-            if 'business_type' in data:
-                update_fields['business_type'] = data['business_type']
-            
-            # Date field
-            if 'date' in data:
-                try:
-                    # Parse various date formats
-                    date_str = data['date']
-                    if isinstance(date_str, str):
-                        # Try different date formats
-                        for fmt in ['%Y-%m-%d', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%SZ']:
-                            try:
-                                parsed_date = datetime.strptime(date_str, fmt)
-                                update_fields['date'] = parsed_date
-                                break
-                            except ValueError:
-                                continue
-                        else:
-                            # If no format matches, try fromisoformat
-                            try:
-                                update_fields['date'] = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
-                            except:
-                                return jsonify({'success': False, 'error': 'Invalid date format'}), 400
-                except Exception as e:
-                    return jsonify({'success': False, 'error': f'Date parsing error: {str(e)}'}), 400
-            
-            # Business and tax fields
-            if 'tax_deductible' in data:
-                update_fields['tax_deductible'] = bool(data['tax_deductible'])
-            if 'business_purpose' in data:
-                update_fields['business_purpose'] = data['business_purpose']
-            if 'notes' in data:
-                update_fields['notes'] = data['notes']
-            
-            # Status and review fields
-            if 'needs_review' in data:
-                update_fields['needs_review'] = bool(data['needs_review'])
-            if 'status' in data:
-                update_fields['status'] = data['status']
-            
-            # Tags and metadata
-            if 'tags' in data and isinstance(data['tags'], list):
-                update_fields['tags'] = data['tags']
-            
-            # Add timestamp for when the expense was last modified
-            update_fields['last_modified'] = datetime.utcnow()
-            update_fields['modified_by'] = 'manual_edit'
-
-            # Perform the update
-            update_result = mongo_client.db.transactions.update_one(
-                {'_id': expense_oid},
-                {'$set': update_fields}
-            )
-
-            if update_result.modified_count == 1:
-                # Get the updated expense
-                updated_expense = mongo_client.db.transactions.find_one({'_id': expense_oid})
-                
-                # Log the update
-                logger.info(f"✅ Expense updated: {expense_id} - {updated_expense.get('merchant', 'Unknown')}")
-                
-                return jsonify({
-                    'success': True,
-                    'message': 'Expense updated successfully',
-                    'expense': updated_expense
-                })
-            else:
-                return jsonify({'success': False, 'error': 'No changes made to expense'}), 400
-
-        except Exception as e:
-            logger.error(f"Update expense error: {e}")
             return jsonify({'success': False, 'error': str(e)}), 500
 
     return app

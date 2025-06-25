@@ -1,41 +1,76 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TransactionPro 2026 - Ultimate Transaction Manager</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <title>TransactionPro 2026 - Ultimate Financial Intelligence</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#ff6b35">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="TransactionPro 2026">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/generated-icon.png">
+    
+    <!-- CDN Links -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registered:', registration);
+                    })
+                    .catch(error => {
+                        console.log('❌ Service Worker registration failed:', error);
+                    });
+            });
+        }
+    </script>
+    
     <style>
         :root {
-            /* Enhanced dark theme with futuristic colors */
-            --bg-primary: #0a0b0f;
-            --bg-secondary: #111319;
-            --bg-card: rgba(17, 19, 25, 0.8);
+            /* 2026 Color Palette */
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            --danger-gradient: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            
+            /* Modern Colors */
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #1a1a2e;
+            --bg-card: #16213e;
             --bg-glass: rgba(255, 255, 255, 0.05);
+            --bg-overlay: rgba(0, 0, 0, 0.8);
             
             --text-primary: #ffffff;
-            --text-secondary: #b8bcc8;
-            --text-muted: #6c757d;
+            --text-secondary: #b8b8b8;
+            --text-muted: #6b7280;
             
-            --primary-orange: #ff6b35;
-            --accent-blue: #4facfe;
-            --accent-green: #69f0ae;
-            --accent-red: #ff5252;
-            --accent-purple: #ab47bc;
+            --border-light: rgba(255, 255, 255, 0.1);
+            --border-medium: rgba(255, 255, 255, 0.2);
+            --border-heavy: rgba(255, 255, 255, 0.3);
             
-            --border-subtle: rgba(255, 255, 255, 0.1);
-            --border-bright: rgba(255, 107, 53, 0.3);
+            --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.1);
+            --shadow-medium: 0 8px 32px rgba(0, 0, 0, 0.2);
+            --shadow-heavy: 0 16px 64px rgba(0, 0, 0, 0.3);
             
-            --gradient-primary: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
-            --gradient-secondary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --gradient-success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-            --gradient-info: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --radius-small: 8px;
+            --radius-medium: 16px;
+            --radius-large: 24px;
+            --radius-xl: 32px;
             
-            --shadow-subtle: 0 4px 12px rgba(0, 0, 0, 0.15);
-            --shadow-prominent: 0 8px 32px rgba(0, 0, 0, 0.3);
-            --shadow-glow: 0 0 40px rgba(255, 107, 53, 0.3);
-            
-            --font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+            --transition-fast: 0.2s ease;
+            --transition-medium: 0.3s ease;
+            --transition-slow: 0.5s ease;
         }
 
         * {
@@ -45,323 +80,667 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
-            min-height: 100vh;
+            line-height: 1.6;
             overflow-x: hidden;
         }
 
-        /* Animated background */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle at 20% 80%, rgba(255, 107, 53, 0.1) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 20%, rgba(71, 175, 254, 0.1) 0%, transparent 50%),
-                        radial-gradient(circle at 40% 40%, rgba(105, 240, 174, 0.05) 0%, transparent 50%);
-            z-index: -1;
-            animation: backgroundPulse 20s ease-in-out infinite;
-        }
-
-        @keyframes backgroundPulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.8; }
-        }
-
-        /* Header */
+        /* Unified App Header */
         .app-header {
-            background: var(--bg-card);
-            border-bottom: 1px solid var(--border-subtle);
-            padding: 1rem 0;
+            background: var(--bg-secondary);
             backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-light);
+            padding: 1rem 2rem;
             position: sticky;
             top: 0;
-            z-index: 1000;
+            z-index: 100;
         }
 
         .header-content {
-            max-width: 1600px;
-            margin: 0 auto;
-            padding: 0 2rem;
             display: flex;
-            align-items: center;
             justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
         }
 
-        .app-title {
-            background: var(--gradient-primary);
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .app-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        .app-logo i {
+            font-size: 2rem;
+            background: var(--primary-gradient);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            font-weight: 800;
-            font-size: 1.5rem;
         }
 
-        .header-controls {
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-medium);
+            transition: var(--transition-medium);
+            font-weight: 500;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            color: var(--text-primary);
+            background: var(--bg-glass);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .status-indicator {
             display: flex;
             align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-glass);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-medium);
+            color: #4facfe;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #4facfe;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Global Notification System */
+        .notification-container {
+            position: fixed;
+            top: 100px;
+            right: 2rem;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
             gap: 1rem;
         }
 
-        .neo-btn {
-            background: var(--bg-glass);
-            border: 1px solid var(--border-subtle);
+        .notification {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-medium);
+            padding: 1rem 1.5rem;
             color: var(--text-primary);
-            padding: 0.75rem 1.5rem;
-            border-radius: 12px;
+            box-shadow: var(--shadow-medium);
+            backdrop-filter: blur(20px);
+            transform: translateX(100%);
+            transition: var(--transition-medium);
+            max-width: 400px;
+            position: relative;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            border-color: #4facfe;
+            background: rgba(79, 172, 254, 0.1);
+        }
+
+        .notification.error {
+            border-color: #f5576c;
+            background: rgba(245, 87, 108, 0.1);
+        }
+
+        .notification.warning {
+            border-color: #fa709a;
+            background: rgba(250, 112, 154, 0.1);
+        }
+
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .notification-title {
             font-weight: 600;
             font-size: 0.9rem;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .notification-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
             cursor: pointer;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
+            padding: 0.25rem;
+            border-radius: 4px;
+            transition: var(--transition-fast);
         }
 
-        .neo-btn:hover {
-            background: var(--gradient-primary);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-glow);
-            color: var(--bg-primary);
+        .notification-close:hover {
+            color: var(--text-primary);
+            background: var(--bg-glass);
         }
 
-        /* Main Content */
-        .main-container {
-            max-width: 1600px;
-            margin: 0 auto;
+        .notification-message {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Page Header */
+        .page-header {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
             padding: 2rem;
+            margin: 2rem;
+            box-shadow: var(--shadow-medium);
+            border: 1px solid var(--border-light);
         }
 
-        /* Stats Grid */
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        /* Search Bar */
+        .search-container {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            padding: 1.5rem 2rem;
+            margin: 2rem;
+            box-shadow: var(--shadow-medium);
+            border: 1px solid var(--border-light);
+        }
+
+        .search-bar {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 300px;
+            background: var(--bg-glass);
+            border: 1px solid var(--border-medium);
+            border-radius: var(--radius-medium);
+            padding: 1rem 1.5rem;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: var(--transition-medium);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .filter-select {
+            background: var(--bg-glass);
+            border: 1px solid var(--border-medium);
+            border-radius: var(--radius-medium);
+            padding: 1rem 1.5rem;
+            color: var(--text-primary);
+            font-size: 1rem;
+            cursor: pointer;
+            transition: var(--transition-medium);
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        /* Stats Cards */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1.5rem;
-            margin-bottom: 2rem;
+            margin: 2rem;
+            max-width: 1400px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
-        .neo-stat-card {
+        .stat-card {
             background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: 20px;
+            border-radius: var(--radius-large);
             padding: 1.5rem;
-            backdrop-filter: blur(20px);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
+            border: 1px solid var(--border-light);
+            box-shadow: var(--shadow-medium);
+            transition: var(--transition-medium);
+            position: relative;
+            overflow: hidden;
         }
 
-        .neo-stat-card::before {
+        .stat-card::before {
             content: '';
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
-            height: 3px;
-            background: var(--gradient-primary);
-            border-radius: 20px 20px 0 0;
-            opacity: 0.7;
+            height: 4px;
+            background: var(--primary-gradient);
         }
 
-        .neo-stat-card:hover {
+        .stat-card:hover {
             transform: translateY(-4px);
-            border-color: var(--border-bright);
-            box-shadow: var(--shadow-glow);
+            box-shadow: var(--shadow-heavy);
         }
 
         .stat-value {
             font-size: 2rem;
-            font-weight: 900;
-            background: var(--gradient-primary);
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: var(--primary-gradient);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            margin-bottom: 0.5rem;
-            font-family: var(--font-mono);
         }
 
         .stat-label {
             color: var(--text-secondary);
             font-size: 0.9rem;
             font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
 
-        /* Filter Panel */
-        .filter-panel {
+        /* Transaction Cards */
+        .transactions-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem 2rem;
+        }
+
+        .transaction-card {
             background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: 20px;
+            border-radius: var(--radius-large);
             padding: 1.5rem;
-            margin-bottom: 2rem;
-            backdrop-filter: blur(20px);
-        }
-
-        .filter-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1rem;
-            align-items: end;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .form-label {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .neo-input, .neo-select {
-            background: var(--bg-glass);
-            border: 1px solid var(--border-subtle);
-            color: var(--text-primary);
-            padding: 0.75rem 1rem;
-            border-radius: 12px;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-        }
-
-        .neo-input:focus, .neo-select:focus {
-            outline: none;
-            border-color: var(--primary-orange);
-            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
-        }
-
-        .search-group {
+            margin-bottom: 1rem;
+            border: 1px solid var(--border-light);
+            box-shadow: var(--shadow-medium);
+            transition: var(--transition-medium);
+            cursor: pointer;
             position: relative;
-        }
-
-        .search-icon {
-            position: absolute;
-            left: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-secondary);
-        }
-
-        .search-input {
-            padding-left: 2.5rem;
-        }
-
-        /* Transaction Table */
-        .transaction-container {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: 20px;
-            backdrop-filter: blur(20px);
             overflow: hidden;
         }
 
-        .table-header {
-            background: var(--bg-glass);
-            border-bottom: 1px solid var(--border-subtle);
-            padding: 1rem;
-            display: grid;
-            grid-template-columns: 3rem 100px 200px 150px 120px 120px 120px 100px 120px;
-            gap: 1rem;
-            align-items: center;
-            font-weight: 600;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--text-secondary);
+        .transaction-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--primary-gradient);
+            opacity: 0;
+            transition: var(--transition-medium);
         }
 
-        .transaction-row {
-            border-bottom: 1px solid var(--border-subtle);
-            padding: 1rem;
-            display: grid;
-            grid-template-columns: 3rem 100px 200px 150px 120px 120px 120px 100px 120px;
-            gap: 1rem;
-            align-items: center;
-            transition: all 0.3s ease;
-            cursor: pointer;
+        .transaction-card:hover {
+            transform: translateX(8px);
+            box-shadow: var(--shadow-heavy);
         }
 
-        .transaction-row:hover {
-            background: var(--bg-glass);
-            border-left: 4px solid var(--primary-orange);
+        .transaction-card:hover::before {
+            opacity: 1;
         }
 
-        .transaction-row:last-child {
-            border-bottom: none;
+        .transaction-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .transaction-main {
+            flex: 1;
         }
 
         .merchant-name {
+            font-size: 1.2rem;
             font-weight: 600;
+            margin-bottom: 0.5rem;
             color: var(--text-primary);
-            font-size: 0.9rem;
         }
 
-        .transaction-description {
-            color: var(--text-secondary);
-            font-size: 0.8rem;
-            margin-top: 0.2rem;
+        .transaction-amount {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
         }
 
         .amount-positive {
-            color: var(--accent-green);
-            font-weight: 700;
-            font-family: var(--font-mono);
+            color: #10b981;
         }
 
         .amount-negative {
-            color: var(--accent-red);
-            font-weight: 700;
-            font-family: var(--font-mono);
+            color: #ef4444;
         }
 
-        .neo-badge {
-            padding: 0.3rem 0.7rem;
-            border-radius: 20px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+        .transaction-meta {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
         }
 
-        .badge-matched {
-            background: rgba(105, 240, 174, 0.2);
-            color: var(--accent-green);
-            border: 1px solid rgba(105, 240, 174, 0.3);
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
         }
 
-        .badge-unmatched {
-            background: rgba(255, 107, 53, 0.2);
-            color: var(--primary-orange);
-            border: 1px solid rgba(255, 107, 53, 0.3);
+        .category-badge {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: var(--radius-small);
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .business-badge {
+            background: var(--secondary-gradient);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: var(--radius-small);
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .receipt-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: var(--radius-small);
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-matched {
+            background: var(--success-gradient);
+            color: white;
+        }
+
+        .status-unmatched {
+            background: var(--warning-gradient);
+            color: white;
+        }
+
+        .transaction-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
         }
 
         .action-btn {
             background: var(--bg-glass);
-            border: 1px solid var(--border-subtle);
+            border: 1px solid var(--border-medium);
+            border-radius: var(--radius-small);
+            padding: 0.75rem;
             color: var(--text-secondary);
-            padding: 0.4rem 0.8rem;
-            border-radius: 8px;
-            font-size: 0.8rem;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: var(--transition-medium);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 44px;
+            min-height: 44px;
         }
 
         .action-btn:hover {
-            background: var(--primary-orange);
-            color: var(--bg-primary);
+            background: var(--primary-gradient);
+            color: white;
+            border-color: transparent;
+            transform: scale(1.05);
         }
 
-        /* Empty state */
+        /* Inline Editing */
+        .editable-field {
+            position: relative;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: var(--radius-small);
+            transition: var(--transition-medium);
+        }
+
+        .editable-field:hover {
+            background: var(--bg-glass);
+        }
+
+        .editable-field.editing {
+            background: var(--bg-glass);
+            border: 1px solid #667eea;
+        }
+
+        .edit-input {
+            background: transparent;
+            border: none;
+            color: inherit;
+            font-size: inherit;
+            font-weight: inherit;
+            width: 100%;
+            outline: none;
+        }
+
+        .edit-select {
+            background: var(--bg-card);
+            border: 1px solid var(--border-medium);
+            border-radius: var(--radius-small);
+            color: var(--text-primary);
+            padding: 0.25rem 0.5rem;
+            font-size: inherit;
+            outline: none;
+        }
+
+        /* Receipt Viewer */
+        .receipt-viewer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-overlay);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .receipt-content {
+            background: var(--bg-card);
+            border-radius: var(--radius-large);
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: var(--shadow-heavy);
+            position: relative;
+        }
+
+        .receipt-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .receipt-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+            max-height: 70vh;
+        }
+
+        .receipt-image {
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            border-radius: var(--radius-medium);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .receipt-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: var(--radius-small);
+            transition: var(--transition-medium);
+        }
+
+        .receipt-close:hover {
+            background: var(--bg-glass);
+            color: var(--text-primary);
+        }
+
+        /* Loading States */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 3rem;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-light);
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Notifications */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius-medium);
+            color: white;
+            font-weight: 500;
+            z-index: 1001;
+            box-shadow: var(--shadow-medium);
+            transform: translateX(100%);
+            transition: var(--transition-medium);
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: var(--success-gradient);
+        }
+
+        .notification.error {
+            background: var(--danger-gradient);
+        }
+
+        .notification.info {
+            background: var(--primary-gradient);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem;
+            }
+
+            .search-container {
+                margin: 1rem;
+                padding: 1rem;
+            }
+
+            .search-bar {
+                flex-direction: column;
+            }
+
+            .search-input {
+                min-width: auto;
+                width: 100%;
+            }
+
+            .stats-grid {
+                margin: 1rem;
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+
+            .transactions-container {
+                padding: 0 1rem 1rem;
+            }
+
+            .transaction-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .transaction-actions {
+                justify-content: center;
+            }
+
+            .receipt-viewer {
+                padding: 1rem;
+            }
+        }
+
+        /* Empty State */
         .empty-state {
             text-align: center;
             padding: 4rem 2rem;
@@ -374,218 +753,178 @@
             opacity: 0.5;
         }
 
-        /* Loading animation */
-        .loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 4rem;
+        .empty-state h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
         }
 
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid var(--border-subtle);
-            border-top: 3px solid var(--primary-orange);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Responsive design */
-        @media (max-width: 1200px) {
-            .table-header, .transaction-row {
-                grid-template-columns: 3rem 90px 180px 130px 100px 100px 100px 90px 100px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .main-container {
-                padding: 1rem;
-            }
-            
-            .stats-grid {
-                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            }
-            
-            .table-header, .transaction-row {
-                display: none;
-            }
-            
-            .transaction-mobile {
-                display: block;
-                background: var(--bg-glass);
-                border: 1px solid var(--border-subtle);
-                border-radius: 12px;
-                padding: 1rem;
-                margin-bottom: 1rem;
-            }
+        .empty-state p {
+            font-size: 1rem;
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
+    <!-- Unified App Header -->
     <header class="app-header">
         <div class="header-content">
-            <h1 class="app-title">
-                <i class="fas fa-brain"></i>
-                TransactionPro 2026 - Ultimate Manager
-            </h1>
-            <div class="header-controls">
-                <a href="/" class="neo-btn">
-                    <i class="fas fa-home"></i> Home
+            <div class="header-left">
+                <a href="/" class="app-logo">
+                    <i class="fas fa-chart-line"></i>
+                    <span>TransactionPro</span>
                 </a>
-                <button class="neo-btn theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Switch Theme">
-                    <i class="fas fa-sun" id="theme-icon"></i>
-                </button>
-                <button class="neo-btn" onclick="refreshAllData()">
-                    <i class="fas fa-sync-alt"></i> Refresh
-                </button>
+                <nav class="nav-links">
+                    <a href="/" class="nav-link">Dashboard</a>
+                    <a href="/transactions" class="nav-link active">Transactions</a>
+                    <a href="/scanner" class="nav-link">Scanner</a>
+                    <a href="/connect" class="nav-link">Connect</a>
+                    <a href="/settings" class="nav-link">Settings</a>
+                </nav>
+            </div>
+            <div class="header-actions">
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span>Live</span>
+                </div>
             </div>
         </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="main-container">
-        <!-- Stats Grid -->
-        <section class="stats-grid">
-            <div class="neo-stat-card">
-                <div class="stat-value" id="total-transactions">0</div>
-                <div class="stat-label">Total Transactions</div>
-            </div>
-            <div class="neo-stat-card">
-                <div class="stat-value" id="match-rate">0%</div>
-                <div class="stat-label">Match Rate</div>
-            </div>
-            <div class="neo-stat-card">
-                <div class="stat-value" id="total-expenses">$0</div>
-                <div class="stat-label">Total Expenses</div>
-            </div>
-            <div class="neo-stat-card">
-                <div class="stat-value" id="split-transactions">0</div>
-                <div class="stat-label">Split Transactions</div>
-            </div>
-            <div class="neo-stat-card">
-                <div class="stat-value" id="review-needed">0</div>
-                <div class="stat-label">Need Review</div>
-            </div>
-            <div class="neo-stat-card">
-                <div class="stat-value" id="realtime-count">0</div>
-                <div class="stat-label">Real-time Updates</div>
-            </div>
-        </section>
+    <!-- Global Notification Container -->
+    <div class="notification-container" id="notification-container"></div>
 
-        <!-- Filter Panel -->
-        <section class="filter-panel">
-            <div class="filter-grid">
-                <div class="form-group">
-                    <label class="form-label">AI-Powered Search</label>
-                    <div class="search-group">
-                        <i class="fas fa-search search-icon"></i>
-                        <input type="text" class="neo-input search-input" id="search-input" placeholder="Search transactions, merchants...">
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Business Entity</label>
-                    <select class="neo-select" id="entity-filter">
-                        <option value="">All Entities</option>
-                        <option value="Personal">👤 Personal</option>
-                        <option value="Down Home Media">🏠 Down Home Media</option>
-                        <option value="Music City Rodeo">🤠 Music City Rodeo</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Category</label>
-                    <select class="neo-select" id="category-filter">
-                        <option value="">All Categories</option>
-                        <option value="Food & Dining">🍕 Food & Dining</option>
-                        <option value="Transportation">🚗 Transportation</option>
-                        <option value="Shopping">🛍️ Shopping</option>
-                        <option value="Technology">💻 Technology</option>
-                        <option value="Healthcare">🏥 Healthcare</option>
-                        <option value="Entertainment">🎬 Entertainment</option>
-                        <option value="Business">💼 Business</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Filter Type</label>
-                    <select class="neo-select" id="filter-type">
-                        <option value="">All Transactions</option>
-                        <option value="matched">✅ With Receipts</option>
-                        <option value="unmatched">⏳ Need Receipts</option>
-                        <option value="expenses">💸 Expenses Only</option>
-                        <option value="income">💰 Income Only</option>
-                        <option value="split">🔄 Split Transactions</option>
-                        <option value="review">⚠️ Need Review</option>
-                        <option value="recent">📅 Recent (7 days)</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <button class="neo-btn" onclick="applyFilters()" style="width: 100%;">
-                        <i class="fas fa-filter"></i> Apply Filters
-                    </button>
-                </div>
-            </div>
-        </section>
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title">Transaction Manager</h1>
+        <p class="page-subtitle">AI-powered transaction processing with real-time insights</p>
+    </div>
 
-        <!-- Transaction Table -->
-        <section class="transaction-container">
-            <div class="table-header">
-                <div><input type="checkbox" id="select-all"></div>
-                <div>Date</div>
-                <div>Merchant</div>
-                <div>Description</div>
-                <div>Amount</div>
-                <div>Category</div>
-                <div>Business Type</div>
-                <div>Status</div>
-                <div>Actions</div>
+    <!-- Search and Filters -->
+    <div class="search-container">
+        <div class="search-bar">
+            <input type="text" id="search-input" class="search-input" placeholder="Search transactions, merchants, or categories...">
+            <select id="filter-type" class="filter-select">
+                <option value="">All Transactions</option>
+                <option value="matched">Matched</option>
+                <option value="unmatched">Unmatched</option>
+                <option value="has_receipt">With Receipts</option>
+                <option value="no_receipt">Without Receipts</option>
+            </select>
+            <select id="category-filter" class="filter-select">
+                <option value="">All Categories</option>
+                <option value="Food & Dining">Food & Dining</option>
+                <option value="Transportation">Transportation</option>
+                <option value="Shopping">Shopping</option>
+                <option value="Entertainment">Entertainment</option>
+                <option value="Utilities">Utilities</option>
+                <option value="Healthcare">Healthcare</option>
+                <option value="Travel">Travel</option>
+                <option value="Business">Business</option>
+                <option value="Other">Other</option>
+            </select>
+            <button onclick="refreshData()" class="action-btn">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value" id="total-transactions">-</div>
+            <div class="stat-label">Total Transactions</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="total-amount">-</div>
+            <div class="stat-label">Total Amount</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="matched-count">-</div>
+            <div class="stat-label">Matched</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="unmatched-count">-</div>
+            <div class="stat-label">Unmatched</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="receipt-count">-</div>
+            <div class="stat-label">With Receipts</div>
+        </div>
+    </div>
+
+    <!-- Transactions Container -->
+    <div class="transactions-container" id="transactions-container">
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>Loading transactions...</p>
+        </div>
+    </div>
+
+    <!-- Receipt Upload Input (Hidden) -->
+    <input type="file" id="receipt-upload-input" accept="image/*" style="display: none;" onchange="handleReceiptUpload(event)">
+
+    <!-- Receipt Viewer Modal -->
+    <div class="receipt-viewer" id="receipt-viewer">
+        <div class="receipt-content">
+            <div class="receipt-header">
+                <h3>Receipt</h3>
+                <button onclick="closeReceiptViewer()" class="close-btn">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            
-            <div id="transactions-container">
-                <div class="loading">
-                    <div class="spinner"></div>
-                </div>
-            </div>
-        </section>
-    </main>
+            <div class="receipt-body" id="receipt-body"></div>
+        </div>
+    </div>
 
     <script>
-        // Global state
-        let currentPage = 1;
-        let totalPages = 1;
-        let currentFilters = {};
+        // Global variables
         let allTransactions = [];
+        let filteredTransactions = [];
+        let currentFilters = {
+            search: '',
+            category: '',
+            business: '',
+            status: ''
+        };
+        let currentUploadExpenseId = null;
+        let editingField = null;
 
-        // Initialize (removed - now handled in the theme section)
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 TransactionPro 2026 Ultimate Manager Initialized');
+            initializeTheme();
+            loadData();
+            setupEventListeners();
+        });
 
-        function setupEventListeners() {
-            // Search with debounce
-            const searchInput = document.getElementById('search-input');
-            let searchTimeout;
-            searchInput.addEventListener('input', function() {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(applyFilters, 500);
-            });
+        // Theme management
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('transactionpro-theme') || 'dark';
+            setTheme(savedTheme);
+        }
 
-            // Filter changes
-            ['entity-filter', 'category-filter', 'filter-type'].forEach(id => {
-                document.getElementById(id).addEventListener('change', applyFilters);
-            });
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            setTheme(newTheme);
+        }
 
-            // Select all checkbox
-            document.getElementById('select-all').addEventListener('change', function() {
-                const checkboxes = document.querySelectorAll('.transaction-checkbox');
-                checkboxes.forEach(cb => cb.checked = this.checked);
-            });
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('transactionpro-theme', theme);
+            
+            const themeIcon = document.getElementById('theme-icon');
+            if (themeIcon) {
+                themeIcon.className = theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
+            }
+        }
+
+        // Data loading
+        async function loadData() {
+            await Promise.all([
+                loadStats(),
+                loadTransactions()
+            ]);
         }
 
         async function loadStats() {
@@ -595,10 +934,10 @@
                 
                 if (data.success && data.stats) {
                     document.getElementById('total-transactions').textContent = data.stats.total_transactions || '0';
-                    document.getElementById('match-rate').textContent = data.stats.match_rate || '0%';
-                    document.getElementById('total-expenses').textContent = data.stats.total_spend || '$0';
-                    document.getElementById('review-needed').textContent = data.stats.review_needed || '0';
-                    document.getElementById('realtime-count').textContent = data.stats.realtime_processed || '0';
+                    document.getElementById('total-amount').textContent = data.stats.total_spend || '$0';
+                    document.getElementById('matched-count').textContent = data.stats.matched_count || '0';
+                    document.getElementById('unmatched-count').textContent = data.stats.unmatched_count || '0';
+                    document.getElementById('receipt-count').textContent = data.stats.receipt_count || '0';
                 }
             } catch (error) {
                 console.error('Failed to load stats:', error);
@@ -609,19 +948,13 @@
             try {
                 showLoading();
                 
-                const params = new URLSearchParams({
-                    page: currentPage,
-                    limit: 50,
-                    ...currentFilters
-                });
-
-                const response = await fetch(`/api/transactions?${params}`);
+                const response = await fetch('/api/transactions?limit=100');
                 const data = await response.json();
 
                 if (data.success) {
                     allTransactions = data.transactions || [];
-                    totalPages = Math.ceil((data.total || 0) / 50);
-                    renderTransactions(allTransactions);
+                    filteredTransactions = [...allTransactions];
+                    renderTransactions();
                 } else {
                     showError('Failed to load transactions');
                 }
@@ -631,7 +964,100 @@
             }
         }
 
-        function renderTransactions(transactions) {
+        // Enhanced notification system
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notification-container');
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            
+            notification.innerHTML = `
+                <div class="notification-header">
+                    <span class="notification-title">${type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                    <button class="notification-close" onclick="this.parentElement.parentElement.remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="notification-message">${message}</div>
+            `;
+            
+            container.appendChild(notification);
+            
+            // Trigger animation
+            setTimeout(() => notification.classList.add('show'), 100);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.classList.remove('show');
+                    setTimeout(() => {
+                        if (notification.parentElement) {
+                            notification.parentElement.removeChild(notification);
+                        }
+                    }, 300);
+                }
+            }, 5000);
+        }
+
+        // Event handlers for new filters
+        document.getElementById('search-input').addEventListener('input', handleSearch);
+        document.getElementById('filter-type').addEventListener('change', handleFilter);
+        document.getElementById('category-filter').addEventListener('change', handleFilter);
+
+        function handleSearch() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const filteredTransactions = allTransactions.filter(transaction => {
+                const merchant = (transaction.merchant || '').toLowerCase();
+                const category = (transaction.category || '').toLowerCase();
+                const description = (transaction.description || '').toLowerCase();
+                
+                return merchant.includes(searchTerm) || 
+                       category.includes(searchTerm) || 
+                       description.includes(searchTerm);
+            });
+            
+            renderTransactions(filteredTransactions);
+        }
+
+        function handleFilter() {
+            const filterType = document.getElementById('filter-type').value;
+            const categoryFilter = document.getElementById('category-filter').value;
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            
+            let filteredTransactions = allTransactions.filter(transaction => {
+                // Search filter
+                if (searchTerm) {
+                    const merchant = (transaction.merchant || '').toLowerCase();
+                    const category = (transaction.category || '').toLowerCase();
+                    const description = (transaction.description || '').toLowerCase();
+                    
+                    if (!merchant.includes(searchTerm) && 
+                        !category.includes(searchTerm) && 
+                        !description.includes(searchTerm)) {
+                        return false;
+                    }
+                }
+                
+                // Type filter
+                if (filterType) {
+                    if (filterType === 'matched' && !transaction.has_receipt) return false;
+                    if (filterType === 'unmatched' && transaction.has_receipt) return false;
+                    if (filterType === 'has_receipt' && !transaction.has_receipt) return false;
+                    if (filterType === 'no_receipt' && transaction.has_receipt) return false;
+                }
+                
+                // Category filter
+                if (categoryFilter && transaction.category !== categoryFilter) {
+                    return false;
+                }
+                
+                return true;
+            });
+            
+            renderTransactions(filteredTransactions);
+        }
+
+        // Rendering
+        function renderTransactions(transactions = filteredTransactions) {
             const container = document.getElementById('transactions-container');
             
             if (!transactions || transactions.length === 0) {
@@ -639,44 +1065,60 @@
                     <div class="empty-state">
                         <i class="fas fa-receipt"></i>
                         <h3>No Transactions Found</h3>
-                        <p>Connect your banks or upload receipts to get started</p>
+                        <p>Try adjusting your search or filters</p>
                     </div>
                 `;
                 return;
             }
 
             const html = transactions.map(tx => `
-                <div class="transaction-row" data-id="${tx._id}">
-                    <div>
-                        <input type="checkbox" class="transaction-checkbox" value="${tx._id}">
+                <div class="transaction-card" data-id="${tx._id}">
+                    <div class="transaction-header">
+                        <div class="transaction-main">
+                            <div class="merchant-name editable-field" data-field="merchant" data-id="${tx._id}">
+                                ${tx.merchant || 'Unknown Merchant'}
+                            </div>
+                            <div class="transaction-amount ${tx.amount < 0 ? 'amount-negative' : 'amount-positive'} editable-field" data-field="amount" data-id="${tx._id}">
+                                ${formatAmount(tx.amount)}
+                            </div>
+                            <div class="transaction-meta">
+                                <div class="meta-item">
+                                    <i class="fas fa-calendar"></i>
+                                    <span class="editable-field" data-field="date" data-id="${tx._id}">${formatDate(tx.date)}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <i class="fas fa-tag"></i>
+                                    <span class="category-badge editable-field" data-field="category" data-id="${tx._id}">${tx.category || 'Other'}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <i class="fas fa-building"></i>
+                                    <span class="business-badge editable-field" data-field="business_type" data-id="${tx._id}">${tx.business_type || 'Personal'}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <i class="fas fa-receipt"></i>
+                                    <span class="receipt-status ${tx.has_receipt ? 'status-matched' : 'status-unmatched'}">
+                                        ${tx.has_receipt ? '✅ Matched' : '⏳ No Receipt'}
+                                    </span>
+                                </div>
+                            </div>
+                            ${tx.description ? `
+                                <div class="meta-item">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span class="editable-field" data-field="description" data-id="${tx._id}">${tx.description}</span>
+                                </div>
+                            ` : ''}
+                        </div>
                     </div>
-                    <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                        ${formatDate(tx.date)}
-                    </div>
-                    <div>
-                        <div class="merchant-name">${tx.merchant || 'Unknown'}</div>
-                    </div>
-                    <div>
-                        <div class="transaction-description">${tx.description || 'No description'}</div>
-                    </div>
-                    <div class="${tx.amount < 0 ? 'amount-negative' : 'amount-positive'}">
-                        ${formatAmount(tx.amount)}
-                    </div>
-                    <div>
-                        <span class="neo-badge" style="background: rgba(71, 175, 254, 0.2); color: var(--accent-blue);">
-                            ${tx.category || 'Other'}
-                        </span>
-                    </div>
-                    <div style="font-size: 0.85rem;">
-                        ${tx.business_type || 'Unknown'}
-                    </div>
-                    <div>
-                        <span class="neo-badge ${tx.has_receipt ? 'badge-matched' : 'badge-unmatched'}">
-                            ${tx.has_receipt ? 'Matched' : 'No Receipt'}
-                        </span>
-                    </div>
-                    <div>
-                        <button class="action-btn" onclick="editTransaction('${tx._id}')">
+                    <div class="transaction-actions">
+                        <button class="action-btn" onclick="uploadReceiptToExpense('${tx._id}')" title="Upload Receipt">
+                            <i class="fas fa-upload"></i>
+                        </button>
+                        ${tx.has_receipt ? `
+                            <button class="action-btn" onclick="viewReceipt('${tx._id}')" title="View Receipt">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        ` : ''}
+                        <button class="action-btn" onclick="editBusinessPurpose('${tx._id}')" title="Edit Business Purpose">
                             <i class="fas fa-edit"></i>
                         </button>
                     </div>
@@ -684,41 +1126,235 @@
             `).join('');
 
             container.innerHTML = html;
+            setupInlineEditing();
         }
 
-        function showLoading() {
-            document.getElementById('transactions-container').innerHTML = `
-                <div class="loading">
-                    <div class="spinner"></div>
+        // Inline editing
+        function setupInlineEditing() {
+            document.querySelectorAll('.editable-field').forEach(field => {
+                field.addEventListener('click', function(e) {
+                    if (editingField) return; // Prevent multiple edits
+                    
+                    const fieldType = this.dataset.field;
+                    const transactionId = this.dataset.id;
+                    const currentValue = this.textContent.trim();
+                    
+                    startInlineEdit(this, fieldType, currentValue, transactionId);
+                });
+            });
+        }
+
+        function startInlineEdit(element, fieldType, currentValue, transactionId) {
+            editingField = { element, fieldType, transactionId };
+            
+            element.classList.add('editing');
+            
+            let input;
+            if (fieldType === 'category') {
+                input = document.createElement('select');
+                input.className = 'edit-select';
+                input.innerHTML = `
+                    <option value="Food & Dining">🍕 Food & Dining</option>
+                    <option value="Transportation">🚗 Transportation</option>
+                    <option value="Shopping">🛍️ Shopping</option>
+                    <option value="Technology">💻 Technology</option>
+                    <option value="Healthcare">🏥 Healthcare</option>
+                    <option value="Entertainment">🎬 Entertainment</option>
+                    <option value="Business">💼 Business</option>
+                    <option value="Utilities">⚡ Utilities</option>
+                    <option value="Travel">✈️ Travel</option>
+                    <option value="Other">📦 Other</option>
+                `;
+                input.value = currentValue;
+            } else if (fieldType === 'business_type') {
+                input = document.createElement('select');
+                input.className = 'edit-select';
+                input.innerHTML = `
+                    <option value="Personal">👤 Personal</option>
+                    <option value="Down Home Media">🏠 Down Home Media</option>
+                    <option value="Music City Rodeo">🤠 Music City Rodeo</option>
+                `;
+                input.value = currentValue;
+            } else if (fieldType === 'amount') {
+                input = document.createElement('input');
+                input.type = 'number';
+                input.className = 'edit-input';
+                input.step = '0.01';
+                input.value = Math.abs(parseFloat(currentValue.replace(/[^0-9.-]/g, '')) || 0);
+            } else if (fieldType === 'date') {
+                input = document.createElement('input');
+                input.type = 'date';
+                input.className = 'edit-input';
+                const date = new Date(currentValue);
+                input.value = date.toISOString().split('T')[0];
+            } else {
+                input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'edit-input';
+                input.value = currentValue;
+            }
+            
+            element.textContent = '';
+            element.appendChild(input);
+            input.focus();
+            
+            input.addEventListener('blur', () => saveInlineEdit());
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    saveInlineEdit();
+                } else if (e.key === 'Escape') {
+                    cancelInlineEdit();
+                }
+            });
+        }
+
+        async function saveInlineEdit() {
+            if (!editingField) return;
+            
+            const { element, fieldType, transactionId } = editingField;
+            const input = element.querySelector('.edit-input, .edit-select');
+            const newValue = input.value;
+            
+            try {
+                const updateData = {};
+                updateData[fieldType] = fieldType === 'amount' ? parseFloat(newValue) : newValue;
+                
+                const response = await fetch(`/api/expenses/${transactionId}/update`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updateData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Update the display
+                    if (fieldType === 'amount') {
+                        const transaction = allTransactions.find(t => t._id === transactionId);
+                        const isNegative = transaction && transaction.amount < 0;
+                        element.textContent = `${isNegative ? '-' : '+'}$${Math.abs(parseFloat(newValue)).toFixed(2)}`;
+                        element.className = `transaction-amount ${isNegative ? 'amount-negative' : 'amount-positive'}`;
+                    } else if (fieldType === 'category') {
+                        element.textContent = newValue;
+                        element.className = 'category-badge editable-field';
+                    } else if (fieldType === 'business_type') {
+                        element.textContent = newValue;
+                        element.className = 'business-badge editable-field';
+                    } else {
+                        element.textContent = newValue;
+                    }
+                    
+                    // Update the data
+                    const transaction = allTransactions.find(t => t._id === transactionId);
+                    if (transaction) {
+                        transaction[fieldType] = fieldType === 'amount' ? parseFloat(newValue) : newValue;
+                    }
+                    
+                    showNotification('✅ Updated successfully', 'success');
+                } else {
+                    showNotification(`❌ Update failed: ${result.error}`, 'error');
+                    element.textContent = editingField.originalValue;
+                }
+            } catch (error) {
+                console.error('Save error:', error);
+                showNotification('❌ Update failed', 'error');
+                element.textContent = editingField.originalValue;
+            }
+            
+            element.classList.remove('editing');
+            editingField = null;
+        }
+
+        function cancelInlineEdit() {
+            if (!editingField) return;
+            
+            const { element } = editingField;
+            element.textContent = editingField.originalValue;
+            element.classList.remove('editing');
+            editingField = null;
+        }
+
+        // Receipt handling
+        function uploadReceiptToExpense(id) {
+            currentUploadExpenseId = id;
+            document.getElementById('receipt-upload-input').click();
+        }
+
+        async function handleReceiptUpload(event) {
+            const file = event.target.files[0];
+            if (!file || !currentUploadExpenseId) return;
+
+            showNotification('📤 Uploading receipt...', 'info');
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const response = await fetch(`/api/expenses/${currentUploadExpenseId}/upload-receipt`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showNotification('✅ Receipt uploaded successfully', 'success');
+                    
+                    // Update the transaction data
+                    const transaction = allTransactions.find(t => t._id === currentUploadExpenseId);
+                    if (transaction) {
+                        transaction.has_receipt = true;
+                        transaction.receipt_url = result.receipt_url;
+                    }
+                    
+                    renderTransactions();
+                } else {
+                    showNotification(`❌ Upload failed: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                showNotification('❌ Upload failed', 'error');
+            }
+
+            event.target.value = '';
+            currentUploadExpenseId = null;
+        }
+
+        function viewReceipt(id) {
+            const transaction = allTransactions.find(tx => tx._id === id);
+            if (!transaction || !transaction.receipt_url) {
+                showNotification('❌ No receipt available', 'error');
+                return;
+            }
+
+            const viewer = document.getElementById('receipt-viewer');
+            const body = document.getElementById('receipt-body');
+            
+            body.innerHTML = `
+                <img src="${transaction.receipt_url}" alt="Receipt" class="receipt-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <div style="display: none; text-align: center; color: var(--text-secondary);">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                    <h3>Receipt Not Available</h3>
+                    <p>The receipt image could not be loaded.</p>
                 </div>
             `;
+            
+            viewer.style.display = 'flex';
         }
 
-        function showError(message) {
-            document.getElementById('transactions-container').innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-exclamation-triangle" style="color: var(--accent-red);"></i>
-                    <h3>Error</h3>
-                    <p>${message}</p>
-                </div>
-            `;
+        function closeReceiptViewer() {
+            document.getElementById('receipt-viewer').style.display = 'none';
         }
 
-        function applyFilters() {
-            currentFilters = {
-                search: document.getElementById('search-input').value,
-                entity: document.getElementById('entity-filter').value,
-                category: document.getElementById('category-filter').value,
-                filter: document.getElementById('filter-type').value
-            };
-            currentPage = 1;
-            loadTransactions();
-        }
-
+        // Utility functions
         function formatDate(dateString) {
             if (!dateString) return 'Unknown';
             const date = new Date(dateString);
-            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            return date.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric',
+                year: 'numeric'
+            });
         }
 
         function formatAmount(amount) {
@@ -726,57 +1362,48 @@
             return `${amount < 0 ? '-' : '+'}$${Math.abs(amount).toFixed(2)}`;
         }
 
-        function refreshAllData() {
-            loadStats();
-            loadTransactions();
+        function showLoading() {
+            document.getElementById('transactions-container').innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading transactions...</p>
+                </div>
+            `;
         }
 
-        function editTransaction(id) {
-            console.log('Edit transaction:', id);
-            // TODO: Implement edit modal
+        function showError(message) {
+            document.getElementById('transactions-container').innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Error</h3>
+                    <p>${message}</p>
+                </div>
+            `;
         }
 
-        // ============================================================================
-        // 🎨 THEME SYSTEM - Light/Dark Mode Toggle
-        // ============================================================================
-        
-        function initializeTheme() {
-            // Check for saved theme preference or default to dark
-            const savedTheme = localStorage.getItem('transactionpro-theme') || 'dark';
-            setTheme(savedTheme);
+        function refreshData() {
+            loadData();
+            showNotification('🔄 Refreshing data...', 'info');
         }
-        
-        function toggleTheme() {
-            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            setTheme(newTheme);
-        }
-        
-        function setTheme(theme) {
-            document.documentElement.setAttribute('data-theme', theme);
-            localStorage.setItem('transactionpro-theme', theme);
-            
-            // Update theme icon
-            const themeIcon = document.getElementById('theme-icon');
-            if (themeIcon) {
-                if (theme === 'light') {
-                    themeIcon.className = 'fas fa-moon';
-                    themeIcon.parentElement.setAttribute('title', 'Switch to Dark Mode');
-                } else {
-                    themeIcon.className = 'fas fa-sun';
-                    themeIcon.parentElement.setAttribute('title', 'Switch to Light Mode');
+
+        function setupEventListeners() {
+            // Close receipt viewer on backdrop click
+            document.getElementById('receipt-viewer').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeReceiptViewer();
                 }
-            }
+            });
+
+            // Close receipt viewer on escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeReceiptViewer();
+                    if (editingField) {
+                        cancelInlineEdit();
+                    }
+                }
+            });
         }
-        
-        // Add theme initialization to existing DOMContentLoaded
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 TransactionPro 2026 Ultimate Manager Initialized');
-            initializeTheme(); // Initialize theme first
-            loadTransactions();
-            setupEventListeners();
-            loadStats();
-        });
     </script>
 </body>
-</html> 
+</html>
