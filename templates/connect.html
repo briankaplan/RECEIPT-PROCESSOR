@@ -871,6 +871,112 @@
         .upload-instructions li {
             margin-bottom: 8px;
         }
+
+        /* Email Progress Indicators */
+        .email-progress {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .email-progress .progress-stats {
+            display: flex;
+            justify-content: space-around;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .email-progress .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            min-width: 80px;
+        }
+
+        .email-progress .stat-item i {
+            color: var(--accent-blue);
+            font-size: 0.9rem;
+        }
+
+        .email-progress .stat-item span {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Email-specific icons */
+        .email-progress .stat-item:nth-child(1) i {
+            color: var(--accent-blue); /* Envelope icon */
+        }
+
+        .email-progress .stat-item:nth-child(2) i {
+            color: var(--accent-green); /* Receipt icon */
+        }
+
+        .email-progress .stat-item:nth-child(3) i {
+            color: var(--primary-orange); /* Check icon */
+        }
+
+        /* Email Accounts Grid */
+        .email-accounts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .email-account-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-light);
+            border-radius: var(--border-radius-medium);
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .email-account-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .account-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .account-header i {
+            font-size: 2rem;
+            color: var(--accent-blue);
+            margin-bottom: 0.5rem;
+        }
+
+        .account-header h4 {
+            font-size: 1.1rem;
+            font-weight: var(--font-weight-semibold);
+            margin-bottom: 0.25rem;
+        }
+
+        .account-header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .scan-all-section {
+            text-align: center;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-light);
+        }
+
+        .btn-large {
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+        }
+
+        .scan-note {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 0.75rem;
+        }
     </style>
 </head>
 <body>
@@ -1082,6 +1188,57 @@
                     <li>Choose CSV format</li>
                     <li>Upload the file here</li>
                 </ol>
+            </div>
+        </div>
+
+        <!-- Email Scanning Section -->
+        <div class="csv-upload-section">
+            <div class="section-header">
+                <i class="fas fa-envelope"></i>
+                <h3>Scan Email Receipts</h3>
+                <p>Automatically scan your Gmail accounts for receipt emails and process them</p>
+            </div>
+            
+            <div class="email-accounts-grid">
+                <div class="email-account-card">
+                    <div class="account-header">
+                        <i class="fas fa-envelope"></i>
+                        <h4>Personal Gmail</h4>
+                        <p>kaplan.brian@gmail.com</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="scanSpecificEmailAccount('kaplan.brian@gmail.com')">
+                        <i class="fas fa-search"></i> Scan for Receipts
+                    </button>
+                </div>
+                
+                <div class="email-account-card">
+                    <div class="account-header">
+                        <i class="fas fa-briefcase"></i>
+                        <h4>Down Home Business</h4>
+                        <p>brian@downhome.com</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="scanSpecificEmailAccount('brian@downhome.com')">
+                        <i class="fas fa-search"></i> Scan for Receipts
+                    </button>
+                </div>
+                
+                <div class="email-account-card">
+                    <div class="account-header">
+                        <i class="fas fa-music"></i>
+                        <h4>Music City Rodeo</h4>
+                        <p>brian@musiccityrodeo.com</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="scanSpecificEmailAccount('brian@musiccityrodeo.com')">
+                        <i class="fas fa-search"></i> Scan for Receipts
+                    </button>
+                </div>
+            </div>
+            
+            <div class="scan-all-section">
+                <button class="btn btn-secondary btn-large" onclick="scanEmailReceipts()">
+                    <i class="fas fa-search"></i> Scan All Email Accounts
+                </button>
+                <p class="scan-note">Scans all configured Gmail accounts for receipt emails from the last 30 days</p>
             </div>
         </div>
     </div>
@@ -1700,6 +1857,195 @@
                 });
             }
         });
+
+        // Enhanced email scanning with progress indicators
+        async function scanEmailReceipts() {
+            showProcessing('📧 Starting Email Scan...', 'Connecting to Gmail accounts');
+            
+            try {
+                updateProcessingDetail('🔐 Authenticating with Gmail...');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                updateProcessingDetail('📬 Scanning email accounts...');
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                updateProcessingDetail('🔍 Detecting receipt emails...');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                const response = await fetch('/api/scan-emails-for-receipts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email_account: 'auto-detect',
+                        password: 'oauth',
+                        days_back: 30
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    const receiptsFound = result.receipts_found || 0;
+                    const receiptsProcessed = result.receipts_processed || 0;
+                    const scanDetails = result.scan_details || {};
+                    
+                    updateProcessingDetail(`✅ Email scan complete! Found ${receiptsFound} receipts, processed ${receiptsProcessed}`);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                    // Show detailed results
+                    const confidenceBreakdown = scanDetails.confidence_breakdown || {};
+                    const successRate = scanDetails.success_rate_percent || 0;
+                    const scanDuration = scanDetails.scan_duration_seconds || 0;
+                    
+                    showNotification(`✅ Email scan complete! ${receiptsProcessed} receipts processed in ${scanDuration}s`, 'success');
+                    
+                    // Show detailed summary after a delay
+                    setTimeout(() => {
+                        const summary = `
+                            📊 Email Scan Summary:
+                            • Receipts Found: ${receiptsFound}
+                            • Successfully Processed: ${receiptsProcessed}
+                            • Success Rate: ${successRate}%
+                            • High Confidence: ${confidenceBreakdown.high_confidence || 0}
+                            • Medium Confidence: ${confidenceBreakdown.medium_confidence || 0}
+                            • Low Confidence: ${confidenceBreakdown.low_confidence || 0}
+                            • Scan Duration: ${scanDuration}s
+                        `;
+                        showNotification(summary, 'info');
+                    }, 1000);
+                    
+                } else {
+                    updateProcessingDetail(`❌ Email scan failed: ${result.error}`);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    showNotification('❌ Email scan failed: ' + result.error, 'error');
+                }
+            } catch (error) {
+                updateProcessingDetail(`❌ Connection error: ${error.message}`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                showNotification('❌ Email scan failed: ' + error.message, 'error');
+            } finally {
+                hideProcessing();
+            }
+        }
+
+        // Enhanced email scanning for specific account
+        async function scanSpecificEmailAccount(emailAccount) {
+            showProcessing('📧 Scanning Email Account...', `Connecting to ${emailAccount}`);
+            
+            try {
+                updateProcessingDetail('🔐 Authenticating with Gmail...');
+                await new Promise(resolve => setTimeout(resolve, 800));
+                
+                updateProcessingDetail('📬 Scanning email inbox...');
+                await new Promise(resolve => setTimeout(resolve, 1200));
+                
+                updateProcessingDetail('🔍 Detecting receipt emails...');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                const response = await fetch('/api/scan-emails-for-receipts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email_account: emailAccount,
+                        password: 'oauth',
+                        days_back: 30
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    const receiptsFound = result.receipts_found || 0;
+                    const receiptsProcessed = result.receipts_processed || 0;
+                    const scanDetails = result.scan_details || {};
+                    
+                    updateProcessingDetail(`✅ Account scan complete! ${receiptsProcessed} receipts processed`);
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    
+                    showNotification(`✅ ${emailAccount}: ${receiptsProcessed} receipts processed`, 'success');
+                    
+                    // Show performance metrics
+                    const scanDuration = scanDetails.scan_duration_seconds || 0;
+                    const processingRate = scanDetails.processing_rate_receipts_per_second || 0;
+                    
+                    setTimeout(() => {
+                        showNotification(`📊 Performance: ${processingRate} receipts/sec, ${scanDuration}s total`, 'info');
+                    }, 1000);
+                    
+                } else {
+                    updateProcessingDetail(`❌ Account scan failed: ${result.error}`);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    showNotification('❌ Account scan failed: ' + result.error, 'error');
+                }
+            } catch (error) {
+                updateProcessingDetail(`❌ Connection error: ${error.message}`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                showNotification('❌ Account scan failed: ' + error.message, 'error');
+            } finally {
+                hideProcessing();
+            }
+        }
+
+        // Show processing overlay with enhanced styling for email scanning
+        function showEmailProcessing(title, detail) {
+            const overlay = document.getElementById('processing-overlay');
+            const titleEl = document.getElementById('processing-text');
+            const detailEl = document.getElementById('processing-detail');
+            
+            titleEl.innerHTML = title;
+            detailEl.innerHTML = detail;
+            
+            // Add email-specific progress animation if not already present
+            if (!overlay.querySelector('.email-progress')) {
+                overlay.querySelector('.processing-content').innerHTML += `
+                    <div class="email-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill"></div>
+                        </div>
+                        <div class="progress-stats">
+                            <span class="stat-item">
+                                <i class="fas fa-envelope"></i>
+                                <span id="emails-scanned">0</span> emails
+                            </span>
+                            <span class="stat-item">
+                                <i class="fas fa-receipt"></i>
+                                <span id="receipts-found">0</span> receipts
+                            </span>
+                            <span class="stat-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span id="receipts-processed">0</span> processed
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            overlay.classList.add('show');
+            
+            // Start email-specific progress animation
+            startEmailProgressAnimation();
+        }
+
+        // Start email-specific progress animation
+        function startEmailProgressAnimation() {
+            const progressFill = document.querySelector('.progress-fill');
+            if (progressFill) {
+                progressFill.style.width = '0%';
+                progressFill.style.transition = 'width 0.5s ease-in-out';
+                
+                // Simulate email scanning progress
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += Math.random() * 12; // Slightly slower for email scanning
+                    if (progress > 85) progress = 85;
+                    progressFill.style.width = progress + '%';
+                    
+                    if (progress >= 85) {
+                        clearInterval(interval);
+                    }
+                }, 600);
+            }
+        }
     </script>
 </body>
 </html>
