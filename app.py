@@ -12,6 +12,8 @@ import secrets
 import requests
 import hmac
 import hashlib
+import base64
+import tempfile
 from urllib.parse import urlencode
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
@@ -140,7 +142,8 @@ try:
         can_transaction_be_split, assess_transaction_review_status,
         find_similar_transactions, generate_transaction_insights,
         generate_transaction_recommendations, create_export_row,
-        generate_csv_export, export_to_google_sheets, execute_manual_split
+        generate_csv_export, export_to_google_sheets, execute_manual_split,
+        extract_merchant_name
     )
     ENHANCED_TRANSACTIONS_AVAILABLE = True
 except ImportError as e:

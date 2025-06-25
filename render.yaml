@@ -16,7 +16,7 @@ services:
       - key: FLASK_ENV
         value: production
       - key: PORT
-        value: 10000
+        value: "10000"
       - key: FLASK_DEBUG
         value: "false"
       - key: DEBUG
