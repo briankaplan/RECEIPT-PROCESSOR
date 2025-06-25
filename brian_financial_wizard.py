@@ -540,6 +540,124 @@ Return analysis focusing on Brian's specific business needs."""
         
         return recommendations
 
+    def analyze_expense_patterns(self, analysis_data: Dict) -> Dict:
+        """
+        Analyze expense patterns from transaction data for AI chat responses
+        """
+        try:
+            transactions = analysis_data.get('recent_transactions', [])
+            total_expenses = analysis_data.get('total_expenses', 0)
+            business_expenses = analysis_data.get('business_expenses', 0)
+            
+            # Calculate real statistics
+            insights = []
+            top_categories = []
+            recommendations = []
+            
+            if transactions:
+                # Category analysis
+                category_totals = {}
+                business_breakdown = {'down_home': 0, 'mcr': 0, 'personal': 0}
+                
+                for txn in transactions:
+                    category = txn.get('category', 'Unknown')
+                    amount = abs(txn.get('amount', 0))
+                    business_type = txn.get('business_type', 'personal')
+                    
+                    # Category totals
+                    if category not in category_totals:
+                        category_totals[category] = 0
+                    category_totals[category] += amount
+                    
+                    # Business breakdown
+                    if business_type in business_breakdown:
+                        business_breakdown[business_type] += amount
+                
+                # Top categories
+                top_categories = sorted(category_totals.items(), key=lambda x: x[1], reverse=True)[:5]
+                top_categories = [cat[0] for cat in top_categories]
+                
+                # Generate insights
+                if business_breakdown['down_home'] > business_breakdown['mcr']:
+                    insights.append(f"Down Home Media expenses (${business_breakdown['down_home']:,.2f}) are higher than Music City Rodeo (${business_breakdown['mcr']:,.2f})")
+                
+                if business_breakdown['personal'] > business_breakdown['down_home'] + business_breakdown['mcr']:
+                    insights.append("Personal expenses are higher than business expenses - consider reviewing categorization")
+                
+                # Recommendations
+                if len(transactions) > 0:
+                    unmatched_count = sum(1 for txn in transactions if not txn.get('receipt_matched'))
+                    if unmatched_count > len(transactions) * 0.3:
+                        recommendations.append(f"Upload receipts for {unmatched_count} unmatched transactions")
+                
+                if business_expenses > 0:
+                    recommendations.append("Consider setting up automatic business expense categorization")
+                
+                if total_expenses > 1000:
+                    recommendations.append("Review high-value transactions for proper business categorization")
+            
+            return {
+                'insights': insights,
+                'top_categories': top_categories,
+                'recommendations': recommendations,
+                'business_breakdown': business_breakdown if transactions else {},
+                'total_transactions': len(transactions)
+            }
+            
+        except Exception as e:
+            logger.error(f"Error analyzing expense patterns: {e}")
+            return {
+                'insights': ['Unable to analyze patterns at this time'],
+                'top_categories': ['Unknown'],
+                'recommendations': ['Connect your accounts to get personalized insights']
+            }
+
+    def analyze_user_message(self, message: str) -> Dict:
+        """
+        Analyze user message and generate contextual response
+        """
+        try:
+            message_lower = message.lower()
+            
+            # Intent analysis
+            if any(word in message_lower for word in ['report', 'summary', 'analysis']):
+                response = "I can help you generate expense reports and summaries. Would you like me to analyze your recent transactions or create a specific business report?"
+                suggestions = ['Generate Monthly Report', 'Show Business Breakdown', 'Create Tax Summary']
+            
+            elif any(word in message_lower for word in ['receipt', 'upload', 'scan']):
+                response = "I can help you with receipt management. You can upload receipts, scan emails, or search Google Photos for receipt images."
+                suggestions = ['Upload Receipt', 'Scan Gmail', 'Search Photos', 'View Unmatched']
+            
+            elif any(word in message_lower for word in ['export', 'sheets', 'download']):
+                response = "I can export your data to Google Sheets or generate downloadable reports. What format would you prefer?"
+                suggestions = ['Export to Sheets', 'Download CSV', 'Generate PDF', 'Email Report']
+            
+            elif any(word in message_lower for word in ['help', 'how', 'what']):
+                response = "I'm Brian's AI Assistant! I can help with expense categorization, receipt matching, business reports, and data export. What would you like to know?"
+                suggestions = ['Show Recent Expenses', 'Generate Report', 'Upload Receipts', 'Export Data']
+            
+            elif any(word in message_lower for word in ['down home', 'mcr', 'business']):
+                response = "I can help you separate and analyze expenses for Down Home Media and Music City Rodeo. Would you like to see business-specific reports?"
+                suggestions = ['Down Home Report', 'MCR Report', 'Business Comparison', 'Tax Summary']
+            
+            else:
+                response = f"I understand you're asking about: '{message}'. I'm here to help with your expense management. What would you like me to analyze or help you with?"
+                suggestions = ['Analyze Expenses', 'Generate Report', 'Upload Receipts', 'Export Data']
+            
+            return {
+                'response': response,
+                'suggestions': suggestions,
+                'intent': 'general_help'
+            }
+            
+        except Exception as e:
+            logger.error(f"Error analyzing user message: {e}")
+            return {
+                'response': "I'm having trouble understanding your request. I'm here to help with expense management - try asking about reports, receipts, or data export.",
+                'suggestions': ['Show Recent Expenses', 'Generate Report', 'Upload Receipts'],
+                'intent': 'fallback'
+            }
+
 def main():
     """Test the Brian Financial Wizard"""
     wizard = BrianFinancialWizard()
