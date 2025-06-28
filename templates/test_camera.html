@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Module Test</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-button {
+            background: #00ff88;
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            margin: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .test-button:hover {
+            background: #00cc6a;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success { background: #00ff88; color: #000; }
+        .error { background: #ff4444; color: white; }
+        .info { background: #4444ff; color: white; }
+        #console-output {
+            background: #000;
+            color: #00ff88;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🎥 TallyUps Camera Module Test</h1>
+        
+        <div class="status info">
+            <strong>Instructions:</strong> Click the buttons below to test the camera module functionality.
+        </div>
+        
+        <button class="test-button" onclick="testCameraInit()">
+            <i class="fas fa-camera"></i> Test Camera Initialization
+        </button>
+        
+        <button class="test-button" onclick="testCameraToggle()">
+            <i class="fas fa-toggle-on"></i> Test Camera Toggle
+        </button>
+        
+        <button class="test-button" onclick="testTallyUpsObject()">
+            <i class="fas fa-code"></i> Test TallyUps Object
+        </button>
+        
+        <button class="test-button" onclick="clearConsole()">
+            <i class="fas fa-trash"></i> Clear Console
+        </button>
+        
+        <div id="console-output">
+            <div>Console output will appear here...</div>
+        </div>
+    </div>
+
+    <!-- Camera Modal Container -->
+    <div id="camera-modal-container"></div>
+
+    <!-- Load the enhanced dashboard script -->
+    <script src="{{ url_for('static', filename='enhanced_dashboard.js') }}"></script>
+    
+    <script>
+        // Override console.log to show in our output
+        const originalLog = console.log;
+        const originalError = console.error;
+        const consoleOutput = document.getElementById('console-output');
+        
+        function addToConsole(message, type = 'log') {
+            const div = document.createElement('div');
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            div.style.color = type === 'error' ? '#ff4444' : '#00ff88';
+            consoleOutput.appendChild(div);
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToConsole(args.join(' '));
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToConsole(args.join(' '), 'error');
+        };
+        
+        function testCameraInit() {
+            console.log('🧪 Testing camera initialization...');
+            if (typeof TallyUps !== 'undefined' && TallyUps.camera) {
+                console.log('✅ TallyUps.camera found');
+                TallyUps.camera.init().then(() => {
+                    console.log('✅ Camera initialization successful');
+                }).catch((error) => {
+                    console.error('❌ Camera initialization failed:', error);
+                });
+            } else {
+                console.error('❌ TallyUps.camera not found');
+                console.log('TallyUps object:', TallyUps);
+            }
+        }
+        
+        function testCameraToggle() {
+            console.log('🧪 Testing camera toggle...');
+            if (typeof TallyUps !== 'undefined' && TallyUps.camera && TallyUps.camera.toggle) {
+                console.log('✅ TallyUps.camera.toggle found, calling...');
+                TallyUps.camera.toggle();
+            } else {
+                console.error('❌ TallyUps.camera.toggle not found');
+            }
+        }
+        
+        function testTallyUpsObject() {
+            console.log('🧪 Testing TallyUps object...');
+            console.log('typeof TallyUps:', typeof TallyUps);
+            console.log('TallyUps object:', TallyUps);
+            if (TallyUps) {
+                console.log('TallyUps.camera:', TallyUps.camera);
+                console.log('TallyUps.modules:', TallyUps.modules);
+            }
+        }
+        
+        function clearConsole() {
+            consoleOutput.innerHTML = '<div>Console cleared...</div>';
+        }
+        
+        // Auto-test on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Camera test page loaded');
+            setTimeout(() => {
+                testTallyUpsObject();
+            }, 1000);
+        });
+    </script>
+</body>
+</html> 

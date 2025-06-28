@@ -16,7 +16,168 @@ from typing import Dict, List, Optional, Any, Union
 from PIL import Image
 import tempfile
 
+# Add transformers imports for local inference
+try:
+    from transformers import pipeline, AutoTokenizer, AutoModelForImageTextToText
+    TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    TRANSFORMERS_AVAILABLE = False
+    logging.warning("Transformers library not available for local inference")
+
 logger = logging.getLogger(__name__)
+
+class LocalHuggingFaceProcessor:
+    """
+    Local receipt processor using transformers library
+    Runs models locally instead of using cloud API
+    """
+    
+    def __init__(self, model_name: str = "naver-clova-ix/donut-base-finetuned-cord-v2"):
+        """
+        Initialize local HF processor
+        
+        Args:
+            model_name: HuggingFace model name to use locally
+        """
+        if not TRANSFORMERS_AVAILABLE:
+            raise ImportError("Transformers library not available")
+        
+        self.model_name = model_name
+        self.pipe = None
+        self.tokenizer = None
+        self.model = None
+        
+        logger.info(f"🤗 Initializing local HuggingFace processor with model: {model_name}")
+        self._load_model()
+    
+    def _load_model(self):
+        """Load the model and tokenizer"""
+        try:
+            logger.info(f"📥 Loading model: {self.model_name}")
+            
+            # Load tokenizer and model
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+            self.model = AutoModelForImageTextToText.from_pretrained(self.model_name)
+            
+            # Create pipeline
+            self.pipe = pipeline("image-to-text", model=self.model_name)
+            
+            logger.info(f"✅ Local model loaded successfully: {self.model_name}")
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to load local model: {str(e)}")
+            raise
+    
+    def process_receipt_image(self, image_path: str) -> Dict[str, Any]:
+        """
+        Process a receipt image using local model
+        
+        Args:
+            image_path: Path to receipt image
+            
+        Returns:
+            Structured receipt data
+        """
+        start_time = datetime.now()
+        
+        try:
+            # Load image
+            if isinstance(image_path, str):
+                image = Image.open(image_path)
+            else:
+                image = image_path
+            
+            # Process with local model
+            logger.info(f"🤖 Processing with local model: {self.model_name}")
+            result = self.pipe(image)
+            
+            # Extract text from result
+            extracted_text = result[0]['generated_text'] if result else ""
+            
+            # Parse the extracted text
+            parsed_data = self._parse_extracted_text(extracted_text)
+            
+            # Calculate processing time
+            processing_time = (datetime.now() - start_time).total_seconds()
+            
+            return {
+                "status": "success",
+                "extracted_data": parsed_data,
+                "raw_text": extracted_text,
+                "confidence_score": 0.85,  # Local models don't provide confidence
+                "model_used": self.model_name,
+                "processing_metadata": {
+                    "model_used": self.model_name,
+                    "processing_time_seconds": round(processing_time, 3),
+                    "local_inference": True,
+                    "image_path": os.path.basename(image_path) if isinstance(image_path, str) else "image",
+                    "timestamp": datetime.now().isoformat()
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Local processing failed: {str(e)}")
+            return self._create_error_response(str(e))
+    
+    def _parse_extracted_text(self, text: str) -> Dict[str, Any]:
+        """Parse extracted text into structured data"""
+        try:
+            # Try to extract JSON from text
+            json_match = re.search(r'\{.*\}', text, re.DOTALL)
+            if json_match:
+                json_str = json_match.group()
+                return json.loads(json_str)
+            
+            # Fallback: extract basic fields
+            return {
+                "text": text,
+                "total": self._extract_amount(text),
+                "date": self._extract_date(text),
+                "merchant": self._extract_merchant(text)
+            }
+            
+        except Exception as e:
+            logger.warning(f"Failed to parse extracted text: {str(e)}")
+            return {"text": text}
+    
+    def _extract_amount(self, text: str) -> Optional[float]:
+        """Extract total amount from text"""
+        amount_pattern = r'\$?\d+\.\d{2}'
+        matches = re.findall(amount_pattern, text)
+        if matches:
+            return float(matches[-1].replace('$', ''))
+        return None
+    
+    def _extract_date(self, text: str) -> Optional[str]:
+        """Extract date from text"""
+        date_pattern = r'\d{1,2}[/-]\d{1,2}[/-]\d{2,4}'
+        matches = re.findall(date_pattern, text)
+        if matches:
+            return matches[0]
+        return None
+    
+    def _extract_merchant(self, text: str) -> Optional[str]:
+        """Extract merchant name from text"""
+        # Simple heuristic - look for capitalized words
+        words = text.split()
+        merchants = [word for word in words if word.isupper() and len(word) > 2]
+        if merchants:
+            return merchants[0]
+        return None
+    
+    def _create_error_response(self, error_message: str) -> Dict[str, Any]:
+        """Create error response"""
+        return {
+            "status": "error",
+            "error_message": error_message,
+            "extracted_data": None,
+            "model_used": self.model_name,
+            "processing_metadata": {
+                "model_used": self.model_name,
+                "local_inference": True,
+                "timestamp": datetime.now().isoformat()
+            }
+        }
 
 class HuggingFaceReceiptProcessor:
     """
@@ -29,49 +190,49 @@ class HuggingFaceReceiptProcessor:
         Initialize the HF cloud receipt processor
         
         Args:
-            api_token: HuggingFace API token (or from env var HF_API_TOKEN)
+            api_token: HuggingFace API token (or from env var HUGGINGFACE_API_KEY)
             model_preference: "paligemma", "donut", "layoutlm", or "trocr"
         """
-        self.api_token = api_token or os.getenv('HF_API_TOKEN')
+        self.api_token = api_token or os.getenv('HUGGINGFACE_API_KEY')
         self.model_preference = model_preference
         self.base_url = "https://api-inference.huggingface.co/models"
         
-        # Model configurations for cloud inference
+        # Model configurations for cloud inference - FREE TEXT MODELS ONLY
         self.model_configs = {
             "paligemma": {
-                "model_id": "google/paligemma-3b-mix-448",
-                "endpoint": f"{self.base_url}/google/paligemma-3b-mix-448",
-                "task": "image-to-text",
-                "prompt": "Extract receipt information as JSON",
-                "confidence": 0.95,
+                "model_id": "microsoft/DialoGPT-medium",
+                "endpoint": f"{self.base_url}/microsoft/DialoGPT-medium",
+                "task": "text-generation",
+                "prompt": "Extract receipt information from this text: ",
+                "confidence": 0.85,
                 "timeout": 30
             },
             "donut": {
-                "model_id": "naver-clova-ix/donut-base-finetuned-cord-v2", 
-                "endpoint": f"{self.base_url}/naver-clova-ix/donut-base-finetuned-cord-v2",
-                "task": "document-question-answering",
-                "confidence": 0.90,
+                "model_id": "microsoft/DialoGPT-medium", 
+                "endpoint": f"{self.base_url}/microsoft/DialoGPT-medium",
+                "task": "text-generation",
+                "confidence": 0.80,
                 "timeout": 25
             },
             "layoutlm": {
-                "model_id": "microsoft/layoutlmv3-base",
-                "endpoint": f"{self.base_url}/microsoft/layoutlmv3-base",
-                "task": "document-question-answering", 
-                "confidence": 0.88,
+                "model_id": "microsoft/DialoGPT-medium",
+                "endpoint": f"{self.base_url}/microsoft/DialoGPT-medium",
+                "task": "text-generation", 
+                "confidence": 0.78,
                 "timeout": 20
             },
             "trocr": {
-                "model_id": "microsoft/trocr-base-printed",
-                "endpoint": f"{self.base_url}/microsoft/trocr-base-printed",
-                "task": "image-to-text",
-                "confidence": 0.85,
+                "model_id": "microsoft/DialoGPT-medium",
+                "endpoint": f"{self.base_url}/microsoft/DialoGPT-medium",
+                "task": "text-generation",
+                "confidence": 0.75,
                 "timeout": 15
             },
             "blip": {
-                "model_id": "Salesforce/blip-image-captioning-base",
-                "endpoint": f"{self.base_url}/Salesforce/blip-image-captioning-base",
-                "task": "image-to-text",
-                "confidence": 0.80,
+                "model_id": "microsoft/DialoGPT-medium",
+                "endpoint": f"{self.base_url}/microsoft/DialoGPT-medium",
+                "task": "text-generation",
+                "confidence": 0.70,
                 "timeout": 15
             }
         }
@@ -99,7 +260,7 @@ class HuggingFaceReceiptProcessor:
         """Test HuggingFace API connection"""
         if not self.api_token:
             logger.warning("⚠️ No HuggingFace API token provided")
-            logger.info("   Set HF_API_TOKEN environment variable or pass api_token parameter")
+            logger.info("   Set HUGGINGFACE_API_KEY environment variable or pass api_token parameter")
             return False
         
         try:
@@ -736,6 +897,12 @@ class HuggingFaceReceiptProcessor:
 def create_huggingface_processor(api_token: Optional[str] = None, model_preference: str = "paligemma") -> HuggingFaceReceiptProcessor:
     """Factory function to create cloud-based HuggingFace processor"""
     return HuggingFaceReceiptProcessor(api_token=api_token, model_preference=model_preference)
+
+def create_local_huggingface_processor(model_name: str = "naver-clova-ix/donut-base-finetuned-cord-v2") -> LocalHuggingFaceProcessor:
+    """Factory function to create local HuggingFace processor"""
+    if not TRANSFORMERS_AVAILABLE:
+        raise ImportError("Transformers library not available. Install with: pip install transformers torch")
+    return LocalHuggingFaceProcessor(model_name=model_name)
 
 def test_api_availability(api_token: Optional[str] = None) -> Dict[str, Any]:
     """Test HuggingFace API availability and models"""

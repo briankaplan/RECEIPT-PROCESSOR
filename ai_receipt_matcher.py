@@ -56,17 +56,42 @@ class IntegratedAIReceiptMatcher:
             'subscription_boost': 0.15     # Boost for subscription patterns
         }
         
-        # Your merchant normalization patterns
+        # Enhanced merchant normalization patterns with common variations
         self.merchant_patterns = {
             r'TST\*': '',                    # Remove TST* prefix
             r'SQ \*': '',                    # Remove SQ * prefix  
             r'GOOGLE \*GSUITE_': 'GOOGLE WORKSPACE ',
             r'AMAZON\.COM': 'AMAZON',
+            r'AMZN': 'AMAZON',              # Amazon variations
+            r'AMAZON MARKETPLACE': 'AMAZON',
             r'CLAUDE\.AI': 'ANTHROPIC CLAUDE',
             r'MIDJOURNEY INC\.': 'MIDJOURNEY',
             r'EXPENSIFY\s+INC\.': 'EXPENSIFY',
+            r'SH NASHVILLE': 'SOHO HOUSE',  # Soho House variations
+            r'SOHO HOUSE NASHVILLE': 'SOHO HOUSE',
+            r'CAMBRIA HOTEL NASHVILLE': 'CAMBRIA HOTEL',
+            r'CAMBRIA HOTEL NASHVILLE D': 'CAMBRIA HOTEL',
+            r'HIVE CO': 'HIVE CO',
+            r'HIVE CO\.': 'HIVE CO',
+            r'BESTBUY\.COM': 'BEST BUY',
+            r'BEST BUY': 'BEST BUY',
             r'[0-9]+$': '',                  # Remove trailing numbers
             r'\s+': ' '                      # Normalize whitespace
+        }
+        
+        # Merchant name similarity mappings for fuzzy matching
+        self.merchant_similarities = {
+            'SOHO HOUSE': ['SH NASHVILLE', 'SOHO HOUSE NASHVILLE', 'SOHO'],
+            'AMAZON': ['AMZN', 'AMAZON MARKETPLACE', 'AMAZON.COM'],
+            'GOOGLE WORKSPACE': ['GOOGLE *GSUITE', 'GOOGLE GSUITE', 'GOOGLE WORKSPACE'],
+            'CAMBRIA HOTEL': ['CAMBRIA HOTEL NASHVILLE', 'CAMBRIA HOTEL NASHVILLE D', 'CAMBRIA'],
+            'EXPENSIFY': ['EXPENSIFY INC', 'EXPENSIFY INC.'],
+            'CLAUDE.AI': ['ANTHROPIC CLAUDE', 'CLAUDE', 'ANTHROPIC'],
+            'MIDJOURNEY': ['MIDJOURNEY INC', 'MIDJOURNEY INC.'],
+            'BEST BUY': ['BESTBUY.COM', 'BESTBUY', 'BEST BUY'],
+            'HIVE CO': ['HIVE CO.', 'HIVE'],
+            'TST': ['TST*', 'TOAST', 'TST*GREEN HILLS GRILLE'],
+            'SQUARE': ['SQ *', 'SQUARE', 'SQ *ROSEANNA']
         }
         
         # Subscription patterns based on actual data
@@ -78,7 +103,7 @@ class IntegratedAIReceiptMatcher:
             ]
         }
         
-        logger.info("🤖 Integrated AI Receipt Matcher initialized")
+        logger.info("🤖 Enhanced AI Receipt Matcher initialized with merchant similarity mappings")
 
     def comprehensive_receipt_matching(self, transaction_batch: List[Dict]) -> Dict:
         """
@@ -292,36 +317,67 @@ class IntegratedAIReceiptMatcher:
             return 0
         
         # Normalize
-        m1 = merchant1.lower().strip()
-        m2 = merchant2.lower().strip()
+        m1 = merchant1.upper().strip()
+        m2 = merchant2.upper().strip()
         
         # Exact match
         if m1 == m2:
             return 1.0
         
+        # Check merchant similarity mappings first
+        for canonical_name, variations in self.merchant_similarities.items():
+            if m1 == canonical_name and m2 in variations:
+                return 0.95
+            if m2 == canonical_name and m1 in variations:
+                return 0.95
+            if m1 in variations and m2 in variations:
+                return 0.90
+        
+        # Apply merchant normalization patterns
+        m1_normalized = m1
+        m2_normalized = m2
+        
+        for pattern, replacement in self.merchant_patterns.items():
+            m1_normalized = re.sub(pattern, replacement, m1_normalized)
+            m2_normalized = re.sub(pattern, replacement, m2_normalized)
+        
+        # Check normalized match
+        if m1_normalized == m2_normalized:
+            return 0.85
+        
         # Clean common business suffixes
-        suffixes = [' inc', ' llc', ' corp', ' co', ' ltd', ' limited']
+        suffixes = [' INC', ' LLC', ' CORP', ' CO', ' LTD', ' LIMITED']
         for suffix in suffixes:
-            m1 = m1.replace(suffix, '')
-            m2 = m2.replace(suffix, '')
+            m1_normalized = m1_normalized.replace(suffix, '')
+            m2_normalized = m2_normalized.replace(suffix, '')
+        
+        # Check normalized match after suffix removal
+        if m1_normalized == m2_normalized:
+            return 0.80
         
         # Substring matching
-        if m1 in m2 or m2 in m1:
-            return 0.9
+        if m1_normalized in m2_normalized or m2_normalized in m1_normalized:
+            return 0.75
         
         # Sequence matching
-        sequence_ratio = SequenceMatcher(None, m1, m2).ratio()
+        sequence_ratio = SequenceMatcher(None, m1_normalized, m2_normalized).ratio()
         if sequence_ratio > 0.8:
             return sequence_ratio
         
         # Word-based matching
-        words1 = set(m1.split())
-        words2 = set(m2.split())
+        words1 = set(m1_normalized.split())
+        words2 = set(m2_normalized.split())
         
         if words1 and words2:
             intersection = words1 & words2
             union = words1 | words2
-            return len(intersection) / len(union)
+            jaccard_similarity = len(intersection) / len(union)
+            
+            # Boost for significant word overlap
+            if len(intersection) >= 2:
+                return max(jaccard_similarity, 0.70)
+            elif len(intersection) >= 1:
+                return max(jaccard_similarity, 0.60)
         
         return sequence_ratio
 

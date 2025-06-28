@@ -3,564 +3,549 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Receipt Scanner - TransactionPro 2026</title>
+    <title>Receipt Scanner - FinanceFlow</title>
     
     <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#ff6b35">
-    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#00ff88">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="TransactionPro 2026">
+    <meta name="apple-mobile-web-app-title" content="Receipt Scanner">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="description" content="Professional receipt scanner with AI processing">
     
-    <!-- PWA Manifest -->
+    <!-- PWA Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
     <link rel="manifest" href="/static/manifest.json">
-    <link rel="apple-touch-icon" href="/static/generated-icon.png">
     
-    <!-- CDN Links -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    
-    <!-- Service Worker Registration -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/static/sw.js')
-                    .then(registration => {
-                        console.log('✅ Service Worker registered:', registration);
-                    })
-                    .catch(error => {
-                        console.log('❌ Service Worker registration failed:', error);
-                    });
-            });
-        }
-    </script>
+    <!-- PWA Splash Screen -->
+    <link rel="apple-touch-startup-image" href="/static/splash.png">
     
     <style>
-        :root {
-            /* iPhone-Style Design System */
-            --bg-primary: #000000;
-            --bg-secondary: #1c1c1e;
-            --bg-card: #2c2c2e;
-            --bg-glass: rgba(28, 28, 30, 0.95);
-            --text-primary: #ffffff;
-            --text-secondary: #ebebf5;
-            --text-tertiary: #ebebf560;
-            --accent-blue: #007AFF;
-            --accent-green: #34C759;
-            --accent-orange: #FF9500;
-            --accent-red: #FF3B30;
-            --accent-purple: #AF52DE;
-            --border-light: rgba(235, 235, 245, 0.13);
-            --shadow-card: 0 10px 40px rgba(0, 0, 0, 0.3);
-            --shadow-button: 0 4px 20px rgba(0, 122, 255, 0.3);
-            
-            /* Typography */
-            --font-weight-light: 300;
-            --font-weight-regular: 400;
-            --font-weight-medium: 500;
-            --font-weight-semibold: 600;
-            --font-weight-bold: 700;
-            --font-weight-heavy: 800;
-            
-            /* Borders */
-            --border-radius-small: 8px;
-            --border-radius-medium: 12px;
-            --border-radius-large: 20px;
-            --border-radius-xl: 28px;
-            
-            /* Transitions */
-            --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
-            font-weight: var(--font-weight-regular);
-            line-height: 1.5;
-            overflow-x: hidden;
-            min-height: 100vh;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            /* PWA safe area support */
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
         }
 
-        /* Unified App Header */
-        .app-header {
-            background: var(--bg-glass);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--border-light);
-            padding: 1rem 2rem;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 2rem;
-        }
-
-        .app-logo {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            text-decoration: none;
-        }
-
-        .app-logo i {
-            font-size: 2rem;
-            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 1.5rem;
-            align-items: center;
-        }
-
-        .nav-link {
-            color: var(--text-secondary);
-            text-decoration: none;
-            padding: 0.5rem 1rem;
-            border-radius: var(--border-radius-medium);
-            transition: var(--transition-smooth);
-            font-weight: 500;
-        }
-
-        .nav-link:hover,
-        .nav-link.active {
-            color: var(--text-primary);
-            background: var(--bg-glass);
-        }
-
-        .header-actions {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-        }
-
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: var(--bg-glass);
-            border: 1px solid var(--border-light);
-            border-radius: var(--border-radius-medium);
-            color: var(--accent-green);
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            background: var(--accent-green);
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        /* Global Notification System */
-        .notification-container {
-            position: fixed;
-            top: 100px;
-            right: 2rem;
-            z-index: 1000;
+        /* Full screen scanner container */
+        .scanner-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
             display: flex;
             flex-direction: column;
-            gap: 1rem;
         }
 
-        .notification {
-            background: var(--bg-card);
-            border: 1px solid var(--border-light);
-            border-radius: var(--border-radius-medium);
-            padding: 1rem 1.5rem;
-            color: var(--text-primary);
-            box-shadow: var(--shadow-card);
-            backdrop-filter: blur(20px);
-            transform: translateX(100%);
-            transition: var(--transition-smooth);
-            max-width: 400px;
-            position: relative;
-        }
-
-        .notification.show {
-            transform: translateX(0);
-        }
-
-        .notification.success {
-            border-color: var(--accent-green);
-            background: rgba(52, 199, 89, 0.1);
-        }
-
-        .notification.error {
-            border-color: var(--accent-red);
-            background: rgba(255, 59, 48, 0.1);
-        }
-
-        .notification.warning {
-            border-color: var(--accent-orange);
-            background: rgba(255, 149, 0, 0.1);
-        }
-
-        .notification-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.5rem;
-        }
-
-        .notification-title {
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .notification-close {
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            padding: 0.25rem;
-            border-radius: 4px;
-            transition: var(--transition-smooth);
-        }
-
-        .notification-close:hover {
-            color: var(--text-primary);
-            background: var(--bg-glass);
-        }
-
-        .notification-message {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-        }
-
-        /* iPhone-Style Header */
-        .scanner-header {
-            position: sticky;
-            top: 80px;
-            z-index: 100;
-            background: var(--bg-glass);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--border-light);
-            padding: 20px 24px 16px;
-        }
-
-        .scanner-header-content {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            max-width: 428px;
-            margin: 0 auto;
-        }
-
-        .back-button {
-            background: none;
-            border: none;
-            color: var(--accent-blue);
-            font-size: 17px;
-            font-weight: var(--font-weight-regular);
-            cursor: pointer;
-            padding: 8px;
-            margin: -8px;
-            transition: opacity 0.2s ease;
-        }
-
-        .back-button:hover {
-            opacity: 0.6;
-        }
-
-        .scanner-title {
-            font-size: 17px;
-            font-weight: var(--font-weight-semibold);
-            color: var(--text-primary);
-        }
-
-        .scanner-action {
-            width: 44px;
-            height: 44px;
-            background: var(--accent-blue);
-            border: none;
-            border-radius: 22px;
-            color: white;
-            font-size: 16px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-            box-shadow: var(--shadow-button);
-        }
-
-        .scanner-action:hover {
-            transform: scale(1.05);
-        }
-
-        /* Main Scanner Interface */
-        .scanner-container {
-            max-width: 428px;
-            margin: 0 auto;
-            padding: 0 24px 40px;
-        }
-
-        /* Camera Viewfinder */
-        .camera-viewfinder {
-            position: relative;
-            width: 100%;
-            height: 400px;
-            background: var(--bg-secondary);
-            border-radius: var(--border-radius-large);
-            margin: 24px 0;
-            overflow: hidden;
-            box-shadow: var(--shadow-card);
-        }
-
-        .viewfinder-video {
+        /* Video preview */
+        #video {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            border-radius: var(--border-radius-large);
+            background: #000;
         }
 
-        .viewfinder-overlay {
+        /* Overlay guides */
+        .camera-overlay {
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: opacity 0.3s ease;
-        }
-
-        .viewfinder-overlay.hidden {
-            opacity: 0;
             pointer-events: none;
+            z-index: 10;
         }
 
-        /* Scanning Frame */
-        .scan-frame {
+        /* Receipt alignment guide */
+        .receipt-guide {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             width: 280px;
-            height: 200px;
-            border: 2px solid var(--accent-green);
-            border-radius: var(--border-radius-medium);
-            position: relative;
-            background: rgba(52, 199, 89, 0.1);
-            animation: pulse 2s infinite;
+            height: 400px;
+            border: 3px solid #00ff88;
+            border-radius: 12px;
+            background: rgba(0, 255, 136, 0.1);
+            box-shadow: 
+                0 0 0 2px rgba(0, 255, 136, 0.3),
+                0 0 20px rgba(0, 255, 136, 0.4),
+                inset 0 0 20px rgba(0, 255, 136, 0.1);
+            animation: pulse 2s ease-in-out infinite;
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 0.6; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.02); }
-        }
-
-        .scan-frame::before,
-        .scan-frame::after {
-            content: '';
+        /* Corner guides */
+        .corner-guide {
             position: absolute;
             width: 20px;
             height: 20px;
-            border: 3px solid var(--accent-green);
+            border: 3px solid #00ff88;
         }
 
-        .scan-frame::before {
+        .corner-guide.top-left {
             top: -3px;
             left: -3px;
             border-right: none;
             border-bottom: none;
+            border-top-left-radius: 12px;
         }
 
-        .scan-frame::after {
+        .corner-guide.top-right {
+            top: -3px;
+            right: -3px;
+            border-left: none;
+            border-bottom: none;
+            border-top-right-radius: 12px;
+        }
+
+        .corner-guide.bottom-left {
+            bottom: -3px;
+            left: -3px;
+            border-right: none;
+            border-top: none;
+            border-bottom-left-radius: 12px;
+        }
+
+        .corner-guide.bottom-right {
             bottom: -3px;
             right: -3px;
             border-left: none;
             border-top: none;
+            border-bottom-right-radius: 12px;
         }
 
-        /* Camera Placeholder */
-        .camera-placeholder {
+        /* Center crosshair */
+        .crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+        }
+
+        .crosshair::before,
+        .crosshair::after {
+            content: '';
+            position: absolute;
+            background: #00ff88;
+            opacity: 0.8;
+        }
+
+        .crosshair::before {
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            transform: translateY(-50%);
+        }
+
+        .crosshair::after {
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            transform: translateX(-50%);
+        }
+
+        /* Top status bar */
+        .status-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%);
             display: flex;
-            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: var(--text-tertiary);
-            text-align: center;
-            padding: 40px;
+            justify-content: space-between;
+            padding: 20px;
+            z-index: 20;
+            /* PWA safe area support */
+            padding-top: calc(20px + env(safe-area-inset-top));
         }
 
-        .camera-placeholder i {
-            font-size: 48px;
-            margin-bottom: 16px;
-            color: var(--text-secondary);
-        }
-
-        .camera-placeholder h3 {
-            font-size: 20px;
-            font-weight: var(--font-weight-semibold);
-            margin-bottom: 8px;
-            color: var(--text-primary);
-        }
-
-        .camera-placeholder p {
+        .status-text {
+            color: #00ff88;
             font-size: 16px;
-            line-height: 1.4;
-            color: var(--text-secondary);
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
 
-        /* Control Panel */
-        .control-panel {
-            background: var(--bg-card);
-            border-radius: var(--border-radius-large);
-            padding: 24px;
-            margin-bottom: 24px;
-            border: 1px solid var(--border-light);
-        }
-
-        .control-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-
-        .control-button {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-light);
-            border-radius: var(--border-radius-medium);
-            padding: 20px 16px;
-            color: var(--text-primary);
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .control-button:hover,
-        .control-button.active {
-            background: var(--accent-blue);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 122, 255, 0.3);
-        }
-
-        .control-button i {
-            font-size: 20px;
-        }
-
-        .control-button span {
-            font-size: 13px;
-            font-weight: var(--font-weight-medium);
-        }
-
-        /* Capture Button */
-        .capture-section {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 32px 0;
-        }
-
-        .capture-button {
-            width: 84px;
-            height: 84px;
-            background: var(--accent-green);
-            border: 6px solid var(--bg-primary);
+        .close-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
             border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            color: #fff;
+            font-size: 18px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.1);
+        }
+
+        /* Bottom controls */
+        .controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 140px;
+            background: linear-gradient(0deg, rgba(0,0,0,0.9) 0%, transparent 100%);
             display: flex;
             align-items: center;
             justify-content: center;
+            z-index: 20;
+            padding: 20px;
+            /* PWA safe area support */
+            padding-bottom: calc(20px + env(safe-area-inset-bottom));
+        }
+
+        /* Capture button */
+        .capture-btn {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #00ff88, #00cc66);
+            border: 4px solid #fff;
+            box-shadow: 
+                0 0 0 4px rgba(0, 255, 136, 0.3),
+                0 8px 32px rgba(0, 255, 136, 0.4);
             cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 8px 30px rgba(52, 199, 89, 0.4);
+            transition: all 0.3s ease;
             position: relative;
+            margin: 0 40px;
         }
 
-        .capture-button:hover {
+        .capture-btn:hover {
             transform: scale(1.1);
-            box-shadow: 0 12px 40px rgba(52, 199, 89, 0.6);
+            box-shadow: 
+                0 0 0 6px rgba(0, 255, 136, 0.4),
+                0 12px 48px rgba(0, 255, 136, 0.6);
         }
 
-        .capture-button:active {
+        .capture-btn:active {
             transform: scale(0.95);
         }
 
-        .capture-button i {
-            font-size: 32px;
-            color: white;
+        .capture-btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 24px;
+            height: 24px;
+            background: #fff;
+            border-radius: 4px;
         }
 
-        /* Processing Animation */
+        /* Side buttons */
+        .side-btn {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .side-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.1);
+        }
+
+        /* Flash toggle */
+        .flash-btn {
+            position: absolute;
+            top: 20px;
+            right: 80px;
+            background: rgba(0,0,0,0.6);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 30px;
+            padding: 8px 16px;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .flash-btn.active {
+            background: rgba(255, 255, 0, 0.8);
+            color: #000;
+            border-color: rgba(255, 255, 0, 0.8);
+        }
+
+        /* Instruction overlay */
+        .instructions {
+            position: absolute;
+            bottom: 160px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            padding: 12px 24px;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #00ff88;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            z-index: 15;
+            animation: fadeInUp 0.5s ease;
+        }
+
+        /* Processing overlay */
         .processing-overlay {
-            position: fixed;
+            position: absolute;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            display: flex;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            z-index: 1000;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-        }
-
-        .processing-overlay.show {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .processing-content {
-            background: var(--bg-card);
-            border-radius: var(--border-radius-large);
-            padding: 40px;
-            text-align: center;
-            max-width: 300px;
-            box-shadow: var(--shadow-card);
+            z-index: 30;
         }
 
         .processing-spinner {
             width: 60px;
             height: 60px;
-            border: 4px solid var(--border-light);
-            border-top: 4px solid var(--accent-blue);
+            border: 4px solid rgba(0, 255, 136, 0.3);
+            border-left: 4px solid #00ff88;
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin: 0 auto 24px;
+            margin-bottom: 20px;
+        }
+
+        .processing-text {
+            color: #00ff88;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .processing-subtext {
+            color: rgba(255,255,255,0.7);
+            font-size: 14px;
+        }
+
+        /* Success overlay */
+        .success-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 30;
+        }
+
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #00ff88;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            animation: successPulse 0.6s ease;
+        }
+
+        .success-icon::after {
+            content: '✓';
+            color: #000;
+            font-size: 36px;
+            font-weight: bold;
+        }
+
+        .success-text {
+            color: #00ff88;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .success-details {
+            color: rgba(255,255,255,0.8);
+            font-size: 16px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .success-actions {
+            display: flex;
+            gap: 16px;
+        }
+
+        .action-btn {
+            background: linear-gradient(145deg, #00ff88, #00cc66);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 24px;
+            color: #000;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn.secondary {
+            background: rgba(255,255,255,0.2);
+            color: #fff;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 255, 136, 0.4);
+        }
+
+        /* Quality indicators */
+        .quality-indicators {
+            position: absolute;
+            top: 100px;
+            left: 20px;
+            background: rgba(0,0,0,0.6);
+            border-radius: 12px;
+            padding: 12px;
+            backdrop-filter: blur(10px);
+            z-index: 15;
+        }
+
+        .quality-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .quality-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .quality-icon {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .quality-icon.good { background: #00ff88; }
+        .quality-icon.warning { background: #ffaa00; }
+        .quality-icon.error { background: #ff4444; }
+
+        /* PWA Install Prompt */
+        .install-prompt {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(145deg, #00ff88, #00cc66);
+            color: #000;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 8px 24px rgba(0, 255, 136, 0.4);
+            animation: slideUp 0.3s ease;
+        }
+
+        .install-prompt:hover {
+            transform: translateX(-50%) translateY(-2px);
+            box-shadow: 0 12px 32px rgba(0, 255, 136, 0.6);
+        }
+
+        /* Offline indicator */
+        .offline-indicator {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ff4444;
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 1000;
+            display: none;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 480px) {
+            .receipt-guide {
+                width: 240px;
+                height: 340px;
+            }
+            
+            .capture-btn {
+                width: 70px;
+                height: 70px;
+            }
+            
+            .side-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+        }
+
+        /* PWA-style status bar */
+        @media (display-mode: standalone) {
+            .status-bar {
+                padding-top: calc(20px + env(safe-area-inset-top));
+            }
+            
+            .controls {
+                padding-bottom: calc(20px + env(safe-area-inset-bottom));
+            }
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { opacity: 0.8; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.02); }
         }
 
         @keyframes spin {
@@ -568,643 +553,738 @@
             100% { transform: rotate(360deg); }
         }
 
-        .processing-text {
-            font-size: 18px;
-            font-weight: var(--font-weight-semibold);
-            margin-bottom: 8px;
-        }
-
-        .processing-detail {
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-
-        /* Result Preview */
-        .result-preview {
-            background: var(--bg-card);
-            border-radius: var(--border-radius-large);
-            padding: 24px;
-            margin-top: 24px;
-            border: 1px solid var(--border-light);
-            opacity: 0;
-            transform: translateY(20px);
-            transition: all 0.3s ease;
-        }
-
-        .result-preview.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .result-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 16px;
-        }
-
-        .result-header i {
-            font-size: 24px;
-            color: var(--accent-green);
-        }
-
-        .result-header h3 {
-            font-size: 18px;
-            font-weight: var(--font-weight-semibold);
-        }
-
-        .result-data {
-            display: grid;
-            gap: 12px;
-        }
-
-        .data-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid var(--border-light);
-        }
-
-        .data-row:last-child {
-            border-bottom: none;
-        }
-
-        .data-label {
-            font-size: 14px;
-            color: var(--text-secondary);
-            font-weight: var(--font-weight-medium);
-        }
-
-        .data-value {
-            font-size: 16px;
-            font-weight: var(--font-weight-semibold);
-            text-align: right;
-        }
-
-        /* Action Buttons */
-        .action-buttons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-top: 24px;
-        }
-
-        .action-btn {
-            padding: 16px;
-            border: none;
-            border-radius: var(--border-radius-medium);
-            font-size: 16px;
-            font-weight: var(--font-weight-semibold);
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .action-btn.primary {
-            background: var(--accent-blue);
-            color: white;
-        }
-
-        .action-btn.secondary {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            border: 1px solid var(--border-light);
-        }
-
-        .action-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-        }
-
-        /* Responsive Design */
-        @media (max-width: 480px) {
-            .scanner-container {
-                padding: 0 16px 32px;
-        }
-
-            .camera-viewfinder {
-                height: 320px;
-                margin: 16px 0;
-        }
-
-            .scan-frame {
-                width: 240px;
-                height: 160px;
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(20px);
             }
-            
-            .control-panel {
-                padding: 20px;
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
             }
         }
 
-        /* Toast Notifications */
-        .toast {
-            position: fixed;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--bg-card);
-            color: var(--text-primary);
-            padding: 16px 24px;
-            border-radius: var(--border-radius-large);
-            border: 1px solid var(--border-light);
-            box-shadow: var(--shadow-card);
-            z-index: 1001;
-            opacity: 0;
-            transform: translate(-50%, 20px);
-            transition: all 0.3s ease;
+        @keyframes successPulse {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
         }
-            
-        .toast.show {
-            opacity: 1;
-            transform: translate(-50%, 0);
+
+        @keyframes slideUp {
+            from {
+                transform: translateX(-50%) translateY(100px);
+                opacity: 0;
             }
-            
-        .toast.success {
-            border-color: var(--accent-green);
-            background: rgba(52, 199, 89, 0.1);
+            to {
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
             }
-            
-        .toast.error {
-            border-color: var(--accent-red);
-            background: rgba(255, 59, 48, 0.1);
         }
     </style>
 </head>
-
 <body>
-    <!-- Unified App Header -->
-    <header class="app-header">
-        <div class="header-content">
-            <div class="header-left">
-                <a href="/" class="app-logo">
-                    <i class="fas fa-chart-line"></i>
-                    <span>TransactionPro</span>
-                </a>
-                <nav class="nav-links">
-                    <a href="/" class="nav-link">Dashboard</a>
-                    <a href="/transactions" class="nav-link">Transactions</a>
-                    <a href="/scanner" class="nav-link active">Scanner</a>
-                    <a href="/connect" class="nav-link">Connect</a>
-                    <a href="/settings" class="nav-link">Settings</a>
-                </nav>
-            </div>
-            <div class="header-actions">
-                <div class="status-indicator">
-                    <div class="status-dot"></div>
-                    <span>Live</span>
-                </div>
+    <div class="scanner-container">
+        <!-- Video stream -->
+        <video id="video" autoplay playsinline></video>
+        
+        <!-- Camera overlay with guides -->
+        <div class="camera-overlay">
+            <!-- Receipt alignment guide -->
+            <div class="receipt-guide">
+                <div class="corner-guide top-left"></div>
+                <div class="corner-guide top-right"></div>
+                <div class="corner-guide bottom-left"></div>
+                <div class="corner-guide bottom-right"></div>
+                <div class="crosshair"></div>
             </div>
         </div>
-    </header>
-
-    <!-- Global Notification Container -->
-    <div class="notification-container" id="notification-container"></div>
-
-    <!-- Scanner Header -->
-    <div class="scanner-header">
-        <div class="scanner-header-content">
-            <button class="back-button" onclick="window.history.back()">
-                <i class="fas fa-chevron-left"></i> Back
-            </button>
-            <div class="scanner-title">Receipt Scanner</div>
-            <button class="scanner-action" onclick="toggleFlash()">
-                <i class="fas fa-bolt" id="flash-icon"></i>
-            </button>
+        
+        <!-- Top status bar -->
+        <div class="status-bar">
+            <div class="status-text">Position receipt within the guide</div>
+            <button class="flash-btn" id="flashBtn">⚡ Flash</button>
+            <button class="close-btn" id="closeBtn">×</button>
+        </div>
+        
+        <!-- Quality indicators -->
+        <div class="quality-indicators">
+            <div class="quality-item">
+                <div class="quality-icon good" id="lightingIcon"></div>
+                <span>Lighting</span>
+            </div>
+            <div class="quality-item">
+                <div class="quality-icon good" id="focusIcon"></div>
+                <span>Focus</span>
+            </div>
+            <div class="quality-item">
+                <div class="quality-icon good" id="alignmentIcon"></div>
+                <span>Alignment</span>
+            </div>
+        </div>
+        
+        <!-- Instructions -->
+        <div class="instructions">
+            Align receipt with the green guide for best results
+        </div>
+        
+        <!-- Bottom controls -->
+        <div class="controls">
+            <button class="side-btn" id="galleryBtn">🖼️</button>
+            <button class="capture-btn" id="captureBtn"></button>
+            <button class="side-btn" id="settingsBtn">⚙️</button>
+        </div>
+        
+        <!-- Processing overlay -->
+        <div class="processing-overlay" id="processingOverlay">
+            <div class="processing-spinner"></div>
+            <div class="processing-text">Processing Receipt...</div>
+            <div class="processing-subtext">Extracting text and analyzing data</div>
+        </div>
+        
+        <!-- Success overlay -->
+        <div class="success-overlay" id="successOverlay">
+            <div class="success-icon"></div>
+            <div class="success-text">Receipt Processed!</div>
+            <div class="success-details">
+                <div id="successDetails">Merchant: Starbucks | Amount: $15.67</div>
+            </div>
+            <div class="success-actions">
+                <button class="action-btn" id="saveBtn">Save Receipt</button>
+                <button class="action-btn secondary" id="retakeBtn">Take Another</button>
+            </div>
         </div>
     </div>
 
-    <!-- Main Scanner Interface -->
-    <div class="scanner-container">
-        <!-- Camera Viewfinder -->
-        <div class="camera-viewfinder" id="viewfinder">
-            <video id="camera-video" class="viewfinder-video" autoplay muted playsinline style="display: none;"></video>
-            <canvas id="camera-canvas" style="display: none;"></canvas>
-            
-            <div class="viewfinder-overlay" id="viewfinder-overlay">
-                    <div class="camera-placeholder">
-                        <i class="fas fa-camera"></i>
-                    <h3>Position Receipt in Frame</h3>
-                    <p>Align the receipt within the frame for optimal scanning</p>
-                    </div>
-                </div>
+    <!-- PWA Install Prompt -->
+    <div class="install-prompt" id="installPrompt">
+        📱 Install Receipt Scanner App
+    </div>
 
-            <div class="scan-frame" id="scan-frame" style="display: none;"></div>
-        </div>
-
-        <!-- Control Panel -->
-        <div class="control-panel">
-            <div class="control-grid">
-                <button class="control-button" onclick="startCamera()" id="camera-btn">
-                    <i class="fas fa-video"></i>
-                    <span>Camera</span>
-                    </button>
-                <button class="control-button" onclick="uploadFile()" id="upload-btn">
-                    <i class="fas fa-upload"></i>
-                    <span>Upload</span>
-                    </button>
-                <button class="control-button" onclick="toggleEnhancement()" id="enhance-btn">
-                    <i class="fas fa-magic"></i>
-                    <span>Enhance</span>
-                    </button>
-                </div>
-
-            <!-- Capture Button -->
-            <div class="capture-section">
-                <button class="capture-button" onclick="captureReceipt()" id="capture-btn" style="display: none;">
-                    <i class="fas fa-camera"></i>
-                </button>
-                </div>
-            </div>
-
-        <!-- Result Preview -->
-        <div class="result-preview" id="result-preview">
-            <div class="result-header">
-                <i class="fas fa-check-circle"></i>
-                <h3>Receipt Processed</h3>
-                </div>
-            <div class="result-data" id="result-data">
-                <!-- Results will be populated here -->
-                </div>
-            <div class="action-buttons">
-                <button class="action-btn secondary" onclick="scanAnother()">Scan Another</button>
-                <button class="action-btn primary" onclick="saveReceipt()">Save Receipt</button>
-                </div>
-            </div>
-        </div>
-
-    <!-- Processing Overlay -->
-    <div class="processing-overlay" id="processing-overlay">
-        <div class="processing-content">
-            <div class="processing-spinner"></div>
-            <div class="processing-text" id="processing-text">Processing Receipt...</div>
-            <div class="processing-detail" id="processing-detail">Extracting text and data</div>
-                </div>
-            </div>
-
-    <!-- Hidden File Input -->
-    <input type="file" id="file-input" accept="image/*" style="display: none;" onchange="handleFileUpload(event)">
-
-    <!-- Toast Container -->
-    <div id="toast" class="toast"></div>
+    <!-- Offline Indicator -->
+    <div class="offline-indicator" id="offlineIndicator">
+        📶 You're offline - Some features may be limited
+    </div>
 
     <script>
-        // Global Variables
-        let currentStream = null;
-        let isFlashOn = false;
-        let enhancementEnabled = true;
-        let capturedImageData = null;
-
-        // Initialize Scanner
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('📷 Receipt Scanner Initialized');
-            checkCameraPermission();
-            showToast('📱 Receipt Scanner ready', 'success');
-        });
-
-        // Camera Functions
-        async function checkCameraPermission() {
-            try {
-                const permission = await navigator.permissions.query({ name: 'camera' });
-                if (permission.state === 'granted') {
-                    console.log('✅ Camera permission granted');
-            } else {
-                    console.log('📱 Camera permission needed');
-                    showToast('Camera access needed for scanning', 'info');
-                }
-            } catch (error) {
-                console.error('❌ Permission check failed:', error);
-            }
-        }
-
-        async function startCamera() {
-            try {
-                showProcessing('Starting Camera...', 'Requesting camera access');
+        class ReceiptScannerPWA {
+            constructor() {
+                this.video = document.getElementById('video');
+                this.canvas = document.createElement('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.stream = null;
+                this.flashEnabled = false;
+                this.currentTrack = null;
+                this.deferredPrompt = null;
+                this.isOnline = navigator.onLine;
                 
-                // Stop existing stream
-                if (currentStream) {
-                    currentStream.getTracks().forEach(track => track.stop());
-                }
-
-                // Request camera access
-                const constraints = {
-                    video: {
-                        facingMode: 'environment', // Back camera for receipts
-                        width: { ideal: 1920 },
-                        height: { ideal: 1080 }
+                this.initializeElements();
+                this.initializePWA();
+                this.startCamera();
+                this.setupEventListeners();
+                this.startQualityMonitoring();
+                this.setupNetworkMonitoring();
+            }
+            
+            initializeElements() {
+                this.captureBtn = document.getElementById('captureBtn');
+                this.flashBtn = document.getElementById('flashBtn');
+                this.closeBtn = document.getElementById('closeBtn');
+                this.galleryBtn = document.getElementById('galleryBtn');
+                this.settingsBtn = document.getElementById('settingsBtn');
+                this.processingOverlay = document.getElementById('processingOverlay');
+                this.successOverlay = document.getElementById('successOverlay');
+                this.saveBtn = document.getElementById('saveBtn');
+                this.retakeBtn = document.getElementById('retakeBtn');
+                this.successDetails = document.getElementById('successDetails');
+                this.installPrompt = document.getElementById('installPrompt');
+                this.offlineIndicator = document.getElementById('offlineIndicator');
+                
+                // Quality indicators
+                this.lightingIcon = document.getElementById('lightingIcon');
+                this.focusIcon = document.getElementById('focusIcon');
+                this.alignmentIcon = document.getElementById('alignmentIcon');
+            }
+            
+            async initializePWA() {
+                // Register service worker
+                if ('serviceWorker' in navigator) {
+                    try {
+                        const registration = await navigator.serviceWorker.register('/static/sw.js');
+                        console.log('Service Worker registered:', registration);
+                    } catch (error) {
+                        console.error('Service Worker registration failed:', error);
                     }
-                };
-
-                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-                const video = document.getElementById('camera-video');
-                video.srcObject = currentStream;
-                
-                // Show camera elements
-                video.style.display = 'block';
-                document.getElementById('viewfinder-overlay').classList.add('hidden');
-                document.getElementById('scan-frame').style.display = 'block';
-                document.getElementById('capture-btn').style.display = 'flex';
-                
-                // Update button state
-                document.getElementById('camera-btn').classList.add('active');
-                
-                hideProcessing();
-                showToast('Camera ready for scanning', 'success');
-                
-            } catch (error) {
-                console.error('❌ Camera start failed:', error);
-                hideProcessing();
-                showToast('Camera access denied. Please enable camera permissions.', 'error');
-            }
-        }
-
-        function stopCamera() {
-            if (currentStream) {
-                currentStream.getTracks().forEach(track => track.stop());
-                currentStream = null;
-            }
-            
-            const video = document.getElementById('camera-video');
-            video.style.display = 'none';
-            document.getElementById('viewfinder-overlay').classList.remove('hidden');
-            document.getElementById('scan-frame').style.display = 'none';
-            document.getElementById('capture-btn').style.display = 'none';
-            document.getElementById('camera-btn').classList.remove('active');
-        }
-
-        async function captureReceipt() {
-            try {
-            const video = document.getElementById('camera-video');
-            const canvas = document.getElementById('camera-canvas');
-                const ctx = canvas.getContext('2d');
-
-                // Set canvas size
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            
-                // Draw video frame to canvas
-            ctx.drawImage(video, 0, 0);
-            
-                // Get image data
-                capturedImageData = canvas.toDataURL('image/jpeg', 0.9);
-                
-                // Stop camera
-                stopCamera();
-                
-                // Process the image
-                await processReceiptImage(capturedImageData);
-
-            } catch (error) {
-                console.error('❌ Capture failed:', error);
-                showToast('Failed to capture image', 'error');
-        }
-        }
-
-        // File Upload Functions
-        function uploadFile() {
-            document.getElementById('file-input').click();
-        }
-
-        async function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            try {
-                // Validate file type
-                if (!file.type.startsWith('image/')) {
-                    showToast('Please select a valid image file', 'error');
-                    return;
                 }
-
-                // Read file as data URL
-                const reader = new FileReader();
-                reader.onload = async function(e) {
-                    capturedImageData = e.target.result;
-                    await processReceiptImage(capturedImageData);
-                };
-                reader.readAsDataURL(file);
                 
-                // Update button state
-                document.getElementById('upload-btn').classList.add('active');
-                
-            } catch (error) {
-                console.error('❌ File upload failed:', error);
-                showToast('Failed to process uploaded file', 'error');
-            }
-        }
-
-        // Image Processing
-        async function processReceiptImage(imageData) {
-            try {
-                showProcessing('Processing Receipt...', 'Extracting text and analyzing data');
-            
-                // Convert data URL to blob for upload
-                const response = await fetch(imageData);
-                const blob = await response.blob();
-                
-                const formData = new FormData();
-                formData.append('file', blob, 'receipt.jpg');
-                formData.append('enhance', enhancementEnabled);
-                
-                // Call backend API
-                const apiResponse = await fetch('/api/process-receipt', {
-                    method: 'POST',
-                    body: formData
+                // Handle install prompt
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault();
+                    this.deferredPrompt = e;
+                    this.showInstallPrompt();
                 });
                 
-                const result = await apiResponse.json();
+                // Handle app installed
+                window.addEventListener('appinstalled', () => {
+                    console.log('PWA was installed');
+                    this.hideInstallPrompt();
+                });
                 
-                hideProcessing();
+                // Check if running as PWA
+                if (window.matchMedia('(display-mode: standalone)').matches) {
+                    console.log('Running as PWA');
+                    this.hideInstallPrompt();
+                }
+            }
+            
+            showInstallPrompt() {
+                this.installPrompt.style.display = 'block';
+                this.installPrompt.addEventListener('click', () => this.installPWA());
+            }
+            
+            hideInstallPrompt() {
+                this.installPrompt.style.display = 'none';
+            }
+            
+            async installPWA() {
+                if (!this.deferredPrompt) return;
                 
-                if (result.success) {
-                    displayResults(result);
-                    showToast('Receipt processed successfully!', 'success');
+                this.deferredPrompt.prompt();
+                const { outcome } = await this.deferredPrompt.userChoice;
+                
+                if (outcome === 'accepted') {
+                    console.log('User accepted the install prompt');
                 } else {
-                    throw new Error(result.error || 'Processing failed');
+                    console.log('User dismissed the install prompt');
                 }
                 
-            } catch (error) {
-                console.error('❌ Processing failed:', error);
-                hideProcessing();
-                showToast('Failed to process receipt: ' + error.message, 'error');
+                this.deferredPrompt = null;
+                this.hideInstallPrompt();
             }
-        }
-
-        // Results Display
-        function displayResults(result) {
-            const preview = document.getElementById('result-preview');
-            const dataContainer = document.getElementById('result-data');
             
-            const data = result.extracted_data || {};
-            
-            dataContainer.innerHTML = `
-                <div class="data-row">
-                    <span class="data-label">Merchant</span>
-                    <span class="data-value">${data.merchant || 'Unknown'}</span>
-                </div>
-                <div class="data-row">
-                    <span class="data-label">Amount</span>
-                    <span class="data-value">$${data.amount || '0.00'}</span>
-                </div>
-                <div class="data-row">
-                    <span class="data-label">Date</span>
-                    <span class="data-value">${data.date || 'Unknown'}</span>
-                </div>
-                <div class="data-row">
-                    <span class="data-label">Category</span>
-                    <span class="data-value">${data.category || 'Uncategorized'}</span>
-                </div>
-                <div class="data-row">
-                    <span class="data-label">Confidence</span>
-                    <span class="data-value">${Math.round((result.confidence_score || 0) * 100)}%</span>
-                </div>
-            `;
-            
-            preview.classList.add('show');
-        }
-
-        // Utility Functions
-        function toggleFlash() {
-            if (currentStream) {
-                const track = currentStream.getVideoTracks()[0];
-                const capabilities = track.getCapabilities();
+            setupNetworkMonitoring() {
+                window.addEventListener('online', () => {
+                    this.isOnline = true;
+                    this.offlineIndicator.style.display = 'none';
+                    console.log('Back online');
+                });
                 
-                if (capabilities.torch) {
-                    isFlashOn = !isFlashOn;
-                    track.applyConstraints({
-                        advanced: [{ torch: isFlashOn }]
+                window.addEventListener('offline', () => {
+                    this.isOnline = false;
+                    this.offlineIndicator.style.display = 'block';
+                    console.log('Gone offline');
+                });
+                
+                // Initial check
+                if (!this.isOnline) {
+                    this.offlineIndicator.style.display = 'block';
+                }
+            }
+            
+            async startCamera() {
+                try {
+                    const constraints = {
+                        video: {
+                            facingMode: 'environment', // Back camera
+                            width: { ideal: 1920, min: 1280 },
+                            height: { ideal: 1080, min: 720 },
+                            focusMode: 'continuous',
+                            exposureMode: 'continuous',
+                            whiteBalanceMode: 'continuous'
+                        }
+                    };
+                    
+                    this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    this.video.srcObject = this.stream;
+                    
+                    // Get video track for flash control
+                    this.currentTrack = this.stream.getVideoTracks()[0];
+                    
+                    // Check if flash is supported
+                    if (this.currentTrack && this.currentTrack.getCapabilities) {
+                        const capabilities = this.currentTrack.getCapabilities();
+                        if (capabilities.torch) {
+                            this.flashBtn.style.display = 'block';
+                        }
+                    }
+                    
+                    console.log('📷 Camera started successfully');
+                } catch (error) {
+                    console.error('Camera error:', error);
+                    this.showError('Camera access denied. Please enable camera permissions.');
+                }
+            }
+            
+            setupEventListeners() {
+                // Capture button
+                this.captureBtn.addEventListener('click', () => this.capturePhoto());
+                
+                // Flash toggle
+                this.flashBtn.addEventListener('click', () => this.toggleFlash());
+                
+                // Close button
+                this.closeBtn.addEventListener('click', () => this.closeScanner());
+                
+                // Gallery button
+                this.galleryBtn.addEventListener('click', () => this.openGallery());
+                
+                // Settings button
+                this.settingsBtn.addEventListener('click', () => this.openSettings());
+                
+                // Success overlay buttons
+                this.saveBtn.addEventListener('click', () => this.saveReceipt());
+                this.retakeBtn.addEventListener('click', () => this.retakePhoto());
+                
+                // Touch gestures
+                this.setupTouchGestures();
+                
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if (e.code === 'Space' || e.code === 'Enter') {
+                        e.preventDefault();
+                        this.capturePhoto();
+                    } else if (e.code === 'Escape') {
+                        this.closeScanner();
+                    } else if (e.code === 'KeyF') {
+                        this.toggleFlash();
+                    }
+                });
+            }
+            
+            setupTouchGestures() {
+                let touchStartY = 0;
+                
+                this.video.addEventListener('touchstart', (e) => {
+                    touchStartY = e.touches[0].clientY;
+                });
+                
+                this.video.addEventListener('touchend', (e) => {
+                    const touchEndY = e.changedTouches[0].clientY;
+                    const deltaY = touchStartY - touchEndY;
+                    
+                    // Swipe up to capture
+                    if (deltaY > 50) {
+                        this.capturePhoto();
+                    }
+                    // Swipe down to close
+                    else if (deltaY < -100) {
+                        this.closeScanner();
+                    }
+                });
+                
+                // Tap to focus (if supported)
+                this.video.addEventListener('click', (e) => {
+                    this.focusAtPoint(e.clientX, e.clientY);
+                });
+            }
+            
+            async toggleFlash() {
+                if (!this.currentTrack || !this.currentTrack.getCapabilities) return;
+                
+                try {
+                    const capabilities = this.currentTrack.getCapabilities();
+                    if (capabilities.torch) {
+                        this.flashEnabled = !this.flashEnabled;
+                        
+                        await this.currentTrack.applyConstraints({
+                            advanced: [{ torch: this.flashEnabled }]
+                        });
+                        
+                        this.flashBtn.classList.toggle('active', this.flashEnabled);
+                        console.log(`Flash ${this.flashEnabled ? 'on' : 'off'}`);
+                    }
+                } catch (error) {
+                    console.error('Flash control error:', error);
+                }
+            }
+            
+            async focusAtPoint(x, y) {
+                if (!this.currentTrack || !this.currentTrack.getCapabilities) return;
+                
+                try {
+                    const capabilities = this.currentTrack.getCapabilities();
+                    if (capabilities.focusMode && capabilities.focusMode.includes('manual')) {
+                        // Calculate relative coordinates
+                        const rect = this.video.getBoundingClientRect();
+                        const relativeX = (x - rect.left) / rect.width;
+                        const relativeY = (y - rect.top) / rect.height;
+                        
+                        await this.currentTrack.applyConstraints({
+                            advanced: [{
+                                focusMode: 'manual',
+                                pointsOfInterest: [{ x: relativeX, y: relativeY }]
+                            }]
+                        });
+                        
+                        // Show focus indicator
+                        this.showFocusIndicator(x, y);
+                    }
+                } catch (error) {
+                    console.error('Focus control error:', error);
+                }
+            }
+            
+            showFocusIndicator(x, y) {
+                const indicator = document.createElement('div');
+                indicator.style.cssText = `
+                    position: absolute;
+                    left: ${x - 30}px;
+                    top: ${y - 30}px;
+                    width: 60px;
+                    height: 60px;
+                    border: 2px solid #00ff88;
+                    border-radius: 50%;
+                    pointer-events: none;
+                    z-index: 25;
+                    animation: focusRing 1s ease-out forwards;
+                `;
+                
+                document.body.appendChild(indicator);
+                
+                setTimeout(() => {
+                    document.body.removeChild(indicator);
+                }, 1000);
+            }
+            
+            async capturePhoto() {
+                try {
+                    // Show processing overlay
+                    this.processingOverlay.style.display = 'flex';
+                    
+                    // Capture the image
+                    this.canvas.width = this.video.videoWidth;
+                    this.canvas.height = this.video.videoHeight;
+                    this.ctx.drawImage(this.video, 0, 0);
+                    
+                    // Convert to blob
+                    const blob = await new Promise(resolve => {
+                        this.canvas.toBlob(resolve, 'image/jpeg', 0.95);
                     });
                     
-                    const icon = document.getElementById('flash-icon');
-                    icon.className = isFlashOn ? 'fas fa-bolt-lightning' : 'fas fa-bolt';
+                    // Process the image
+                    await this.processReceiptImage(blob);
                     
-                    showToast(isFlashOn ? 'Flash turned on' : 'Flash turned off', 'info');
-                } else {
-                    showToast('Flash not available on this device', 'error');
+                } catch (error) {
+                    console.error('Capture error:', error);
+                    this.hideProcessing();
+                    this.showError('Failed to capture image. Please try again.');
+                }
             }
-            }
-        }
-
-        function toggleEnhancement() {
-            enhancementEnabled = !enhancementEnabled;
-            const btn = document.getElementById('enhance-btn');
             
-            if (enhancementEnabled) {
-                btn.classList.add('active');
-                showToast('Image enhancement enabled', 'success');
-            } else {
-                btn.classList.remove('active');
-                showToast('Image enhancement disabled', 'info');
-            }
-        }
-
-        async function saveReceipt() {
-            try {
-                showProcessing('Saving Receipt...', 'Adding to transaction library');
-                
-                // Save to R2 and MongoDB
-                const saveResponse = await fetch('/api/save-processed-receipt', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        image_data: capturedImageData,
-                        extracted_data: window.lastProcessedData
-                    })
-                });
-                
-                const result = await saveResponse.json();
-                
-                hideProcessing();
+            async processReceiptImage(blob) {
+                try {
+                    // Create form data
+                    const formData = new FormData();
+                    formData.append('receipt_image', blob, 'receipt.jpg');
                     
-                if (result.success) {
-                    showToast('Receipt saved successfully!', 'success');
-                    setTimeout(() => {
-                        window.location.href = '/transaction_manager';
-                    }, 1500);
-                } else {
-                    throw new Error(result.error);
+                    // Send to backend for processing
+                    const response = await fetch('/api/process-receipt', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    this.hideProcessing();
+                    
+                    if (result.success) {
+                        this.showSuccess(result);
+                    } else {
+                        this.showError(result.error || 'Processing failed');
+                    }
+                    
+                } catch (error) {
+                    console.error('Processing error:', error);
+                    this.hideProcessing();
+                    this.showError('Failed to process receipt. Please try again.');
+                }
+            }
+            
+            showSuccess(result) {
+                // Update success details
+                const merchant = result.merchant || 'Unknown';
+                const amount = result.amount ? `$${result.amount.toFixed(2)}` : 'Unknown';
+                const confidence = result.confidence ? `${(result.confidence * 100).toFixed(0)}%` : 'N/A';
+                
+                this.successDetails.innerHTML = `
+                    <div style="margin-bottom: 8px;"><strong>Merchant:</strong> ${merchant}</div>
+                    <div style="margin-bottom: 8px;"><strong>Amount:</strong> ${amount}</div>
+                    <div><strong>Confidence:</strong> ${confidence}</div>
+                `;
+                
+                // Store result for saving
+                this.lastResult = result;
+                
+                // Show success overlay
+                this.successOverlay.style.display = 'flex';
+            }
+            
+            async saveReceipt() {
+                try {
+                    if (!this.lastResult) return;
+                    
+                    // Send processed receipt to backend
+                    const response = await fetch('/api/save-processed-receipt', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            extracted_data: this.lastResult
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        // Show success message
+                        this.showToast('Receipt saved successfully!', 'success');
+                        
+                        // Close scanner or return to dashboard
+                        setTimeout(() => {
+                            this.closeScanner();
+                        }, 1500);
+                    } else {
+                        this.showToast('Failed to save receipt', 'error');
+                    }
+                    
+                } catch (error) {
+                    console.error('Save error:', error);
+                    this.showToast('Failed to save receipt', 'error');
+                }
+            }
+            
+            retakePhoto() {
+                this.successOverlay.style.display = 'none';
+                this.lastResult = null;
+            }
+            
+            hideProcessing() {
+                this.processingOverlay.style.display = 'none';
+            }
+            
+            openGallery() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        this.processUploadedImage(file);
+                    }
+                };
+                input.click();
+            }
+            
+            async processUploadedImage(file) {
+                try {
+                    this.processingOverlay.style.display = 'flex';
+                    
+                    const formData = new FormData();
+                    formData.append('receipt_image', file);
+                    
+                    const response = await fetch('/api/process-receipt', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    this.hideProcessing();
+                    
+                    if (result.success) {
+                        this.showSuccess(result);
+                    } else {
+                        this.showError(result.error || 'Processing failed');
+                    }
+                    
+                } catch (error) {
+                    console.error('Upload processing error:', error);
+                    this.hideProcessing();
+                    this.showError('Failed to process uploaded image');
+                }
+            }
+            
+            openSettings() {
+                // Open camera settings modal
+                this.showToast('Camera settings coming soon!', 'info');
+            }
+            
+            closeScanner() {
+                // Stop camera stream
+                if (this.stream) {
+                    this.stream.getTracks().forEach(track => track.stop());
                 }
                 
-            } catch (error) {
-                console.error('❌ Save failed:', error);
-                hideProcessing();
-                showToast('Failed to save receipt', 'error');
+                // Return to previous page or dashboard
+                if (window.history.length > 1) {
+                    window.history.back();
+                } else {
+                    window.location.href = '/';
+                }
             }
-        }
-
-        function scanAnother() {
-            // Reset interface
-            document.getElementById('result-preview').classList.remove('show');
-            capturedImageData = null;
             
-            // Reset button states
-            document.querySelectorAll('.control-button').forEach(btn => {
-                btn.classList.remove('active');
-            });
+            startQualityMonitoring() {
+                // Monitor image quality in real-time
+                setInterval(() => {
+                    this.checkImageQuality();
+                }, 1000);
+            }
             
-            showToast('Ready for next scan', 'info');
-        }
-
-        // UI Helper Functions
-        function showProcessing(title, detail) {
-            document.getElementById('processing-text').textContent = title;
-            document.getElementById('processing-detail').textContent = detail;
-            document.getElementById('processing-overlay').classList.add('show');
-        }
-
-        function hideProcessing() {
-            document.getElementById('processing-overlay').classList.remove('show');
-        }
-
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('notification-container');
-            const notification = document.createElement('div');
-            notification.className = `notification ${type}`;
+            checkImageQuality() {
+                if (!this.video.videoWidth || !this.video.videoHeight) return;
+                
+                // Create a small canvas for analysis
+                const analysisCanvas = document.createElement('canvas');
+                const analysisCtx = analysisCanvas.getContext('2d');
+                analysisCanvas.width = 160;
+                analysisCanvas.height = 120;
+                
+                // Draw current frame
+                analysisCtx.drawImage(this.video, 0, 0, 160, 120);
+                
+                // Get image data for analysis
+                const imageData = analysisCtx.getImageData(0, 0, 160, 120);
+                const data = imageData.data;
+                
+                // Analyze lighting
+                let brightness = 0;
+                for (let i = 0; i < data.length; i += 4) {
+                    brightness += (data[i] + data[i + 1] + data[i + 2]) / 3;
+                }
+                brightness = brightness / (data.length / 4);
+                
+                // Update lighting indicator
+                if (brightness < 50) {
+                    this.lightingIcon.className = 'quality-icon error';
+                } else if (brightness < 100) {
+                    this.lightingIcon.className = 'quality-icon warning';
+                } else {
+                    this.lightingIcon.className = 'quality-icon good';
+                }
+                
+                // Analyze contrast (simple edge detection)
+                let contrast = 0;
+                for (let i = 0; i < data.length - 4; i += 4) {
+                    const current = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                    const next = (data[i + 4] + data[i + 5] + data[i + 6]) / 3;
+                    contrast += Math.abs(current - next);
+                }
+                contrast = contrast / (data.length / 4);
+                
+                // Update focus indicator
+                if (contrast < 5) {
+                    this.focusIcon.className = 'quality-icon error';
+                } else if (contrast < 15) {
+                    this.focusIcon.className = 'quality-icon warning';
+                } else {
+                    this.focusIcon.className = 'quality-icon good';
+                }
+                
+                // Mock alignment check (would need more sophisticated analysis)
+                this.alignmentIcon.className = 'quality-icon good';
+            }
             
-            notification.innerHTML = `
-                <div class="notification-header">
-                    <span class="notification-title">${type.charAt(0).toUpperCase() + type.slice(1)}</span>
-                    <button class="notification-close" onclick="this.parentElement.parentElement.remove()">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="notification-message">${message}</div>
-            `;
+            showError(message) {
+                this.showToast(message, 'error');
+            }
             
-            container.appendChild(notification);
-            
-            // Trigger animation
-            setTimeout(() => notification.classList.add('show'), 100);
-            
-            // Auto remove after 5 seconds
-            setTimeout(() => {
-                if (notification.parentElement) {
-                    notification.classList.remove('show');
+            showToast(message, type = 'info') {
+                const toast = document.createElement('div');
+                toast.style.cssText = `
+                    position: fixed;
+                    top: 100px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: ${type === 'error' ? '#ff4444' : type === 'success' ? '#00ff88' : '#007acc'};
+                    color: ${type === 'success' ? '#000' : '#fff'};
+                    padding: 12px 24px;
+                    border-radius: 25px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    z-index: 1000;
+                    backdrop-filter: blur(10px);
+                    animation: toastSlide 0.3s ease;
+                `;
+                toast.textContent = message;
+                
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.style.animation = 'toastSlide 0.3s ease reverse';
                     setTimeout(() => {
-                        if (notification.parentElement) {
-                            notification.parentElement.removeChild(notification);
-                        }
+                        document.body.removeChild(toast);
                     }, 300);
-                }
-            }, 5000);
-        }
-
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', function() {
-            if (currentStream) {
-                currentStream.getTracks().forEach(track => track.stop());
+                }, 3000);
             }
-        });
+        }
+        
+        // Add additional CSS animations
+        const additionalStyles = document.createElement('style');
+        additionalStyles.textContent = `
+            @keyframes focusRing {
+                0% {
+                    transform: scale(1);
+                    opacity: 1;
+                }
+                100% {
+                    transform: scale(1.5);
+                    opacity: 0;
+                }
+            }
             
+            @keyframes toastSlide {
+                from {
+                    transform: translateX(-50%) translateY(-20px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(-50%) translateY(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(additionalStyles);
+        
+        // Initialize scanner when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            // Request full screen on mobile
+            if (window.innerHeight < window.innerWidth && /Mobi|Android/i.test(navigator.userAgent)) {
+                document.body.requestFullscreen?.() || 
+                document.body.webkitRequestFullscreen?.() || 
+                document.body.mozRequestFullScreen?.();
+            }
+            
+            // Hide browser UI on mobile
+            window.scrollTo(0, 1);
+            
+            // Initialize scanner
+            new ReceiptScannerPWA();
+        });
+        
+        // Handle orientation changes
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                window.scrollTo(0, 1);
+            }, 500);
+        });
+        
         // Prevent zoom on double tap
         let lastTouchEnd = 0;
-        document.addEventListener('touchend', function(event) {
-            const now = (new Date()).getTime();
+        document.addEventListener('touchend', (event) => {
+            const now = new Date().getTime();
             if (now - lastTouchEnd <= 300) {
                 event.preventDefault();
             }
             lastTouchEnd = now;
         }, false);
+        
+        // Prevent context menu
+        document.addEventListener('contextmenu', (e) => e.preventDefault());
+        
+        // Handle back button
+        window.addEventListener('popstate', () => {
+            // Scanner will be closed when user navigates back
+        });
     </script>
 </body>
 </html>

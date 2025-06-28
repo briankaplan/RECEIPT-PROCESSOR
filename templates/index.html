@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>TallyUps - TALLY SMART, UP YOUR GAME</title>
+  
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#00ff88">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TallyUps">
+  <meta name="description" content="AI-powered financial intelligence platform">
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiVGFsbHlVcHMiLCJzaG9ydF9uYW1lIjoiVGFsbHlVcHMiLCJzdGFydF91cmwiOiIvIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJ0aGVtZV9jb2xvciI6IiMwMGZmODgiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiIzAwMDAwMCIsImljb25zIjpbeyJzcmMiOiJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUIzYVdSMGFEMGlNVGd3SWlCb1pXbG5hSFE5SWpFNE1DSWlJSFpwWlhkQ2IzZzlJakFnTUNBeE9EQXRNVGM0TUNBNE1UZ2lQZ284UkdWbWN6NEtQR3hwYm1WaGNrZHlZV1JwWlc1MElHbGtQU0puY21Ga01TSWdlREU5SWpBbElpQjVNVDBpTUNVaUlIZ3lQU0l4TURBbElpQjVNajBpTVRBd0pTSStQSE4wYjNBZ2IyWm1jMlYwUFNJd0pTSWdjM1J2Y0MxamIyeHZjajBpSXpBd1ptWTRPQ0l2UGdvOGMzUnZjQ0J2Wm1aelpYUTlJakV3TUNVaUlITjBiM0F0WTI5c2IzSTlJaU5tWmpNek1EQWlMejQ4TDJ4cGJtVmhjbWR5WVdScFpXNTBQZ284TDJSbFpuTStQQzl6ZG1jKyIsInNpemVzIjoiMTkyeDE5MiIsInR5cGUiOiJpbWFnZS9zdmcreG1sIn1dfQ==">
+  <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgdmlld0JveD0iMCAwIDE4MCAxODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iZzEiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMwMGZmODgiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiNmZjMzMDAiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgZmlsbD0idXJsKCNnMSkiLz48dGV4dCB4PSI5MCIgeT0iMTAwIiBmb250LWZhbWlseT0iQXJpYWwsc2Fucy1zZXJpZiIgZm9udC1zaXplPSI0OCIgZmlsbD0iIzAwMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC13ZWlnaHQ9ImJvbGQiPiQ8L3RleHQ+PC9zdmc+">
+  
+  <!-- External Resources -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- Existing Styles -->
+  <!-- <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"> -->
+  
+  <!-- New Enhanced Styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='enhanced_style.css') }}">
+</head>
+<body>
+  <div class="app">
+    <!-- ===== HEADER SECTION ===== -->
+    <header class="header">
+      <div class="header-content">
+        <div class="app-logo">
+          <div class="logo-icon">
+            <i class="fas fa-chart-line"></i>
+          </div>
+          <div class="logo-text">
+            <h1>TallyUps</h1>
+            <p>TALLY SMART, UP YOUR GAME</p>
+          </div>
+        </div>
+        
+        <div class="header-actions">
+          <button class="action-btn camera-btn" onclick="TallyUps.camera.toggle()" id="camera-btn" title="Scan Receipt">
+            <i class="fas fa-camera"></i>
+          </button>
+          <button class="action-btn settings-btn" onclick="toggleSettings()" title="Settings">
+            <i class="fas fa-cog"></i>
+          </button>
+          <div class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+            <i class="fas fa-moon" id="theme-icon"></i>
+          </div>
+        </div>
+      </div>
+      
+      <div class="status-bar">
+        <div class="status-indicators">
+          <div class="status-item">
+            <div class="status-dot online" id="database-status"></div>
+            <span>Database</span>
+          </div>
+          <div class="status-item">
+            <div class="status-dot online" id="storage-status"></div>
+            <span>Storage</span>
+          </div>
+          <div class="status-item">
+            <div class="status-dot online" id="bank-status"></div>
+            <span>Banks</span>
+          </div>
+          <div class="status-item">
+            <div class="status-dot online" id="ai-status"></div>
+            <span>AI</span>
+          </div>
+          <div class="status-item">
+            <div class="status-dot online" id="email-status"></div>
+            <span>Email</span>
+          </div>
+          <div class="status-item">
+            <div class="status-dot online" id="calendar-status"></div>
+            <span>Calendar</span>
+          </div>
+          <div class="status-item">
+            <div class="status-dot online" id="sheets-status"></div>
+            <span>Sheets</span>
+          </div>
+        </div>
+        <div class="confidence-meter">
+          <span>AI Confidence: <strong id="ai-confidence">94%</strong></span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ===== MAIN DASHBOARD ===== -->
+    <main class="dashboard">
+      <!-- ===== STATS SECTION ===== -->
+      <section class="stats-section">
+        <!-- Dashboard Stats -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">💰</div>
+            <div class="stat-content">
+              <div class="stat-value" id="total-expenses">$0.00</div>
+              <div class="stat-label">Total Expenses</div>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon">📊</div>
+            <div class="stat-content">
+              <div class="stat-value" id="match-rate">0%</div>
+              <div class="stat-label">Receipts Matched</div>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon">🤖</div>
+            <div class="stat-content">
+              <div class="stat-value" id="ai-processed">0</div>
+              <div class="stat-label">AI Processed</div>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon">📈</div>
+            <div class="stat-content">
+              <div class="stat-value" id="total-transactions">0</div>
+              <div class="stat-label">Total Transactions</div>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-content">
+              <div class="stat-value" id="matched-transactions">0</div>
+              <div class="stat-label">Matched Receipts</div>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon">⚠️</div>
+            <div class="stat-content">
+              <div class="stat-value" id="missing-receipts">0</div>
+              <div class="stat-label">Missing Receipts</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Business Type Breakdown -->
+        <div class="business-breakdown">
+          <h3>Business Type Breakdown</h3>
+          <div class="business-cards">
+            <div class="business-card personal" data-business-type="Personal">
+              <div class="business-header">
+                <div class="business-icon">👤</div>
+                <div class="business-title">Personal</div>
+              </div>
+              <div class="business-stats">
+                <div class="business-stat">
+                  <span class="business-amount">$0.00</span>
+                  <span class="business-label">Total</span>
+                </div>
+                <div class="business-stat">
+                  <span class="business-count">0</span>
+                  <span class="business-label">Transactions</span>
+                </div>
+                <div class="business-stat">
+                  <span class="business-matched">0</span>
+                  <span class="business-label">Matched</span>
+                </div>
+                <div class="business-stat">
+                  <span class="business-missing">0</span>
+                  <span class="business-label">Missing</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="business-card down-home" data-business-type="Down Home">
+              <div class="business-header">
+                <div class="business-icon">🏠</div>
+                <div class="business-title">Down Home</div>
+              </div>
+              <div class="business-stats">
+                <div class="business-stat">
+                  <span class="business-amount">$0.00</span>
+                  <span class="business-label">Total</span>
+                </div>
+                <div class="business-stat">
+                  <span class="business-count">0</span>
+                  <span class="business-label">Transactions</span>
+                </div>
+                <div class="business-stat">
+                  <span class="business-matched">0</span>
+                  <span class="business-label">Matched</span>
+                </div>
+                <div class="business-stat">
+                  <span class="business-missing">0</span>
+                  <span class="business-label">Missing</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="business-card music-city-rodeo" data-business-type="Music City Rodeo">
+              <div class="business-header">
+                <div class="business-icon">🤠</div>
+                <div class="business-title">Music City Rodeo</div>
+              </div>
+              <div class="business-stats">
+                <div class="business-stat">
+                  <span class="business-amount">$0.00</span>
+                  <span class="business-label">Total</span>
+                </div>
+                <div class="business-stat">
+                  <span class="business-count">0</span>
+                  <span class="business-label">Transactions</span>
+                </div>
+                <div class="business-stat">
+                  <span class="business-matched">0</span>
+                  <span class="business-label">Matched</span>
+                </div>
+                <div class="business-stat">
+                  <span class="business-missing">0</span>
+                  <span class="business-label">Missing</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== QUICK ACTIONS ===== -->
+      <section class="quick-actions">
+        <div class="action-grid">
+          <div class="action-card" onclick="comprehensiveReceiptWorkflow()">
+            <i class="fas fa-rocket"></i>
+            <span>🚀 Complete Workflow</span>
+          </div>
+          
+          <div class="action-card" onclick="TallyUps.camera.toggle()">
+            <i class="fas fa-camera"></i>
+            <span>Scan Receipt</span>
+          </div>
+          
+          <div class="action-card" onclick="syncBankTransactions()">
+            <i class="fas fa-sync"></i>
+            <span>Sync Banks</span>
+          </div>
+          
+          <div class="action-card" onclick="personalizedEmailSearch()">
+            <i class="fas fa-brain"></i>
+            <span>🎯 Smart Search</span>
+          </div>
+          
+          <div class="action-card" onclick="exportToSheets()">
+            <i class="fas fa-file-export"></i>
+            <span>Export Data</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== TRANSACTION MANAGER ===== -->
+      <section class="transaction-manager">
+        <div class="transaction-container table-view" id="transaction-container">
+          <!-- Header with View Toggle -->
+          <div class="transaction-header">
+              <h1 class="transaction-title">Transactions</h1>
+              <div class="header-controls">
+                  <div class="page-info">
+                      <span id="page-info">Page 1 of 1 • 50 per page</span>
+                  </div>
+                  <div class="view-toggle">
+                      <button class="view-btn active" data-view="table" onclick="switchView('table')">
+                          <i class="fas fa-table"></i>
+                          <span>Table</span>
+                      </button>
+                      <button class="view-btn" data-view="cards" onclick="switchView('cards')">
+                          <i class="fas fa-th-large"></i>
+                          <span>Cards</span>
+                      </button>
+                  </div>
+              </div>
+          </div>
+
+          <!-- Transaction Controls -->
+          <div class="transaction-controls">
+              <div class="controls-row">
+                  <div class="search-box">
+                      <input type="text" placeholder="Search transactions..." id="search-input">
+                      <i class="fas fa-search search-icon"></i>
+                  </div>
+                  <div class="filter-controls">
+                      <select class="filter-select" id="business-filter">
+                          <option value="">All Business Types</option>
+                          <option value="personal">Personal</option>
+                          <option value="down-home">Down Home</option>
+                          <option value="music-city">Music City Rodeo</option>
+                      </select>
+                      <select class="filter-select" id="category-filter">
+                          <option value="">All Categories</option>
+                          <option value="food">Food & Dining</option>
+                          <option value="transport">Transportation</option>
+                          <option value="shopping">Shopping</option>
+                          <option value="travel">Travel</option>
+                          <option value="entertainment">Entertainment</option>
+                          <option value="business">Business</option>
+                      </select>
+                      <select class="filter-select" id="receipt-filter">
+                          <option value="">All Receipts</option>
+                          <option value="matched">Matched</option>
+                          <option value="missing">Missing</option>
+                      </select>
+                      <select class="filter-select" id="sort-filter">
+                          <option value="date-desc">Date (Newest)</option>
+                          <option value="date-asc">Date (Oldest)</option>
+                          <option value="amount-desc">Amount (High to Low)</option>
+                          <option value="amount-asc">Amount (Low to High)</option>
+                          <option value="merchant">Merchant (A-Z)</option>
+                      </select>
+                      <button class="clear-filters-btn" id="clear-filters" onclick="clearFilters()">
+                          <i class="fas fa-times"></i>
+                          Clear Filters
+                      </button>
+                  </div>
+              </div>
+          </div>
+
+          <!-- Transaction Table -->
+          <div class="transaction-table-wrapper">
+              <table class="transaction-table">
+                  <thead>
+                      <tr>
+                          <th class="date-cell sortable" onclick="sortBy('date')">
+                              Date <i class="fas fa-sort"></i>
+                          </th>
+                          <th class="merchant-cell sortable" onclick="sortBy('merchant')">
+                              Merchant <i class="fas fa-sort"></i>
+                          </th>
+                          <th class="description-cell">Description</th>
+                          <th class="business-cell sortable" onclick="sortBy('business_type')">
+                              Business Type <i class="fas fa-sort"></i>
+                          </th>
+                          <th class="category-cell sortable" onclick="sortBy('category')">
+                              Category <i class="fas fa-sort"></i>
+                          </th>
+                          <th class="amount-cell sortable" onclick="sortBy('amount')">
+                              Amount <i class="fas fa-sort"></i>
+                          </th>
+                          <th class="receipt-cell">Receipt</th>
+                          <th class="actions-cell">Actions</th>
+                      </tr>
+                  </thead>
+                  <tbody id="transaction-tbody">
+                      <!-- Transactions will be dynamically rendered here -->
+                  </tbody>
+              </table>
+          </div>
+
+          <!-- Transaction Cards -->
+          <div class="transaction-cards" id="transaction-cards">
+              <!-- Cards will be dynamically generated -->
+          </div>
+
+          <!-- Pagination -->
+          <div class="pagination-container">
+              <div class="pagination-info">
+                  <span id="pagination-summary">Showing 1-50 of 0 transactions</span>
+              </div>
+              <div class="pagination-controls" id="pagination-controls">
+                  <!-- Pagination buttons will be generated here -->
+              </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== RECEIPT MANAGER ===== -->
+      <section class="receipt-manager">
+        <div class="receipt-container">
+          <!-- Receipt Header -->
+          <div class="receipt-header">
+            <h2 class="receipt-title">Receipt Management</h2>
+            <div class="receipt-controls">
+              <div class="receipt-filters">
+                <button class="receipt-filter-btn active" data-filter="all">
+                  <i class="fas fa-list"></i>
+                  All Receipts
+                </button>
+                <button class="receipt-filter-btn" data-filter="matched">
+                  <i class="fas fa-check-circle"></i>
+                  Matched
+                </button>
+                <button class="receipt-filter-btn" data-filter="unmatched">
+                  <i class="fas fa-exclamation-circle"></i>
+                  Unmatched
+                </button>
+              </div>
+              <div class="receipt-actions">
+                <button class="btn btn-primary" onclick="autoMatchReceipts()">
+                  <i class="fas fa-magic"></i>
+                  Auto-Match
+                </button>
+                <button class="btn btn-secondary" onclick="personalizedEmailSearch()">
+                  <i class="fas fa-brain"></i>
+                  🎯 Smart Search
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Receipt Stats -->
+          <div class="receipt-stats" id="receipt-stats">
+            <div class="stat-card">
+              <div class="stat-value">0</div>
+              <div class="stat-label">Total Receipts</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">0</div>
+              <div class="stat-label">Matched</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">0</div>
+              <div class="stat-label">Unmatched</div>
+            </div>
+          </div>
+
+          <!-- Receipts Container -->
+          <div class="receipts-container" id="receipts-container">
+            <!-- Receipts will be dynamically rendered here -->
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ===== SETTINGS PANEL ===== -->
+    <div class="settings-panel" id="settings-panel">
+      <div class="settings-content">
+        <div class="settings-header">
+          <h2>Settings</h2>
+          <button class="close-settings" onclick="toggleSettings()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        
+        <div class="settings-body">
+          <!-- Bank Connections -->
+          <div class="setting-group">
+            <h3><i class="fas fa-university"></i> Bank Connections</h3>
+            
+            <div id="bank-connections">
+              <div class="connection-item">
+                <div class="connection-info">
+                  <div class="connection-icon">
+                    <i class="fas fa-university"></i>
+                  </div>
+                  <div class="connection-details">
+                    <div class="connection-name">Chase Bank</div>
+                    <div class="connection-status connected">Connected</div>
+                  </div>
+                </div>
+                <div class="connection-actions">
+                  <button class="connection-btn" onclick="refreshBankConnection('chase')" title="Refresh">
+                    <i class="fas fa-sync"></i>
+                  </button>
+                  <button class="connection-btn" onclick="disconnectBank('chase')" title="Disconnect">
+                    <i class="fas fa-unlink"></i>
+                  </button>
+                </div>
+              </div>
+              
+              <div class="connection-item">
+                <div class="connection-info">
+                  <div class="connection-icon">
+                    <i class="fas fa-university"></i>
+                  </div>
+                  <div class="connection-details">
+                    <div class="connection-name">Wells Fargo</div>
+                    <div class="connection-status disconnected">Disconnected</div>
+                  </div>
+                </div>
+                <div class="connection-actions">
+                  <button class="connection-btn" onclick="connectBank('wells')" title="Connect">
+                    <i class="fas fa-link"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <button class="connect-btn" onclick="addBankConnection()">
+              <i class="fas fa-plus"></i> Add Bank Connection
+            </button>
+          </div>
+
+          <!-- Email Receipts -->
+          <div class="setting-group">
+            <h3><i class="fas fa-envelope"></i> Email Receipts</h3>
+            <p>Manage your Gmail account connections for automatic receipt scanning.</p>
+            
+            <!-- Gmail Account Management -->
+            <div class="gmail-accounts-section">
+              <h4>Connected Gmail Accounts</h4>
+              <div id="gmail-accounts-list" class="accounts-list">
+                <!-- Accounts will be loaded here -->
+              </div>
+              
+              <!-- Add New Account -->
+              <div class="add-account-section">
+                <h4>Connect New Gmail Account</h4>
+                <div class="form-group">
+                  <label for="new-gmail-email">Email Address:</label>
+                  <input type="email" id="new-gmail-email" placeholder="your-email@gmail.com" class="form-control">
+                </div>
+                <button class="btn-primary" onclick="connectGmailAccount()">
+                  <i class="fas fa-plus"></i> Connect Gmail Account
+                </button>
+              </div>
+              
+              <!-- Scan Emails Button -->
+              <div class="scan-section" style="margin-top: 20px;">
+                <button class="btn-primary" onclick="personalizedEmailSearch()">
+                  <i class="fas fa-brain"></i> 🎯 Smart Email Search
+                </button>
+                <small class="text-muted">AI-powered personalized search based on your transaction patterns</small>
+              </div>
+              
+              <!-- Match Receipts Button -->
+              <div class="match-section" style="margin-top: 15px;">
+                <button class="btn-secondary" onclick="matchReceipts()">
+                  <i class="fas fa-link"></i> Match Receipts to Transactions
+                </button>
+                <small class="text-muted">AI-powered matching of receipts to bank transactions</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Google Sheets -->
+          <div class="setting-group">
+            <h3><i class="fas fa-table"></i> Google Sheets</h3>
+            
+            <div class="connection-item">
+              <div class="connection-info">
+                <div class="connection-icon">
+                  <i class="fas fa-table"></i>
+                </div>
+                <div class="connection-details">
+                  <div class="connection-name">TallyUps Export Sheet</div>
+                  <div class="connection-status connected">Connected</div>
+                </div>
+              </div>
+              <div class="connection-actions">
+                <button class="connection-btn" onclick="openSheet()" title="Open Sheet">
+                  <i class="fas fa-external-link-alt"></i>
+                </button>
+                <button class="connection-btn" onclick="refreshSheet()" title="Refresh">
+                  <i class="fas fa-sync"></i>
+                </button>
+              </div>
+            </div>
+            
+            <button class="connect-btn" onclick="exportToSheets()">
+              <i class="fas fa-upload"></i> Export Current Data
+            </button>
+          </div>
+
+          <!-- Cloud Storage -->
+          <div class="setting-group">
+            <h3><i class="fas fa-cloud"></i> Cloud Storage (R2)</h3>
+            
+            <div class="connection-item">
+              <div class="connection-info">
+                <div class="connection-icon">
+                  <i class="fas fa-cloud"></i>
+                </div>
+                <div class="connection-details">
+                  <div class="connection-name">Receipt Storage</div>
+                  <div class="connection-status connected">Connected</div>
+                </div>
+              </div>
+              <div class="connection-actions">
+                <button class="connection-btn" onclick="testR2Connection()" title="Test Connection">
+                  <i class="fas fa-check"></i>
+                </button>
+                <button class="connection-btn" onclick="viewStorageUsage()" title="View Usage">
+                  <i class="fas fa-chart-bar"></i>
+                </button>
+              </div>
+            </div>
+            
+            <button class="connect-btn" onclick="manageStorage()">
+              <i class="fas fa-cog"></i> Manage Storage
+            </button>
+          </div>
+
+          <!-- MongoDB -->
+          <div class="setting-group">
+            <h3><i class="fas fa-database"></i> Database (MongoDB)</h3>
+            
+            <div class="connection-item">
+              <div class="connection-info">
+                <div class="connection-icon">
+                  <i class="fas fa-database"></i>
+                </div>
+                <div class="connection-details">
+                  <div class="connection-name">TallyUps Database</div>
+                  <div class="connection-status connected">Connected</div>
+                </div>
+              </div>
+              <div class="connection-actions">
+                <button class="connection-btn" onclick="testDBConnection()" title="Test Connection">
+                  <i class="fas fa-check"></i>
+                </button>
+                <button class="connection-btn" onclick="backupDatabase()" title="Backup">
+                  <i class="fas fa-download"></i>
+                </button>
+              </div>
+            </div>
+            
+            <button class="connect-btn" onclick="manageDatabaseBackups()">
+              <i class="fas fa-history"></i> Manage Backups
+            </button>
+          </div>
+
+          <!-- HuggingFace AI -->
+          <div class="setting-group">
+            <h3><i class="fas fa-brain"></i> AI Processing (HuggingFace)</h3>
+            
+            <div class="connection-item">
+              <div class="connection-info">
+                <div class="connection-icon">
+                  <i class="fas fa-brain"></i>
+                </div>
+                <div class="connection-details">
+                  <div class="connection-name">HuggingFace API</div>
+                  <div class="connection-status connected">Connected</div>
+                </div>
+              </div>
+              <div class="connection-actions">
+                <button class="connection-btn" onclick="testAIConnection()" title="Test AI">
+                  <i class="fas fa-check"></i>
+                </button>
+                <button class="connection-btn" onclick="viewAIUsage()" title="View Usage">
+                  <i class="fas fa-chart-line"></i>
+                </button>
+              </div>
+            </div>
+            
+            <button class="connect-btn" onclick="configureAI()">
+              <i class="fas fa-cog"></i> Configure AI Models
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== NOTIFICATION CONTAINER ===== -->
+    <div class="notification-container" id="notification-container">
+      <!-- Notifications will be added here dynamically -->
+    </div>
+
+    <!-- Camera Modal Container -->
+    <div id="camera-modal-container"></div>
+    
+    <!-- ===== TRANSACTION MANAGEMENT MODALS ===== -->
+    
+    <!-- Edit Transaction Modal -->
+    <div class="modal-overlay" id="edit-transaction-modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Edit Transaction</h3>
+          <button class="close-btn" onclick="closeModal('edit-transaction-modal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="edit-transaction-form">
+            <div class="form-group">
+              <label for="edit-merchant">Merchant</label>
+              <input type="text" id="edit-merchant" name="merchant" required>
+            </div>
+            <div class="form-group">
+              <label for="edit-amount">Amount</label>
+              <input type="number" id="edit-amount" name="amount" step="0.01" required>
+            </div>
+            <div class="form-group">
+              <label for="edit-date">Date</label>
+              <input type="date" id="edit-date" name="date" required>
+            </div>
+            <div class="form-group">
+              <label for="edit-business-type">Business Type</label>
+              <select id="edit-business-type" name="business_type" required>
+                <option value="personal">Personal</option>
+                <option value="business">Business</option>
+                <option value="mixed">Mixed</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="edit-category">Category</label>
+              <select id="edit-category" name="category" required>
+                <option value="food">Food & Dining</option>
+                <option value="shopping">Shopping</option>
+                <option value="transport">Transportation</option>
+                <option value="entertainment">Entertainment</option>
+                <option value="health">Healthcare</option>
+                <option value="utilities">Utilities</option>
+                <option value="insurance">Insurance</option>
+                <option value="business">Business</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="edit-description">Description</label>
+              <textarea id="edit-description" name="description" rows="3"></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="closeModal('edit-transaction-modal')">Cancel</button>
+          <button class="btn-primary" onclick="saveTransactionEdit()">Save Changes</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Split Transaction Modal -->
+    <div class="modal-overlay" id="split-transaction-modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Split Transaction</h3>
+          <button class="close-btn" onclick="closeModal('split-transaction-modal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="original-transaction" id="original-transaction-info">
+            <!-- Original transaction info will be populated here -->
+          </div>
+          
+          <div class="split-sections">
+            <div class="split-section">
+              <h4>Split 1</h4>
+              <div class="form-group">
+                <label for="split1-amount">Amount</label>
+                <input type="number" id="split1-amount" step="0.01" onchange="updateSplitTotal()">
+              </div>
+              <div class="form-group">
+                <label for="split1-category">Category</label>
+                <select id="split1-category">
+                  <option value="food">Food & Dining</option>
+                  <option value="shopping">Shopping</option>
+                  <option value="transport">Transportation</option>
+                  <option value="entertainment">Entertainment</option>
+                  <option value="health">Healthcare</option>
+                  <option value="utilities">Utilities</option>
+                  <option value="insurance">Insurance</option>
+                  <option value="business">Business</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="split1-description">Description</label>
+                <input type="text" id="split1-description">
+              </div>
+            </div>
+            
+            <div class="split-section">
+              <h4>Split 2</h4>
+              <div class="form-group">
+                <label for="split2-amount">Amount</label>
+                <input type="number" id="split2-amount" step="0.01" onchange="updateSplitTotal()">
+              </div>
+              <div class="form-group">
+                <label for="split2-category">Category</label>
+                <select id="split2-category">
+                  <option value="food">Food & Dining</option>
+                  <option value="shopping">Shopping</option>
+                  <option value="transport">Transportation</option>
+                  <option value="entertainment">Entertainment</option>
+                  <option value="health">Healthcare</option>
+                  <option value="utilities">Utilities</option>
+                  <option value="insurance">Insurance</option>
+                  <option value="business">Business</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="split2-description">Description</label>
+                <input type="text" id="split2-description">
+              </div>
+            </div>
+          </div>
+          
+          <div class="split-total">
+            <p>Original Amount: <span id="original-amount">$0.00</span></p>
+            <p>Split Total: <span id="split-total">$0.00</span></p>
+            <p class="split-difference" id="split-difference">Difference: $0.00</p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="closeModal('split-transaction-modal')">Cancel</button>
+          <button class="btn-primary" onclick="saveTransactionSplit()" id="save-split-btn" disabled>Split Transaction</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Receipt Upload Modal -->
+    <div class="modal-overlay" id="receipt-upload-modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Upload Receipt</h3>
+          <button class="close-btn" onclick="closeModal('receipt-upload-modal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="transaction-info" id="receipt-transaction-info">
+            <!-- Transaction info will be populated here -->
+          </div>
+          
+          <div class="form-group">
+            <label for="receipt-file">Select Receipt Image</label>
+            <input type="file" id="receipt-file" accept="image/*" onchange="previewReceipt(event)">
+          </div>
+          
+          <div class="receipt-preview" id="receipt-preview" style="display: none;">
+            <h4>Preview</h4>
+            <img id="receipt-preview-img" alt="Receipt preview">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="closeModal('receipt-upload-modal')">Cancel</button>
+          <button class="btn-primary" onclick="uploadReceiptToTransaction()" id="upload-receipt-btn" disabled>Upload Receipt</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Hidden file input for receipt upload -->
+    <input type="file" id="receipt-upload-input" accept="image/*" style="display: none;" onchange="handleReceiptUpload(event)">
+    
+    <!-- ===== PROGRESS MODAL ===== -->
+    <div class="modal-overlay" id="progress-modal" style="display: none;">
+      <div class="modal-content progress-modal">
+        <div class="modal-header">
+          <h3 class="modal-title">Processing...</h3>
+        </div>
+        <div class="modal-body">
+          <div class="progress-container">
+            <div class="progress-bar">
+              <div class="progress-fill"></div>
+            </div>
+            <div class="progress-message">Initializing...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- ===== RESULTS MODAL ===== -->
+    <div class="modal-overlay" id="results-modal" style="display: none;">
+      <div class="modal-content results-modal">
+        <div class="modal-header">
+          <h3 class="modal-title">Results</h3>
+          <button class="close-btn" onclick="closeModal('results-modal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="results-content">
+            <!-- Results will be populated here -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-primary" onclick="closeModal('results-modal')">Close</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- ===== RECEIPT VIEWER MODAL ===== -->
+    <div class="modal-overlay" id="receipt-viewer-modal" style="display: none;">
+      <div class="modal-content receipt-viewer-modal">
+        <div class="modal-header">
+          <h3>Receipt Viewer</h3>
+          <button class="close-btn" onclick="closeModal('receipt-viewer-modal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="receipt-image-container">
+            <!-- Receipt images will be displayed here -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="closeModal('receipt-viewer-modal')">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="{{ url_for('static', filename='script.js') }}?v=20250628_2"></script>
+  <!-- <script src="{{ url_for('static', filename='enhanced_notifications.js') }}"></script> -->
+  <script>
+    // Initialize the dashboard when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('🚀 DOM loaded, initializing TallyUps Dashboard...');
+      // The script.js file handles its own initialization
+      // No need to call anything here as script.js has its own DOMContentLoaded listener
+    });
+  </script>
+</body>
+</html> 

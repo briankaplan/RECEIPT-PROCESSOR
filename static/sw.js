@@ -1,331 +1,357 @@
-const CACHE_NAME = 'transactionpro-2026-v1.0.0';
-const STATIC_CACHE = 'static-v1.0.0';
-const DYNAMIC_CACHE = 'dynamic-v1.0.0';
+const CACHE_NAME = 'receipt-scanner-v1.0.0';
+const STATIC_CACHE = 'receipt-scanner-static-v1.0.0';
+const DYNAMIC_CACHE = 'receipt-scanner-dynamic-v1.0.0';
 
-// Assets to cache for offline functionality
-const STATIC_ASSETS = [
-    '/',
-    '/static/manifest.json',
-    '/health',
-    '/status',
-    'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
-    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
-    'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap',
-    'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js'
+// Files to cache immediately
+const STATIC_FILES = [
+  '/',
+  '/receipt-scanner',
+  '/static/style.css',
+  '/static/script.js',
+  '/static/receipt_scanner.js',
+  '/static/enhanced_notifications.js',
+  '/static/manifest.json',
+  '/static/icon-192x192.png',
+  '/static/icon-512x512.png',
+  '/static/favicon-32x32.png',
+  '/static/favicon-16x16.png',
+  '/static/apple-touch-icon.png'
 ];
 
-// API endpoints to cache dynamically
-const API_ENDPOINTS = [
-    '/api/transactions',
-    '/api/stats',
-    '/api/analytics',
-    '/api/receipts'
+// API endpoints to cache
+const API_CACHE = [
+  '/api/process-receipt',
+  '/api/save-processed-receipt',
+  '/api/analytics/summary',
+  '/api/chat/general'
 ];
 
-// Install event - cache static assets
-self.addEventListener('install', event => {
-    console.log('🚀 Service Worker installing...');
-    
-    event.waitUntil(
-        caches.open(STATIC_CACHE)
-            .then(cache => {
-                console.log('📦 Caching static assets...');
-                return cache.addAll(STATIC_ASSETS);
-            })
-            .then(() => {
-                console.log('✅ Static assets cached successfully');
-                return self.skipWaiting();
-            })
-            .catch(err => {
-                console.error('❌ Failed to cache static assets:', err);
-            })
-    );
+// Install event - cache static files
+self.addEventListener('install', (event) => {
+  console.log('Service Worker installing...');
+  
+  event.waitUntil(
+    caches.open(STATIC_CACHE)
+      .then((cache) => {
+        console.log('Caching static files');
+        return cache.addAll(STATIC_FILES);
+      })
+      .then(() => {
+        console.log('Static files cached successfully');
+        return self.skipWaiting();
+      })
+      .catch((error) => {
+        console.error('Failed to cache static files:', error);
+      })
+  );
 });
 
 // Activate event - clean up old caches
-self.addEventListener('activate', event => {
-    console.log('🔄 Service Worker activating...');
-    
-    event.waitUntil(
-        caches.keys()
-            .then(cacheNames => {
-                return Promise.all(
-                    cacheNames.map(cacheName => {
-                        if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
-                            console.log('🗑️ Deleting old cache:', cacheName);
-                            return caches.delete(cacheName);
-                        }
-                    })
-                );
-            })
-            .then(() => {
-                console.log('✅ Service Worker activated');
-                return self.clients.claim();
-            })
-    );
-});
-
-// Fetch event - implement caching strategies
-self.addEventListener('fetch', event => {
-    const requestURL = new URL(event.request.url);
-    
-    // Handle API requests with network-first strategy
-    if (requestURL.pathname.startsWith('/api/')) {
-        event.respondWith(networkFirstStrategy(event.request));
-        return;
-    }
-    
-    // Handle static assets with cache-first strategy
-    if (STATIC_ASSETS.some(asset => event.request.url.includes(asset))) {
-        event.respondWith(cacheFirstStrategy(event.request));
-        return;
-    }
-    
-    // Handle navigation requests with network-first, fallback to cache
-    if (event.request.mode === 'navigate') {
-        event.respondWith(navigationStrategy(event.request));
-        return;
-    }
-    
-    // Default strategy for other requests
-    event.respondWith(
-        fetch(event.request).catch(() => {
-            return caches.match(event.request);
-        })
-    );
-});
-
-// Network-first strategy (for API requests)
-async function networkFirstStrategy(request) {
-    try {
-        const networkResponse = await fetch(request);
-        
-        if (networkResponse.ok) {
-            const cache = await caches.open(DYNAMIC_CACHE);
-            cache.put(request, networkResponse.clone());
-        }
-        
-        return networkResponse;
-    } catch (error) {
-        console.log('📡 Network failed, trying cache for:', request.url);
-        const cachedResponse = await caches.match(request);
-        
-        if (cachedResponse) {
-            return cachedResponse;
-        }
-        
-        // Return offline fallback for API requests
-        return new Response(JSON.stringify({
-            error: 'Offline',
-            message: 'No network connection available',
-            offline: true
-        }), {
-            status: 503,
-            headers: { 'Content-Type': 'application/json' }
-        });
-    }
-}
-
-// Cache-first strategy (for static assets)
-async function cacheFirstStrategy(request) {
-    const cachedResponse = await caches.match(request);
-    
-    if (cachedResponse) {
-        return cachedResponse;
-    }
-    
-    try {
-        const networkResponse = await fetch(request);
-        const cache = await caches.open(STATIC_CACHE);
-        cache.put(request, networkResponse.clone());
-        return networkResponse;
-    } catch (error) {
-        console.error('❌ Failed to fetch:', request.url);
-        throw error;
-    }
-}
-
-// Navigation strategy (for page requests)
-async function navigationStrategy(request) {
-    try {
-        const networkResponse = await fetch(request);
-        return networkResponse;
-    } catch (error) {
-        console.log('📄 Network failed for navigation, using cache');
-        const cachedResponse = await caches.match('/');
-        return cachedResponse || new Response('Offline', { status: 503 });
-    }
-}
-
-// Background sync for failed requests
-self.addEventListener('sync', event => {
-    console.log('🔄 Background sync triggered:', event.tag);
-    
-    if (event.tag === 'transaction-sync') {
-        event.waitUntil(syncTransactions());
-    }
-    
-    if (event.tag === 'analytics-sync') {
-        event.waitUntil(syncAnalytics());
-    }
-});
-
-// Sync transactions when back online
-async function syncTransactions() {
-    try {
-        console.log('📊 Syncing transactions...');
-        const response = await fetch('/api/sync/transactions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        });
-        
-        if (response.ok) {
-            console.log('✅ Transactions synced successfully');
-            // Notify clients about sync completion
-            self.clients.matchAll().then(clients => {
-                clients.forEach(client => {
-                    client.postMessage({
-                        type: 'SYNC_COMPLETE',
-                        data: 'Transactions synced successfully'
-                    });
-                });
-            });
-        }
-    } catch (error) {
-        console.error('❌ Transaction sync failed:', error);
-    }
-}
-
-// Sync analytics when back online
-async function syncAnalytics() {
-    try {
-        console.log('📈 Syncing analytics...');
-        const response = await fetch('/api/sync/analytics', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        });
-        
-        if (response.ok) {
-            console.log('✅ Analytics synced successfully');
-        }
-    } catch (error) {
-        console.error('❌ Analytics sync failed:', error);
-    }
-}
-
-// Push notification handler
-self.addEventListener('push', event => {
-    console.log('📨 Push notification received');
-    
-    let data = {};
-    if (event.data) {
-        data = event.data.json();
-    }
-    
-    const options = {
-        title: data.title || 'TransactionPro 2026',
-        body: data.body || 'New transaction intelligence available',
-        icon: '/static/manifest.json',
-        badge: '/static/manifest.json',
-        tag: data.tag || 'general',
-        data: data.url || '/',
-        actions: [
-            {
-                action: 'view',
-                title: 'View Details',
-                icon: '/static/icon-view.png'
-            },
-            {
-                action: 'dismiss',
-                title: 'Dismiss',
-                icon: '/static/icon-dismiss.png'
+self.addEventListener('activate', (event) => {
+  console.log('Service Worker activating...');
+  
+  event.waitUntil(
+    caches.keys()
+      .then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
+              console.log('Deleting old cache:', cacheName);
+              return caches.delete(cacheName);
             }
-        ],
-        vibrate: [200, 100, 200],
-        requireInteraction: true
-    };
+          })
+        );
+      })
+      .then(() => {
+        console.log('Service Worker activated');
+        return self.clients.claim();
+      })
+  );
+});
+
+// Fetch event - handle network requests
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  const url = new URL(request.url);
+  
+  // Skip non-GET requests
+  if (request.method !== 'GET') {
+    return;
+  }
+  
+  // Handle API requests
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(handleApiRequest(request));
+    return;
+  }
+  
+  // Handle static file requests
+  if (url.pathname.startsWith('/static/') || url.pathname === '/' || url.pathname === '/receipt-scanner') {
+    event.respondWith(handleStaticRequest(request));
+    return;
+  }
+  
+  // Handle other requests with network-first strategy
+  event.respondWith(handleOtherRequest(request));
+});
+
+// Handle API requests with network-first strategy
+async function handleApiRequest(request) {
+  try {
+    // Try network first
+    const networkResponse = await fetch(request);
     
-    event.waitUntil(
-        self.registration.showNotification(options.title, options)
+    // Cache successful responses
+    if (networkResponse.ok) {
+      const cache = await caches.open(DYNAMIC_CACHE);
+      cache.put(request, networkResponse.clone());
+    }
+    
+    return networkResponse;
+  } catch (error) {
+    console.log('Network failed for API request, trying cache:', request.url);
+    
+    // Fallback to cache
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    
+    // Return offline response for API requests
+    return new Response(
+      JSON.stringify({ 
+        error: 'You are offline. Please check your connection and try again.',
+        offline: true 
+      }),
+      {
+        status: 503,
+        statusText: 'Service Unavailable',
+        headers: { 'Content-Type': 'application/json' }
+      }
     );
-});
+  }
+}
 
-// Notification click handler
-self.addEventListener('notificationclick', event => {
-    console.log('🔔 Notification clicked:', event.action);
+// Handle static file requests with cache-first strategy
+async function handleStaticRequest(request) {
+  const cachedResponse = await caches.match(request);
+  
+  if (cachedResponse) {
+    return cachedResponse;
+  }
+  
+  try {
+    const networkResponse = await fetch(request);
     
-    event.notification.close();
-    
-    if (event.action === 'view') {
-        event.waitUntil(
-            clients.openWindow(event.notification.data)
-        );
-    } else if (event.action === 'dismiss') {
-        // Just close the notification
-        return;
-    } else {
-        // Default action - open the app
-        event.waitUntil(
-            clients.matchAll({ type: 'window', includeUncontrolled: true })
-                .then(clientList => {
-                    if (clientList.length > 0) {
-                        return clientList[0].focus();
-                    }
-                    return clients.openWindow('/');
-                })
-        );
-    }
-});
-
-// Message handler for communication with main thread
-self.addEventListener('message', event => {
-    console.log('📨 Service Worker received message:', event.data);
-    
-    if (event.data && event.data.type === 'SKIP_WAITING') {
-        self.skipWaiting();
+    if (networkResponse.ok) {
+      const cache = await caches.open(STATIC_CACHE);
+      cache.put(request, networkResponse.clone());
     }
     
-    if (event.data && event.data.type === 'CACHE_ANALYTICS') {
-        caches.open(DYNAMIC_CACHE).then(cache => {
-            cache.put('/api/analytics', new Response(JSON.stringify(event.data.payload)));
-        });
-    }
-});
-
-// Periodic background sync (if supported)
-self.addEventListener('periodicsync', event => {
-    console.log('⏰ Periodic sync triggered:', event.tag);
+    return networkResponse;
+  } catch (error) {
+    console.log('Failed to fetch static file:', request.url);
     
-    if (event.tag === 'analytics-update') {
-        event.waitUntil(updateAnalytics());
+    // Return a basic offline page for HTML requests
+    if (request.headers.get('accept').includes('text/html')) {
+      return new Response(
+        `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Offline - Receipt Scanner</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              display: flex; 
+              align-items: center; 
+              justify-content: center; 
+              height: 100vh; 
+              margin: 0; 
+              background: #000; 
+              color: #fff; 
+            }
+            .offline-container { 
+              text-align: center; 
+              padding: 20px; 
+            }
+            .offline-icon { 
+              font-size: 64px; 
+              margin-bottom: 20px; 
+            }
+            .retry-btn { 
+              background: #00ff88; 
+              color: #000; 
+              border: none; 
+              padding: 12px 24px; 
+              border-radius: 25px; 
+              font-size: 16px; 
+              cursor: pointer; 
+              margin-top: 20px; 
+            }
+          </style>
+        </head>
+        <body>
+          <div class="offline-container">
+            <div class="offline-icon">📶</div>
+            <h1>You're Offline</h1>
+            <p>Please check your internet connection and try again.</p>
+            <button class="retry-btn" onclick="window.location.reload()">Retry</button>
+          </div>
+        </body>
+        </html>
+        `,
+        {
+          status: 200,
+          headers: { 'Content-Type': 'text/html' }
+        }
+      );
     }
+    
+    throw error;
+  }
+}
+
+// Handle other requests with network-first strategy
+async function handleOtherRequest(request) {
+  try {
+    const networkResponse = await fetch(request);
+    
+    if (networkResponse.ok) {
+      const cache = await caches.open(DYNAMIC_CACHE);
+      cache.put(request, networkResponse.clone());
+    }
+    
+    return networkResponse;
+  } catch (error) {
+    const cachedResponse = await caches.match(request);
+    return cachedResponse || new Response('Not found', { status: 404 });
+  }
+}
+
+// Background sync for offline receipt processing
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'background-sync-receipts') {
+    console.log('Background sync triggered for receipts');
+    event.waitUntil(syncReceipts());
+  }
 });
 
-async function updateAnalytics() {
-    try {
-        console.log('📊 Updating analytics in background...');
-        const response = await fetch('/api/analytics/refresh', {
-            method: 'POST'
+// Sync pending receipts when back online
+async function syncReceipts() {
+  try {
+    // Get pending receipts from IndexedDB
+    const pendingReceipts = await getPendingReceipts();
+    
+    for (const receipt of pendingReceipts) {
+      try {
+        const response = await fetch('/api/save-processed-receipt', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(receipt)
         });
         
         if (response.ok) {
-            console.log('✅ Analytics updated successfully');
+          // Remove from pending receipts
+          await removePendingReceipt(receipt.id);
+          console.log('Synced receipt:', receipt.id);
         }
-    } catch (error) {
-        console.error('❌ Background analytics update failed:', error);
+      } catch (error) {
+        console.error('Failed to sync receipt:', receipt.id, error);
+      }
     }
+  } catch (error) {
+    console.error('Background sync failed:', error);
+  }
 }
 
-// Error handler
-self.addEventListener('error', event => {
-    console.error('❌ Service Worker error:', event.error);
+// IndexedDB operations for offline storage
+async function getPendingReceipts() {
+  // This would be implemented with actual IndexedDB operations
+  // For now, return empty array
+  return [];
+}
+
+async function removePendingReceipt(id) {
+  // This would be implemented with actual IndexedDB operations
+  console.log('Removing pending receipt:', id);
+}
+
+// Push notification handling
+self.addEventListener('push', (event) => {
+  console.log('Push notification received');
+  
+  const options = {
+    body: event.data ? event.data.text() : 'New receipt processed!',
+    icon: '/static/icon-192x192.png',
+    badge: '/static/icon-72x72.png',
+    vibrate: [100, 50, 100],
+    data: {
+      dateOfArrival: Date.now(),
+      primaryKey: 1
+    },
+    actions: [
+      {
+        action: 'explore',
+        title: 'View Receipt',
+        icon: '/static/icon-96x96.png'
+      },
+      {
+        action: 'close',
+        title: 'Close',
+        icon: '/static/icon-96x96.png'
+      }
+    ]
+  };
+  
+  event.waitUntil(
+    self.registration.showNotification('Receipt Scanner', options)
+  );
 });
 
-// Unhandled rejection handler
-self.addEventListener('unhandledrejection', event => {
-    console.error('❌ Service Worker unhandled rejection:', event.reason);
+// Notification click handling
+self.addEventListener('notificationclick', (event) => {
+  console.log('Notification clicked:', event.action);
+  
+  event.notification.close();
+  
+  if (event.action === 'explore') {
+    event.waitUntil(
+      clients.openWindow('/receipt-scanner')
+    );
+  }
 });
 
-console.log('🎯 TransactionPro 2026 Service Worker loaded successfully');
-console.log('📱 PWA features: Offline support, background sync, push notifications');
-console.log('🔄 Cache strategy: Network-first for API, Cache-first for static assets'); 
+// Message handling from main thread
+self.addEventListener('message', (event) => {
+  console.log('Service Worker received message:', event.data);
+  
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+  
+  if (event.data && event.data.type === 'CACHE_RECEIPT') {
+    // Cache receipt data for offline processing
+    event.waitUntil(cacheReceiptData(event.data.receipt));
+  }
+});
+
+// Cache receipt data for offline processing
+async function cacheReceiptData(receipt) {
+  try {
+    const cache = await caches.open(DYNAMIC_CACHE);
+    const response = new Response(JSON.stringify(receipt), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    await cache.put(`/api/receipts/${receipt.id}`, response);
+    console.log('Cached receipt data for offline processing');
+  } catch (error) {
+    console.error('Failed to cache receipt data:', error);
+  }
+}
+
+console.log('Service Worker script loaded'); 

@@ -16,7 +16,9 @@ from googleapiclient.discovery import build
 # Gmail API scopes
 SCOPES = [
     'https://www.googleapis.com/auth/gmail.readonly',
-    'https://www.googleapis.com/auth/gmail.modify'
+    'https://www.googleapis.com/auth/gmail.modify',
+    'https://www.googleapis.com/auth/calendar.readonly',
+    'https://www.googleapis.com/auth/calendar.events.readonly'
 ]
 
 class GmailTokenSetup:

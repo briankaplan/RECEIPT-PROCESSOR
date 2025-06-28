@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction Debug</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='enhanced_style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <div class="transaction-container table-view" id="transaction-container">
+        <div class="transaction-header">
+            <h1 class="transaction-title">Transactions</h1>
+            <div class="header-controls">
+                <div class="page-info">
+                    <span id="page-info">Page 1 of 1 • 50 per page</span>
+                </div>
+                <div class="view-toggle">
+                    <button class="view-btn active" data-view="table" onclick="switchView('table')">
+                        <i class="fas fa-table"></i>
+                        <span>Table</span>
+                    </button>
+                    <button class="view-btn" data-view="cards" onclick="switchView('cards')">
+                        <i class="fas fa-th-large"></i>
+                        <span>Cards</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="transaction-controls">
+            <div class="controls-row">
+                <div class="search-box">
+                    <input type="text" placeholder="Search transactions..." id="search-input">
+                </div>
+                <div class="filter-controls">
+                    <select class="filter-select" id="business-filter">
+                        <option value="">All Business Types</option>
+                        <option value="personal">Personal</option>
+                        <option value="down-home">Down Home</option>
+                        <option value="music-city">Music City Rodeo</option>
+                    </select>
+                    <select class="filter-select" id="category-filter">
+                        <option value="">All Categories</option>
+                        <option value="food">Food & Dining</option>
+                        <option value="transport">Transportation</option>
+                        <option value="shopping">Shopping</option>
+                        <option value="travel">Travel</option>
+                        <option value="entertainment">Entertainment</option>
+                    </select>
+                    <select class="filter-select" id="receipt-filter">
+                        <option value="">All Receipts</option>
+                        <option value="matched">Matched</option>
+                        <option value="missing">Missing</option>
+                    </select>
+                    <button class="clear-filters-btn" id="clear-filters" onclick="clearFilters()">
+                        Clear Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="transaction-table-wrapper">
+            <table class="transaction-table">
+                <thead>
+                    <tr>
+                        <th class="date-cell">Date</th>
+                        <th class="merchant-cell">Merchant</th>
+                        <th class="description-cell">Description</th>
+                        <th class="business-cell">Business Type</th>
+                        <th class="category-cell">Category</th>
+                        <th class="amount-cell">Amount</th>
+                        <th class="receipt-cell">Receipt Status</th>
+                        <th class="actions-cell">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="transaction-tbody">
+                    <!-- Transactions will be dynamically rendered here -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="transaction-cards" id="transaction-cards">
+            <!-- Cards will be dynamically generated -->
+        </div>
+
+        <div class="pagination-container">
+            <div class="pagination-info">
+                <span id="pagination-summary">Showing 1-50 of 0 transactions</span>
+            </div>
+            <div class="pagination-controls" id="pagination-controls">
+                <!-- Pagination buttons will be generated here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Debug version of the transaction system
+        let transactions = [];
+        let filteredTransactions = [];
+        let currentView = 'table';
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Debug page loaded');
+            loadTransactions();
+            setupViewToggle();
+            setupFilters();
+        });
+
+        async function loadTransactions() {
+            try {
+                console.log('📊 Loading transactions...');
+                
+                const response = await fetch('/transactions?page=1&page_size=10&date_from=2024-07-01&date_to=2025-06-28');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('📊 API Response:', data);
+                
+                if (data.success && data.transactions) {
+                    transactions = data.transactions;
+                    filteredTransactions = [...transactions];
+                    
+                    console.log(`✅ Loaded ${transactions.length} transactions`);
+                    console.log('🔍 Sample transaction:', transactions[0]);
+                    
+                    renderTransactions();
+                    updateStats();
+                    
+                    console.log('🎨 Rendering complete');
+                } else {
+                    console.error('❌ No transaction data in response');
+                }
+            } catch (error) {
+                console.error('❌ Error loading transactions:', error);
+            }
+        }
+
+        function renderTransactions() {
+            console.log('🎨 Rendering transactions...');
+            console.log('📊 Current view:', currentView);
+            console.log('📊 Filtered transactions:', filteredTransactions.length);
+            
+            if (currentView === 'table') {
+                console.log('📋 Rendering table view...');
+                renderTableView();
+            } else {
+                console.log('🃏 Rendering cards view...');
+                renderCardsView();
+            }
+        }
+
+        function renderTableView() {
+            const tbody = document.getElementById('transaction-tbody');
+            console.log('🔍 Table body element:', tbody);
+            
+            if (!tbody) {
+                console.error('❌ Table body element not found');
+                return;
+            }
+            
+            tbody.innerHTML = '';
+            
+            if (filteredTransactions.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="no-transactions">
+                            <div class="empty-state">
+                                <i class="fas fa-inbox"></i>
+                                <p>No transactions found</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            console.log('📝 Rendering', filteredTransactions.length, 'transactions');
+            
+            filteredTransactions.forEach((tx, index) => {
+                const row = document.createElement('tr');
+                row.className = 'transaction-row';
+                
+                const date = new Date(tx.date || tx.created_at);
+                const formattedDate = date.toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    year: 'numeric' 
+                });
+                
+                const amount = Math.abs(parseFloat(tx.amount || 0));
+                const isNegative = parseFloat(tx.amount || 0) < 0;
+                
+                row.innerHTML = `
+                    <td class="date-cell">${formattedDate}</td>
+                    <td class="merchant-cell">${tx.merchant || 'Unknown Merchant'}</td>
+                    <td class="description-cell">${tx.description || tx.merchant || 'No description'}</td>
+                    <td class="business-cell">${renderBusinessBadge(tx.business_type)}</td>
+                    <td class="category-cell">${renderCategoryBadge(tx.category)}</td>
+                    <td class="amount-cell">
+                        <span class="amount ${isNegative ? 'amount-negative' : 'amount-positive'}">
+                            $${amount.toFixed(2)}
+                        </span>
+                    </td>
+                    <td class="receipt-cell">${renderReceiptStatus(tx)}</td>
+                    <td class="actions-cell">
+                        <div class="action-buttons">
+                            <button class="action-btn edit-btn" onclick="editTransaction('${tx._id || tx.id}')" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="action-btn upload-btn" onclick="uploadReceipt('${tx._id || tx.id}')" title="Upload Receipt">
+                                <i class="fas fa-upload"></i>
+                            </button>
+                            <button class="action-btn split-btn" onclick="splitTransaction('${tx._id || tx.id}')" title="Split">
+                                <i class="fas fa-cut"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+                console.log(`✅ Rendered transaction ${index + 1}:`, tx.merchant);
+            });
+        }
+
+        function renderCardsView() {
+            const container = document.getElementById('transaction-cards');
+            console.log('🔍 Cards container element:', container);
+            
+            if (!container) {
+                console.error('❌ Cards container element not found');
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            if (filteredTransactions.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>No transactions found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            filteredTransactions.forEach((tx, index) => {
+                const card = document.createElement('div');
+                card.className = 'transaction-card';
+                
+                const date = new Date(tx.date || tx.created_at);
+                const formattedDate = date.toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    year: 'numeric' 
+                });
+                
+                const amount = Math.abs(parseFloat(tx.amount || 0));
+                const isNegative = parseFloat(tx.amount || 0) < 0;
+                
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="card-merchant">
+                            <div class="merchant-name">${tx.merchant || 'Unknown Merchant'}</div>
+                            <div class="card-date">${formattedDate}</div>
+                        </div>
+                        <div class="card-amount">
+                            <div class="amount-value ${isNegative ? 'amount-negative' : 'amount-positive'}">
+                                $${amount.toFixed(2)}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-description">
+                            ${tx.description || tx.merchant || 'No description available'}
+                        </div>
+                        <div class="card-meta">
+                            ${renderBusinessBadge(tx.business_type)}
+                            ${renderCategoryBadge(tx.category)}
+                        </div>
+                        <div class="card-receipt">
+                            ${renderReceiptStatus(tx)}
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="card-actions">
+                            <button class="action-btn edit-btn" onclick="editTransaction('${tx._id || tx.id}')" title="Edit">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button class="action-btn upload-btn" onclick="uploadReceipt('${tx._id || tx.id}')" title="Upload Receipt">
+                                <i class="fas fa-upload"></i> Receipt
+                            </button>
+                            <button class="action-btn split-btn" onclick="splitTransaction('${tx._id || tx.id}')" title="Split">
+                                <i class="fas fa-cut"></i> Split
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+                console.log(`✅ Rendered card ${index + 1}:`, tx.merchant);
+            });
+        }
+
+        function renderBusinessBadge(businessType) {
+            const badges = {
+                'personal': '<span class="badge badge-personal"><i class="fas fa-user"></i> Personal</span>',
+                'down-home': '<span class="badge badge-down-home"><i class="fas fa-home"></i> Down Home</span>',
+                'music-city': '<span class="badge badge-music-city"><i class="fas fa-horse"></i> Music City</span>'
+            };
+            return badges[businessType] || '<span class="badge badge-personal"><i class="fas fa-user"></i> Personal</span>';
+        }
+
+        function renderCategoryBadge(category) {
+            const badges = {
+                'food': '<span class="badge badge-category"><i class="fas fa-coffee"></i> Food</span>',
+                'shopping': '<span class="badge badge-category"><i class="fas fa-shopping-cart"></i> Shopping</span>',
+                'transport': '<span class="badge badge-category"><i class="fas fa-car"></i> Transport</span>',
+                'entertainment': '<span class="badge badge-category"><i class="fas fa-film"></i> Entertainment</span>',
+                'travel': '<span class="badge badge-category"><i class="fas fa-plane"></i> Travel</span>',
+                'business': '<span class="badge badge-category"><i class="fas fa-briefcase"></i> Business</span>'
+            };
+            return badges[category] || '<span class="badge badge-category"><i class="fas fa-tag"></i> Other</span>';
+        }
+
+        function renderReceiptStatus(tx) {
+            if (tx.has_receipt || tx.receipt_url) {
+                return '<span class="receipt-status receipt-matched"><i class="fas fa-check-circle"></i> Matched</span>';
+            } else {
+                return '<span class="receipt-status receipt-missing"><i class="fas fa-exclamation-triangle"></i> Missing</span>';
+            }
+        }
+
+        function updateStats() {
+            const total = filteredTransactions.length;
+            const matched = filteredTransactions.filter(tx => tx.has_receipt || tx.receipt_url).length;
+            const missing = total - matched;
+            const totalAmount = filteredTransactions.reduce((sum, tx) => sum + Math.abs(tx.amount || 0), 0);
+            
+            // Update pagination summary
+            const paginationSummary = document.getElementById('pagination-summary');
+            if (paginationSummary) {
+                paginationSummary.textContent = `Showing 1-${total} of ${total} transactions`;
+            }
+            
+            // Update page info
+            const pageInfo = document.getElementById('page-info');
+            if (pageInfo) {
+                pageInfo.textContent = `Page 1 of 1 • ${total} per page`;
+            }
+            
+            console.log('📊 Stats updated:', { total, matched, missing, totalAmount });
+        }
+
+        function setupViewToggle() {
+            const viewButtons = document.querySelectorAll('.view-btn');
+            
+            viewButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const view = btn.dataset.view;
+                    switchView(view);
+                    
+                    // Update active button
+                    viewButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                });
+            });
+        }
+
+        function switchView(view) {
+            console.log(`🔄 Switching to ${view} view`);
+            
+            const container = document.getElementById('transaction-container');
+            if (container) {
+                container.className = `transaction-container ${view}-view`;
+            }
+            
+            currentView = view;
+            localStorage.setItem('transaction-view', view);
+            
+            // Re-render for the new view
+            renderTransactions();
+        }
+
+        function setupFilters() {
+            // Search input
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) {
+                searchInput.addEventListener('input', debounce(applyFilters, 300));
+            }
+            
+            // Filter dropdowns
+            const businessFilter = document.getElementById('business-filter');
+            const categoryFilter = document.getElementById('category-filter');
+            const receiptFilter = document.getElementById('receipt-filter');
+            
+            if (businessFilter) businessFilter.addEventListener('change', applyFilters);
+            if (categoryFilter) categoryFilter.addEventListener('change', applyFilters);
+            if (receiptFilter) receiptFilter.addEventListener('change', applyFilters);
+        }
+
+        function applyFilters() {
+            const searchTerm = document.getElementById('search-input')?.value.toLowerCase() || '';
+            const businessFilter = document.getElementById('business-filter')?.value || '';
+            const categoryFilter = document.getElementById('category-filter')?.value || '';
+            const receiptFilter = document.getElementById('receipt-filter')?.value || '';
+            
+            filteredTransactions = transactions.filter(tx => {
+                // Search filter
+                if (searchTerm) {
+                    const searchText = [
+                        tx.merchant || '',
+                        tx.description || '',
+                        tx.category || ''
+                    ].join(' ').toLowerCase();
+                    
+                    if (!searchText.includes(searchTerm)) {
+                        return false;
+                    }
+                }
+                
+                // Business type filter
+                if (businessFilter && tx.business_type !== businessFilter) {
+                    return false;
+                }
+                
+                // Category filter
+                if (categoryFilter && tx.category !== categoryFilter) {
+                    return false;
+                }
+                
+                // Receipt status filter
+                if (receiptFilter) {
+                    const hasReceipt = tx.has_receipt || tx.receipt_url;
+                    if (receiptFilter === 'matched' && !hasReceipt) {
+                        return false;
+                    }
+                    if (receiptFilter === 'missing' && hasReceipt) {
+                        return false;
+                    }
+                }
+                
+                return true;
+            });
+            
+            renderTransactions();
+            updateStats();
+        }
+
+        function clearFilters() {
+            const searchInput = document.getElementById('search-input');
+            const businessFilter = document.getElementById('business-filter');
+            const categoryFilter = document.getElementById('category-filter');
+            const receiptFilter = document.getElementById('receipt-filter');
+            
+            if (searchInput) searchInput.value = '';
+            if (businessFilter) businessFilter.value = '';
+            if (categoryFilter) categoryFilter.value = '';
+            if (receiptFilter) receiptFilter.value = '';
+            
+            filteredTransactions = [...transactions];
+            renderTransactions();
+            updateStats();
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function editTransaction(id) {
+            console.log('Edit transaction:', id);
+        }
+
+        function uploadReceipt(id) {
+            console.log('Upload receipt for transaction:', id);
+        }
+
+        function splitTransaction(id) {
+            console.log('Split transaction:', id);
+        }
+    </script>
+</body>
+</html> 

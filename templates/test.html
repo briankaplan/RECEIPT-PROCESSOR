@@ -1,822 +1,168 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Test - Brian's Financial Intelligence</title>
+    <title>TallyUps - Test Page</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='enhanced_style.css') }}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <style>
-        /* Ultra-Modern Dark Theme Variables */
-        :root {
-            --bg-primary: #0a0f1c;
-            --bg-secondary: #111827;
-            --bg-card: #1f2937;
-            --bg-glass: rgba(31, 41, 55, 0.8);
-            --text-primary: #f9fafb;
-            --text-secondary: #d1d5db;
-            --text-muted: #9ca3af;
-            --primary-orange: #ff6b35;
-            --accent-green: #10b981;
-            --accent-red: #ef4444;
-            --accent-cyan: #06b6d4;
-            --border-subtle: rgba(55, 65, 81, 0.6);
-            --gradient-primary: linear-gradient(135deg, #ff6b35 0%, #f59e0b 100%);
-            --font-mono: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
-        }
-
-        /* Light Theme Overrides */
-        [data-theme="light"] {
-            --bg-primary: #ffffff;
-            --bg-secondary: #f8fafc;
-            --bg-card: #ffffff;
-            --bg-glass: rgba(255, 255, 255, 0.8);
-            --text-primary: #1a1a1a;
-            --text-secondary: #4a5568;
-            --text-muted: #718096;
-            --border-subtle: rgba(200, 200, 200, 0.6);
-        }
-
-        /* Smooth theme transitions */
-        * {
-            transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                        color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                        border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-            line-height: 1.6;
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 3rem;
-            padding-bottom: 2rem;
-            border-bottom: 1px solid var(--border-subtle);
-        }
-
-        .header h1 {
-            font-size: 2.5rem;
-            font-weight: 800;
-            background: var(--gradient-primary);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .back-btn {
-            background: var(--bg-glass);
-            border: 1px solid var(--border-subtle);
-            color: var(--text-primary);
-            padding: 1rem 2rem;
-            border-radius: 16px;
-            font-weight: 600;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(20px);
-            cursor: pointer;
-        }
-
-        .back-btn:hover {
-            background: var(--primary-orange);
-            color: var(--bg-primary);
-            transform: translateY(-2px);
-        }
-
-        .test-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-bottom: 3rem;
-        }
-
-        .test-panel {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: 24px;
-            padding: 2rem;
-            backdrop-filter: blur(20px);
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-
-        .test-panel:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 16px 64px rgba(0, 0, 0, 0.3);
-        }
-
-        .test-panel::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: var(--gradient-primary);
-        }
-
-        .panel-header {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-            color: var(--primary-orange);
-            font-size: 1.25rem;
-            font-weight: 700;
-        }
-
-        .btn-test {
-            width: 100%;
-            padding: 1rem 1.5rem;
-            background: var(--bg-glass);
-            border: 1px solid var(--border-subtle);
-            color: var(--text-primary);
-            border-radius: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.75rem;
-            font-size: 1rem;
-        }
-
-        .btn-test:hover {
-            background: var(--primary-orange);
-            color: var(--bg-primary);
-            transform: translateY(-2px);
-        }
-
-        .btn-test.processing {
-            background: var(--accent-cyan);
-            color: var(--bg-primary);
-            pointer-events: none;
-        }
-
-        .btn-test.success {
-            background: var(--accent-green);
-            color: var(--bg-primary);
-        }
-
-        .btn-test.error {
-            background: var(--accent-red);
-            color: var(--bg-primary);
-        }
-
-        .status-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
-            margin-bottom: 3rem;
-        }
-
-        .status-item {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 1rem;
-            background: var(--bg-glass);
-            border-radius: 12px;
-            border: 1px solid var(--border-subtle);
-        }
-
-        .status-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            position: relative;
-        }
-
-        .status-dot.online {
-            background: var(--accent-green);
-            animation: pulse 2s infinite;
-        }
-
-        .status-dot.offline {
-            background: var(--accent-red);
-        }
-
-        .status-dot.processing {
-            background: #fbbf24;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .test-table {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: 24px;
-            padding: 2rem;
-            overflow-x: auto;
-        }
-
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .table th {
-            padding: 1rem;
-            background: var(--bg-glass);
-            color: var(--text-primary);
-            font-weight: 600;
-            text-align: left;
-            border-bottom: 1px solid var(--border-subtle);
-        }
-
-        .table td {
-            padding: 1rem;
-            color: var(--text-secondary);
-            border-bottom: 1px solid var(--border-subtle);
-        }
-
-        .table tbody tr:hover {
-            background: var(--bg-glass);
-        }
-
-        .badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .badge.success {
-            background: rgba(16, 185, 129, 0.2);
-            color: var(--accent-green);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-        }
-
-        .badge.warning {
-            background: rgba(251, 191, 36, 0.2);
-            color: #fbbf24;
-            border: 1px solid rgba(251, 191, 36, 0.3);
-        }
-
-        .badge.error {
-            background: rgba(239, 68, 68, 0.2);
-            color: var(--accent-red);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-        }
-
-        .stats-row {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-            text-align: center;
-        }
-
-        .stat-item {
-            padding: 1rem;
-            background: var(--bg-glass);
-            border-radius: 12px;
-            border: 1px solid var(--border-subtle);
-        }
-
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 800;
-            background: var(--gradient-primary);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .stat-label {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            margin-top: 0.5rem;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 1rem;
-            }
-            
-            .header {
-                flex-direction: column;
-                gap: 1rem;
-                text-align: center;
-            }
-            
-            .test-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .status-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .stats-row {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-    </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1><i class="fas fa-flask"></i> System Test Suite</h1>
-            <div style="display: flex; gap: 1rem; align-items: center;">
-                <button id="theme-toggle" class="back-btn" onclick="toggleTheme()" style="padding: 1rem;">
-                    <i id="theme-icon" class="fas fa-sun"></i>
-                </button>
-                <a href="/" class="back-btn">
-                    <i class="fas fa-arrow-left"></i> Back to Dashboard
-                </a>
-            </div>
-        </div>
-
-        <!-- System Status -->
-        <div class="test-panel" style="grid-column: 1 / -1; margin-bottom: 2rem;">
-            <div class="panel-header">
-                <i class="fas fa-heartbeat"></i>
-                System Status
-            </div>
-            
-            <div class="status-grid">
-                <div class="status-item">
-                    <div class="status-dot online" id="mongodb-status"></div>
-                    <div>
-                        <strong>MongoDB</strong>
-                        <div style="font-size: 0.9rem; color: var(--text-secondary);">Database Connection</div>
+    <div class="app">
+        <header class="header">
+            <div class="header-content">
+                <div class="app-logo">
+                    <div class="logo-icon">
+                        <i class="fas fa-chart-line"></i>
                     </div>
-                </div>
-                <div class="status-item">
-                    <div class="status-dot processing" id="gmail-status"></div>
-                    <div>
-                        <strong>Gmail API</strong>
-                        <div style="font-size: 0.9rem; color: var(--text-secondary);">Email Integration</div>
-                    </div>
-                </div>
-                <div class="status-item">
-                    <div class="status-dot offline" id="teller-status"></div>
-                    <div>
-                        <strong>Teller Banking</strong>
-                        <div style="font-size: 0.9rem; color: var(--text-secondary);">Bank Connections</div>
-                    </div>
-                </div>
-                <div class="status-item">
-                    <div class="status-dot online" id="wizard-status"></div>
-                    <div>
-                        <strong>Brian's Wizard</strong>
-                        <div style="font-size: 0.9rem; color: var(--text-secondary);">AI Processing</div>
+                    <div class="logo-text">
+                        <h1>TallyUps</h1>
+                        <p>TEST PAGE</p>
                     </div>
                 </div>
             </div>
+        </header>
 
-            <div class="stats-row" style="margin-top: 2rem;">
-                <div class="stat-item">
-                    <div class="stat-value" id="receipts-count">0</div>
-                    <div class="stat-label">Receipts</div>
+        <main class="dashboard">
+            <div style="padding: 2rem; max-width: 800px; margin: 0 auto;">
+                <h2>🧪 TallyUps Function Test</h2>
+                
+                <div style="margin: 2rem 0;">
+                    <h3>Core Functions</h3>
+                    <button onclick="testCoreFunctions()" style="margin: 0.5rem; padding: 0.5rem 1rem; background: var(--primary-green); color: black; border: none; border-radius: 4px; cursor: pointer;">
+                        Test Core Functions
+                    </button>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="processed-count">0</div>
-                    <div class="stat-label">Processed</div>
+
+                <div style="margin: 2rem 0;">
+                    <h3>Quick Actions</h3>
+                    <button onclick="TallyUps.camera.toggle()" style="margin: 0.5rem; padding: 0.5rem 1rem; background: var(--accent-blue); color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Camera Toggle
+                    </button>
+                    <button onclick="toggleSettings()" style="margin: 0.5rem; padding: 0.5rem 1rem; background: var(--accent-purple); color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Toggle Settings
+                    </button>
+                    <button onclick="toggleTheme()" style="margin: 0.5rem; padding: 0.5rem 1rem; background: var(--accent-yellow); color: black; border: none; border-radius: 4px; cursor: pointer;">
+                        Toggle Theme
+                    </button>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="matched-count">0</div>
-                    <div class="stat-label">Matched</div>
+
+                <div style="margin: 2rem 0;">
+                    <h3>Transaction Functions</h3>
+                    <button onclick="syncBankTransactions()" style="margin: 0.5rem; padding: 0.5rem 1rem; background: var(--accent-blue); color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Sync Banks
+                    </button>
+                    <button onclick="scanEmailReceipts()" style="margin: 0.5rem; padding: 0.5rem 1rem; background: var(--accent-purple); color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Scan Emails
+                    </button>
+                    <button onclick="exportToSheets()" style="margin: 0.5rem; padding: 0.5rem 1rem; background: var(--accent-green); color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Export to Sheets
+                    </button>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="unmatched-count">0</div>
-                    <div class="stat-label">Unmatched</div>
+
+                <div style="margin: 2rem 0;">
+                    <h3>API Test</h3>
+                    <button onclick="testAPI()" style="margin: 0.5rem; padding: 0.5rem 1rem; background: var(--primary-green); color: black; border: none; border-radius: 4px; cursor: pointer;">
+                        Test API
+                    </button>
+                    <div id="api-result" style="margin-top: 1rem; padding: 1rem; background: var(--bg-card); border-radius: 4px; font-family: monospace; font-size: 0.9rem;"></div>
+                </div>
+
+                <div style="margin: 2rem 0;">
+                    <h3>Console Log</h3>
+                    <div id="console-log" style="height: 200px; overflow-y: auto; padding: 1rem; background: var(--bg-card); border-radius: 4px; font-family: monospace; font-size: 0.8rem; border: 1px solid var(--border-light);"></div>
                 </div>
             </div>
-        </div>
-
-        <!-- Test Actions -->
-        <div class="test-grid">
-            <div class="test-panel">
-                <div class="panel-header">
-                    <i class="fas fa-university"></i>
-                    Banking Tests
-                </div>
-                <button class="btn-test" onclick="testBankConnection()">
-                    <i class="fas fa-plug"></i>
-                    Test Bank Connection
-                </button>
-            </div>
-
-            <div class="test-panel">
-                <div class="panel-header">
-                    <i class="fas fa-cogs"></i>
-                    Processing Tests
-                </div>
-                <button class="btn-test" onclick="testReceiptProcessing()">
-                    <i class="fas fa-receipt"></i>
-                    Test Receipt Processing
-                </button>
-            </div>
-
-            <div class="test-panel">
-                <div class="panel-header">
-                    <i class="fas fa-file-export"></i>
-                    Export Tests
-                </div>
-                <button class="btn-test" onclick="testSheetsExport()">
-                    <i class="fas fa-table"></i>
-                    Test Google Sheets Export
-                </button>
-            </div>
-
-            <div class="test-panel">
-                <div class="panel-header">
-                    <i class="fas fa-magic"></i>
-                    AI Wizard Tests
-                </div>
-                <button class="btn-test" onclick="testBrianWizard()">
-                    <i class="fas fa-wand-magic-sparkles"></i>
-                    Test Brian's Wizard
-                </button>
-            </div>
-
-            <div class="test-panel">
-                <div class="panel-header">
-                    <i class="fas fa-envelope"></i>
-                    Email Tests
-                </div>
-                <button class="btn-test" onclick="testEmailScanning()">
-                    <i class="fas fa-at"></i>
-                    Test Email Scanning
-                </button>
-            </div>
-
-            <div class="test-panel">
-                <div class="panel-header">
-                    <i class="fas fa-trash"></i>
-                    Data Management
-                </div>
-                <button class="btn-test" onclick="clearTestData()">
-                    <i class="fas fa-broom"></i>
-                    Clear Test Data
-                </button>
-            </div>
-        </div>
-
-        <!-- Sample Data Table -->
-        <div class="test-table">
-            <div class="panel-header" style="margin-bottom: 2rem;">
-                <i class="fas fa-table"></i>
-                Sample Transaction Data
-            </div>
-            
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Merchant</th>
-                        <th>Amount</th>
-                        <th>Category</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>2025-06-24</td>
-                        <td>Coffee Shop Downtown</td>
-                        <td>$5.99</td>
-                        <td>Business Meals</td>
-                        <td><span class="badge success">Matched</span></td>
-                    </tr>
-                    <tr>
-                        <td>2025-06-23</td>
-                        <td>Office Supply Store</td>
-                        <td>$89.50</td>
-                        <td>Office Supplies</td>
-                        <td><span class="badge warning">Needs Review</span></td>
-                    </tr>
-                    <tr>
-                        <td>2025-06-22</td>
-                        <td>Gas Station</td>
-                        <td>$45.20</td>
-                        <td>Travel</td>
-                        <td><span class="badge error">Unmatched</span></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        </main>
     </div>
 
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
     <script>
-        // Test action functions
-        async function testBankConnection() {
-            const btn = event.target;
-            setButtonState(btn, 'processing');
-            
-            try {
-                const response = await fetch('/api/test-bank-connection', { method: 'POST' });
-                const result = await response.json();
-                
-                if (result.success) {
-                    setButtonState(btn, 'success');
-                    showNotification('Bank connection test passed', 'success');
-                } else {
-                    throw new Error(result.error);
-                }
-            } catch (error) {
-                setButtonState(btn, 'error');
-                showNotification('Bank connection test failed: ' + error.message, 'error');
-            }
-            
-            setTimeout(() => setButtonState(btn, 'default'), 3000);
+        // Override console.log to capture logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        const logContainer = document.getElementById('console-log');
+        
+        function addToLog(message, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.style.color = type === 'error' ? '#ff6b6b' : '#00ff88';
+            logEntry.style.marginBottom = '0.25rem';
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
         }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToLog(args.join(' '));
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToLog(args.join(' '), 'error');
+        };
 
-        async function testReceiptProcessing() {
-            const btn = event.target;
-            setButtonState(btn, 'processing');
+        function testCoreFunctions() {
+            console.log('🧪 Testing core functions...');
             
-            try {
-                const response = await fetch('/api/test-receipt-processing', { method: 'POST' });
-                const result = await response.json();
-                
-                if (result.success) {
-                    setButtonState(btn, 'success');
-                    showNotification('Receipt processing test passed', 'success');
-                } else {
-                    throw new Error(result.error);
-                }
-            } catch (error) {
-                setButtonState(btn, 'error');
-                showNotification('Receipt processing test failed: ' + error.message, 'error');
-            }
-            
-            setTimeout(() => setButtonState(btn, 'default'), 3000);
-        }
-
-        async function testSheetsExport() {
-            const btn = event.target;
-            setButtonState(btn, 'processing');
-            
-            try {
-                const response = await fetch('/api/test-sheets-export', { method: 'POST' });
-                const result = await response.json();
-                
-                if (result.success) {
-                    setButtonState(btn, 'success');
-                    showNotification('Sheets export test passed', 'success');
-                } else {
-                    throw new Error(result.error);
-                }
-            } catch (error) {
-                setButtonState(btn, 'error');
-                showNotification('Sheets export test failed: ' + error.message, 'error');
-            }
-            
-            setTimeout(() => setButtonState(btn, 'default'), 3000);
-        }
-
-        async function testBrianWizard() {
-            const btn = event.target;
-            setButtonState(btn, 'processing');
-            
-            try {
-                const response = await fetch('/api/test-brian-wizard', { method: 'POST' });
-                const result = await response.json();
-                
-                if (result.success) {
-                    setButtonState(btn, 'success');
-                    showNotification('Brian\'s Wizard test passed', 'success');
-                } else {
-                    throw new Error(result.error);
-                }
-            } catch (error) {
-                setButtonState(btn, 'error');
-                showNotification('Brian\'s Wizard test failed: ' + error.message, 'error');
-            }
-            
-            setTimeout(() => setButtonState(btn, 'default'), 3000);
-        }
-
-        async function testEmailScanning() {
-            const btn = event.target;
-            setButtonState(btn, 'processing');
-            
-            try {
-                const response = await fetch('/api/test-email-scanning', { method: 'POST' });
-                const result = await response.json();
-                
-                if (result.success) {
-                    setButtonState(btn, 'success');
-                    showNotification('Email scanning test passed', 'success');
-                } else {
-                    throw new Error(result.error);
-                }
-            } catch (error) {
-                setButtonState(btn, 'error');
-                showNotification('Email scanning test failed: ' + error.message, 'error');
-            }
-            
-            setTimeout(() => setButtonState(btn, 'default'), 3000);
-        }
-
-        async function clearTestData() {
-            if (confirm('Are you sure you want to clear all test data? This cannot be undone.')) {
-                const btn = event.target;
-                setButtonState(btn, 'processing');
-                
-                try {
-                    const response = await fetch('/api/clear-test-data', { method: 'POST' });
-                    const result = await response.json();
-                    
-                    if (result.success) {
-                        setButtonState(btn, 'success');
-                        showNotification('Test data cleared successfully', 'success');
-                        updateStats();
-                    } else {
-                        throw new Error(result.error);
-                    }
-                } catch (error) {
-                    setButtonState(btn, 'error');
-                    showNotification('Failed to clear test data: ' + error.message, 'error');
-                }
-                
-                setTimeout(() => setButtonState(btn, 'default'), 3000);
-            }
-        }
-
-        function setButtonState(btn, state) {
-            btn.classList.remove('processing', 'success', 'error');
-            
-            if (state === 'processing') {
-                btn.classList.add('processing');
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
-            } else if (state === 'success') {
-                btn.classList.add('success');
-                btn.innerHTML = '<i class="fas fa-check"></i> Success';
-            } else if (state === 'error') {
-                btn.classList.add('error');
-                btn.innerHTML = '<i class="fas fa-times"></i> Failed';
+            // Test if TallyUps object exists
+            if (window.TallyUps) {
+                console.log('✅ TallyUps object exists');
             } else {
-                // Restore original button content based on its parent
-                const panelHeader = btn.closest('.test-panel').querySelector('.panel-header').textContent.trim();
-                if (panelHeader.includes('Banking')) {
-                    btn.innerHTML = '<i class="fas fa-plug"></i> Test Bank Connection';
-                } else if (panelHeader.includes('Processing')) {
-                    btn.innerHTML = '<i class="fas fa-receipt"></i> Test Receipt Processing';
-                } else if (panelHeader.includes('Export')) {
-                    btn.innerHTML = '<i class="fas fa-table"></i> Test Google Sheets Export';
-                } else if (panelHeader.includes('AI Wizard')) {
-                    btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Test Brian\'s Wizard';
-                } else if (panelHeader.includes('Email')) {
-                    btn.innerHTML = '<i class="fas fa-at"></i> Test Email Scanning';
-                } else if (panelHeader.includes('Data')) {
-                    btn.innerHTML = '<i class="fas fa-broom"></i> Clear Test Data';
-                }
+                console.error('❌ TallyUps object missing');
             }
+            
+            // Test if functions exist
+            const functions = [
+                'toggleSettings', 'toggleTheme', 'syncBankTransactions', 
+                'scanEmailReceipts', 'exportToSheets', 'processAI', 
+                'calendarAnalysis', 'closeModal', 'saveTransactionEdit',
+                'saveTransactionSplit', 'showToast', 'showError'
+            ];
+            
+            functions.forEach(func => {
+                if (typeof window[func] === 'function') {
+                    console.log(`✅ ${func} function exists`);
+                } else {
+                    console.error(`❌ ${func} function missing`);
+                }
+            });
         }
 
-        async function updateStats() {
+        async function testAPI() {
+            console.log('🧪 Testing API...');
+            const resultDiv = document.getElementById('api-result');
+            
             try {
-                const response = await fetch('/api/dashboard-stats');
-                const result = await response.json();
+                const response = await fetch('/transactions?page=1&page_size=5');
+                const data = await response.json();
                 
-                if (result.success) {
-                    document.getElementById('receipts-count').textContent = result.stats.total_transactions || '0';
-                    document.getElementById('processed-count').textContent = result.stats.realtime_processed || '0';
-                    // Calculate matched and unmatched from match_rate
-                    const total = parseInt(result.stats.total_transactions) || 0;
-                    const matchRate = parseFloat(result.stats.match_rate.replace('%', '')) / 100;
-                    const matched = Math.round(total * matchRate);
-                    const unmatched = total - matched;
-                    
-                    document.getElementById('matched-count').textContent = matched.toString();
-                    document.getElementById('unmatched-count').textContent = unmatched.toString();
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div style="color: #00ff88;">✅ API Working</div>
+                        <div>Total: ${data.total}</div>
+                        <div>Page: ${data.page}</div>
+                        <div>Page Size: ${data.page_size}</div>
+                        <div>Total Pages: ${data.total_pages}</div>
+                        <div>Transactions: ${data.transactions.length}</div>
+                    `;
+                    console.log('✅ API test successful:', data);
+                } else {
+                    resultDiv.innerHTML = `<div style="color: #ff6b6b;">❌ API Error: ${data.error}</div>`;
+                    console.error('❌ API test failed:', data);
                 }
             } catch (error) {
-                console.error('Failed to update stats:', error);
+                resultDiv.innerHTML = `<div style="color: #ff6b6b;">❌ API Error: ${error.message}</div>`;
+                console.error('❌ API test error:', error);
             }
         }
 
-        // Notification system
-        function showNotification(message, type) {
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 2rem;
-                right: 2rem;
-                background: var(--bg-card);
-                border: 1px solid var(--border-subtle);
-                border-radius: 12px;
-                padding: 1rem 1.5rem;
-                color: var(--text-primary);
-                font-weight: 600;
-                z-index: 9999;
-                backdrop-filter: blur(20px);
-                animation: slideIn 0.3s ease-out;
-                max-width: 400px;
-            `;
-
-            const iconMap = {
-                success: '✅',
-                error: '❌',
-                warning: '⚠️',
-                info: 'ℹ️'
-            };
-
-            notification.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <span style="font-size: 1.25rem;">${iconMap[type] || 'ℹ️'}</span>
-                    <span>${message}</span>
-                </div>
-            `;
-
-            document.body.appendChild(notification);
-
-            // Auto-remove after 4 seconds
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.style.animation = 'slideOut 0.3s ease-in forwards';
-                    setTimeout(() => {
-                        if (notification.parentNode) {
-                            notification.parentNode.removeChild(notification);
-                        }
-                    }, 300);
-                }
-            }, 4000);
-        }
-
-        // Theme Management
-        function initializeTheme() {
-            const savedTheme = localStorage.getItem('transactionpro-theme') || 'dark';
-            setTheme(savedTheme);
-        }
-
-        function toggleTheme() {
-            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            setTheme(newTheme);
-            localStorage.setItem('transactionpro-theme', newTheme);
-            
-            // Show feedback
-            showNotification(`Switched to ${newTheme} mode`, 'success');
-        }
-
-        function setTheme(theme) {
-            document.documentElement.setAttribute('data-theme', theme);
-            const icon = document.getElementById('theme-icon');
-            if (icon) {
-                icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
-            }
-        }
-
-        // Add CSS animations
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideIn {
-                from {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-                to {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-            }
-            
-            @keyframes slideOut {
-                from {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-                to {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-
-        // Initialize on page load
+        // Initialize test page
         document.addEventListener('DOMContentLoaded', function() {
-            initializeTheme();
-            updateStats();
+            console.log('🧪 Test page loaded');
+            console.log('🌐 Current theme:', document.documentElement.getAttribute('data-theme'));
+            console.log('📱 Viewport:', window.innerWidth + 'x' + window.innerHeight);
         });
     </script>
 </body>
