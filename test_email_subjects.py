@@ -1,58 +1,82 @@
 #!/usr/bin/env python3
-"""
-Test script to see actual email subjects from personalized search
-"""
+"""Test email subject extraction"""
 
-import requests
-import json
+import os
+import logging
+from datetime import datetime
+from pymongo import MongoClient
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def test_email_subjects():
-    """Test to see what email subjects we're getting"""
-    
-    # Call the personalized email search
-    url = "http://localhost:10000/api/personalized-email-search"
-    data = {
-        "days_back": 30,
-        "max_emails": 10
-    }
-    
+    """Test email subject extraction"""
     try:
-        response = requests.post(url, json=data)
-        result = response.json()
+        # Connect to MongoDB
+        mongo_uri = os.getenv('MONGODB_URI') or os.getenv('MONGO_URI')
+        if not mongo_uri:
+            print("❌ No MongoDB URI configured")
+            return
         
-        print("🎯 Personalized Email Search Results:")
-        print(f"Success: {result.get('success', False)}")
-        print(f"Receipts Found: {result.get('receipts_found', 0)}")
-        print(f"Receipts Matched: {result.get('receipts_matched', 0)}")
-        print(f"Search Strategies: {result.get('search_strategies', 0)}")
-        print(f"Average Confidence: {result.get('average_confidence', 0.0):.2f}")
+        client = MongoClient(mongo_uri)
+        db = client.expense
         
-        # Get processing details
-        details = result.get('processing_details', {})
-        print(f"\n📧 Processing Details:")
-        print(f"Receipts Processed: {details.get('receipts_processed', 0)}")
-        print(f"Receipts Matched: {details.get('receipts_matched', 0)}")
-        print(f"Receipts Uploaded: {details.get('receipts_uploaded', 0)}")
-        print(f"Errors: {len(details.get('errors', []))}")
+        print("🔍 TESTING EMAIL SUBJECT EXTRACTION")
+        print("=" * 50)
         
-        # Show sample subjects from matches
-        matches = details.get('matches', [])
-        if matches:
-            print(f"\n✅ Matched Receipts:")
-            for i, match in enumerate(matches[:5], 1):
-                receipt_data = match.get('receipt_data', {})
-                print(f"{i}. Subject: {receipt_data.get('subject', 'No subject')}")
-                print(f"   Merchant: {receipt_data.get('merchant', 'Unknown')}")
-                print(f"   Amount: ${receipt_data.get('amount', 0)}")
-                print(f"   Confidence: {match.get('confidence', 0):.2f}")
-                print()
-        else:
-            print(f"\n❌ No matches found")
+        # Get all receipts and their subjects
+        all_receipts = list(db.receipts.find({}))
+        print(f"\n📧 EMAIL SUBJECTS FROM RECEIPTS:")
+        
+        for i, receipt in enumerate(all_receipts[:10], 1):
+            subject = receipt.get('subject', 'No subject')
+            merchant = receipt.get('merchant', 'Unknown')
+            amount = receipt.get('amount', 0)
+            from_email = receipt.get('from_email', 'Unknown')
             
-            # Show some sample subjects from the search results
-            print(f"\n📧 Sample Email Subjects (from search results):")
-            # We need to modify the personalized search to return the actual subjects
-            print("Need to modify search to return actual subjects")
+            print(f"\n  Receipt {i}:")
+            print(f"    Subject: '{subject}'")
+            print(f"    From: {from_email}")
+            print(f"    Extracted Merchant: {merchant}")
+            print(f"    Extracted Amount: ${amount}")
+            
+            # Test the extraction logic
+            from enhanced_receipt_processor import EnhancedReceiptProcessor
+            processor = EnhancedReceiptProcessor(client)
+            
+            test_merchant, test_amount = processor._extract_basic_info(subject)
+            print(f"    Test Extraction - Merchant: {test_merchant}, Amount: ${test_amount}")
+            
+            if test_amount != amount:
+                print(f"    ⚠️  EXTRACTION MISMATCH!")
+        
+        # Check if there are any receipts with non-zero amounts
+        receipts_with_amounts = [r for r in all_receipts if r.get('amount', 0) > 0]
+        print(f"\n📊 RECEIPTS WITH NON-ZERO AMOUNTS: {len(receipts_with_amounts)}")
+        
+        if receipts_with_amounts:
+            for receipt in receipts_with_amounts:
+                print(f"  ✅ {receipt.get('merchant', 'Unknown')} - ${receipt.get('amount', 0)}")
+        else:
+            print("  ❌ No receipts with non-zero amounts found")
+        
+        # Check transactions to see what amounts we should be looking for
+        midjourney_transactions = list(db.bank_transactions.find({
+            'merchant': {'$regex': 'midjourney', '$options': 'i'}
+        }))
+        anthropic_transactions = list(db.bank_transactions.find({
+            'merchant': {'$regex': 'anthropic', '$options': 'i'}
+        }))
+        
+        print(f"\n💰 TRANSACTION AMOUNTS TO MATCH:")
+        print(f"  Midjourney transactions: {len(midjourney_transactions)}")
+        for txn in midjourney_transactions[:3]:
+            print(f"    ${abs(txn.get('amount', 0))}")
+        
+        print(f"  Anthropic transactions: {len(anthropic_transactions)}")
+        for txn in anthropic_transactions[:3]:
+            print(f"    ${abs(txn.get('amount', 0))}")
         
     except Exception as e:
         print(f"❌ Error: {e}")

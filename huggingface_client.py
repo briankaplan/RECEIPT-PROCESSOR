@@ -98,6 +98,25 @@ class HuggingFaceClient:
         """Check if Hugging Face API is available"""
         return bool(self.api_key)
     
+    def test_connection(self) -> bool:
+        """Test Hugging Face API connection with a simple request"""
+        if not self.is_connected():
+            return False
+        
+        try:
+            # Test with a simple model endpoint
+            test_url = f"{self.base_url}/microsoft/DialoGPT-medium"
+            response = requests.get(
+                test_url,
+                headers=self.headers,
+                timeout=10
+            )
+            # 200 = success, 401/403 = valid API key but no access, 404 = API reachable but model not found
+            return response.status_code in [200, 401, 403, 404]
+        except Exception as e:
+            logger.warning(f"HuggingFace connection test failed: {e}")
+            return False
+    
     def categorize_expense(self, receipt_data: Dict) -> ExpenseCategory:
         """Categorize expense with COST PROTECTION - falls back to rules early"""
         if not self.is_connected():

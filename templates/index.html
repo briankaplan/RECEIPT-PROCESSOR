@@ -26,6 +26,15 @@
   
   <!-- New Enhanced Styles -->
   <link rel="stylesheet" href="{{ url_for('static', filename='enhanced_style.css') }}">
+
+  <!-- Teller Connect SDK -->
+  <script src="https://cdn.teller.io/connect/connect.js"></script>
+  
+  <script>
+    // Force dark theme on load
+    document.documentElement.setAttribute('data-theme', 'dark');
+    localStorage.setItem('theme', 'dark');
+  </script>
 </head>
 <body>
   <div class="app">
@@ -46,9 +55,150 @@
           <button class="action-btn camera-btn" onclick="TallyUps.camera.toggle()" id="camera-btn" title="Scan Receipt">
             <i class="fas fa-camera"></i>
           </button>
-          <button class="action-btn settings-btn" onclick="toggleSettings()" title="Settings">
-            <i class="fas fa-cog"></i>
+          <button class="action-btn logout-btn" onclick="TallyUps.logout()" title="Logout">
+            <i class="fas fa-sign-out-alt"></i>
           </button>
+          <div class="settings-dropdown">
+            <button class="action-btn settings-btn" onclick="toggleSettingsDropdown()" title="Settings">
+              <i class="fas fa-cog"></i>
+            </button>
+            <div class="settings-dropdown-menu" id="settings-dropdown-menu">
+              <!-- Bank Connections -->
+              <div class="dropdown-section">
+                <div class="dropdown-section-header">
+                  <i class="fas fa-university"></i>
+                  <span>Bank Connections</span>
+                </div>
+                <div class="dropdown-section-content">
+                  <div class="connection-status" id="bank-connection-status">
+                    <div class="status-item">
+                      <i class="fas fa-circle status-dot"></i>
+                      <span>No banks connected</span>
+                    </div>
+                  </div>
+                  <div class="dropdown-actions">
+                    <button class="dropdown-btn primary" onclick="openTellerConnect()">
+                      <i class="fas fa-plus"></i>
+                      Connect Bank Account
+                    </button>
+                    <button class="dropdown-btn secondary" onclick="syncBankTransactions()" id="sync-bank-btn" style="display: none;">
+                      <i class="fas fa-sync"></i>
+                      Sync Transactions
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Email Receipts -->
+              <div class="dropdown-section">
+                <div class="dropdown-section-header">
+                  <i class="fas fa-envelope"></i>
+                  <span>Email Receipts</span>
+                </div>
+                <div class="dropdown-section-content">
+                  <div class="connection-status" id="email-connection-status">
+                    <div class="status-item">
+                      <i class="fas fa-circle status-dot"></i>
+                      <span>Loading...</span>
+                    </div>
+                  </div>
+                  <div class="dropdown-actions">
+                    <button class="dropdown-btn primary" onclick="connectGmail()">
+                      <i class="fas fa-plus"></i>
+                      Connect Gmail
+                    </button>
+                    <button class="dropdown-btn secondary" onclick="scanEmailReceipts()" id="scan-email-btn" style="display: none;">
+                      <i class="fas fa-search"></i>
+                      Scan for Receipts
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Google Sheets -->
+              <div class="dropdown-section">
+                <div class="dropdown-section-header">
+                  <i class="fas fa-table"></i>
+                  <span>Google Sheets</span>
+                </div>
+                <div class="dropdown-section-content">
+                  <div class="connection-status" id="sheets-connection-status">
+                    <div class="status-item">
+                      <i class="fas fa-circle status-dot"></i>
+                      <span>Not connected</span>
+                    </div>
+                  </div>
+                  <div class="dropdown-actions">
+                    <button class="dropdown-btn primary" onclick="connectGoogleSheets()">
+                      <i class="fas fa-plus"></i>
+                      Connect Sheets
+                    </button>
+                    <button class="dropdown-btn secondary" onclick="exportToSheets()" id="export-sheets-btn" style="display: none;">
+                      <i class="fas fa-download"></i>
+                      Export Data
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Cloud Storage -->
+              <div class="dropdown-section">
+                <div class="dropdown-section-header">
+                  <i class="fas fa-cloud"></i>
+                  <span>Cloud Storage</span>
+                </div>
+                <div class="dropdown-section-content">
+                  <div class="connection-status" id="storage-connection-status">
+                    <div class="status-item">
+                      <i class="fas fa-circle status-dot"></i>
+                      <span>Not connected</span>
+                    </div>
+                  </div>
+                  <div class="dropdown-actions">
+                    <button class="dropdown-btn primary" onclick="connectCloudStorage()">
+                      <i class="fas fa-plus"></i>
+                      Connect Storage
+                    </button>
+                    <button class="dropdown-btn secondary" onclick="backupData()" id="backup-btn" style="display: none;">
+                      <i class="fas fa-save"></i>
+                      Backup Data
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- System Settings -->
+              <div class="dropdown-section">
+                <div class="dropdown-section-header">
+                  <i class="fas fa-cog"></i>
+                  <span>System Settings</span>
+                </div>
+                <div class="dropdown-section-content">
+                  <div class="setting-item">
+                    <label>Theme</label>
+                    <select id="theme-selector" onchange="changeTheme(this.value)">
+                      <option value="dark">Dark</option>
+                      <option value="light">Light</option>
+                      <option value="auto">Auto</option>
+                    </select>
+                  </div>
+                  <div class="setting-item">
+                    <label>Notifications</label>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="notifications-toggle" onchange="toggleNotifications(this.checked)">
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+                  <div class="dropdown-actions">
+                    <button class="dropdown-btn secondary" onclick="openSystemSettings()">
+                      <i class="fas fa-cog"></i>
+                      Advanced Settings
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
           <div class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
             <i class="fas fa-moon" id="theme-icon"></i>
           </div>
@@ -431,226 +581,6 @@
       </section>
     </main>
 
-    <!-- ===== SETTINGS PANEL ===== -->
-    <div class="settings-panel" id="settings-panel">
-      <div class="settings-content">
-        <div class="settings-header">
-          <h2>Settings</h2>
-          <button class="close-settings" onclick="toggleSettings()">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        
-        <div class="settings-body">
-          <!-- Bank Connections -->
-          <div class="setting-group">
-            <h3><i class="fas fa-university"></i> Bank Connections</h3>
-            
-            <div id="bank-connections">
-              <div class="connection-item">
-                <div class="connection-info">
-                  <div class="connection-icon">
-                    <i class="fas fa-university"></i>
-                  </div>
-                  <div class="connection-details">
-                    <div class="connection-name">Chase Bank</div>
-                    <div class="connection-status connected">Connected</div>
-                  </div>
-                </div>
-                <div class="connection-actions">
-                  <button class="connection-btn" onclick="refreshBankConnection('chase')" title="Refresh">
-                    <i class="fas fa-sync"></i>
-                  </button>
-                  <button class="connection-btn" onclick="disconnectBank('chase')" title="Disconnect">
-                    <i class="fas fa-unlink"></i>
-                  </button>
-                </div>
-              </div>
-              
-              <div class="connection-item">
-                <div class="connection-info">
-                  <div class="connection-icon">
-                    <i class="fas fa-university"></i>
-                  </div>
-                  <div class="connection-details">
-                    <div class="connection-name">Wells Fargo</div>
-                    <div class="connection-status disconnected">Disconnected</div>
-                  </div>
-                </div>
-                <div class="connection-actions">
-                  <button class="connection-btn" onclick="connectBank('wells')" title="Connect">
-                    <i class="fas fa-link"></i>
-                  </button>
-                </div>
-              </div>
-            </div>
-            
-            <button class="connect-btn" onclick="addBankConnection()">
-              <i class="fas fa-plus"></i> Add Bank Connection
-            </button>
-          </div>
-
-          <!-- Email Receipts -->
-          <div class="setting-group">
-            <h3><i class="fas fa-envelope"></i> Email Receipts</h3>
-            <p>Manage your Gmail account connections for automatic receipt scanning.</p>
-            
-            <!-- Gmail Account Management -->
-            <div class="gmail-accounts-section">
-              <h4>Connected Gmail Accounts</h4>
-              <div id="gmail-accounts-list" class="accounts-list">
-                <!-- Accounts will be loaded here -->
-              </div>
-              
-              <!-- Add New Account -->
-              <div class="add-account-section">
-                <h4>Connect New Gmail Account</h4>
-                <div class="form-group">
-                  <label for="new-gmail-email">Email Address:</label>
-                  <input type="email" id="new-gmail-email" placeholder="your-email@gmail.com" class="form-control">
-                </div>
-                <button class="btn-primary" onclick="connectGmailAccount()">
-                  <i class="fas fa-plus"></i> Connect Gmail Account
-                </button>
-              </div>
-              
-              <!-- Scan Emails Button -->
-              <div class="scan-section" style="margin-top: 20px;">
-                <button class="btn-primary" onclick="personalizedEmailSearch()">
-                  <i class="fas fa-brain"></i> 🎯 Smart Email Search
-                </button>
-                <small class="text-muted">AI-powered personalized search based on your transaction patterns</small>
-              </div>
-              
-              <!-- Match Receipts Button -->
-              <div class="match-section" style="margin-top: 15px;">
-                <button class="btn-secondary" onclick="matchReceipts()">
-                  <i class="fas fa-link"></i> Match Receipts to Transactions
-                </button>
-                <small class="text-muted">AI-powered matching of receipts to bank transactions</small>
-              </div>
-            </div>
-          </div>
-
-          <!-- Google Sheets -->
-          <div class="setting-group">
-            <h3><i class="fas fa-table"></i> Google Sheets</h3>
-            
-            <div class="connection-item">
-              <div class="connection-info">
-                <div class="connection-icon">
-                  <i class="fas fa-table"></i>
-                </div>
-                <div class="connection-details">
-                  <div class="connection-name">TallyUps Export Sheet</div>
-                  <div class="connection-status connected">Connected</div>
-                </div>
-              </div>
-              <div class="connection-actions">
-                <button class="connection-btn" onclick="openSheet()" title="Open Sheet">
-                  <i class="fas fa-external-link-alt"></i>
-                </button>
-                <button class="connection-btn" onclick="refreshSheet()" title="Refresh">
-                  <i class="fas fa-sync"></i>
-                </button>
-              </div>
-            </div>
-            
-            <button class="connect-btn" onclick="exportToSheets()">
-              <i class="fas fa-upload"></i> Export Current Data
-            </button>
-          </div>
-
-          <!-- Cloud Storage -->
-          <div class="setting-group">
-            <h3><i class="fas fa-cloud"></i> Cloud Storage (R2)</h3>
-            
-            <div class="connection-item">
-              <div class="connection-info">
-                <div class="connection-icon">
-                  <i class="fas fa-cloud"></i>
-                </div>
-                <div class="connection-details">
-                  <div class="connection-name">Receipt Storage</div>
-                  <div class="connection-status connected">Connected</div>
-                </div>
-              </div>
-              <div class="connection-actions">
-                <button class="connection-btn" onclick="testR2Connection()" title="Test Connection">
-                  <i class="fas fa-check"></i>
-                </button>
-                <button class="connection-btn" onclick="viewStorageUsage()" title="View Usage">
-                  <i class="fas fa-chart-bar"></i>
-                </button>
-              </div>
-            </div>
-            
-            <button class="connect-btn" onclick="manageStorage()">
-              <i class="fas fa-cog"></i> Manage Storage
-            </button>
-          </div>
-
-          <!-- MongoDB -->
-          <div class="setting-group">
-            <h3><i class="fas fa-database"></i> Database (MongoDB)</h3>
-            
-            <div class="connection-item">
-              <div class="connection-info">
-                <div class="connection-icon">
-                  <i class="fas fa-database"></i>
-                </div>
-                <div class="connection-details">
-                  <div class="connection-name">TallyUps Database</div>
-                  <div class="connection-status connected">Connected</div>
-                </div>
-              </div>
-              <div class="connection-actions">
-                <button class="connection-btn" onclick="testDBConnection()" title="Test Connection">
-                  <i class="fas fa-check"></i>
-                </button>
-                <button class="connection-btn" onclick="backupDatabase()" title="Backup">
-                  <i class="fas fa-download"></i>
-                </button>
-              </div>
-            </div>
-            
-            <button class="connect-btn" onclick="manageDatabaseBackups()">
-              <i class="fas fa-history"></i> Manage Backups
-            </button>
-          </div>
-
-          <!-- HuggingFace AI -->
-          <div class="setting-group">
-            <h3><i class="fas fa-brain"></i> AI Processing (HuggingFace)</h3>
-            
-            <div class="connection-item">
-              <div class="connection-info">
-                <div class="connection-icon">
-                  <i class="fas fa-brain"></i>
-                </div>
-                <div class="connection-details">
-                  <div class="connection-name">HuggingFace API</div>
-                  <div class="connection-status connected">Connected</div>
-                </div>
-              </div>
-              <div class="connection-actions">
-                <button class="connection-btn" onclick="testAIConnection()" title="Test AI">
-                  <i class="fas fa-check"></i>
-                </button>
-                <button class="connection-btn" onclick="viewAIUsage()" title="View Usage">
-                  <i class="fas fa-chart-line"></i>
-                </button>
-              </div>
-            </div>
-            
-            <button class="connect-btn" onclick="configureAI()">
-              <i class="fas fa-cog"></i> Configure AI Models
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- ===== NOTIFICATION CONTAINER ===== -->
     <div class="notification-container" id="notification-container">
       <!-- Notifications will be added here dynamically -->
@@ -894,6 +824,7 @@
 
   <!-- Scripts -->
   <script src="{{ url_for('static', filename='script.js') }}?v=20250628_2"></script>
+  <script src="{{ url_for('static', filename='enhanced_dashboard.js') }}"></script>
   <!-- <script src="{{ url_for('static', filename='enhanced_notifications.js') }}"></script> -->
   <script>
     // Initialize the dashboard when the page loads

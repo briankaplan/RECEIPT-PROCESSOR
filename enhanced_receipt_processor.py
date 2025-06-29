@@ -490,6 +490,12 @@ class EnhancedReceiptProcessor:
             if not date2_parsed:
                 return False
             
+            # Normalize timezones - convert both to UTC if they have timezone info
+            if date1_parsed.tzinfo is not None:
+                date1_parsed = date1_parsed.replace(tzinfo=None)
+            if date2_parsed.tzinfo is not None:
+                date2_parsed = date2_parsed.replace(tzinfo=None)
+            
             # Calculate difference
             diff = abs((date1_parsed - date2_parsed).days)
             return diff <= days_threshold
@@ -498,15 +504,23 @@ class EnhancedReceiptProcessor:
             logger.error(f"Error checking date proximity: {e}")
             return False
     
-    def _parse_date(self, date_str: str) -> Optional[datetime]:
+    def _parse_date(self, date_input) -> Optional[datetime]:
         """Parse various date formats"""
         try:
             import re
             from datetime import datetime
             from email.utils import parsedate_to_datetime
             
-            if not date_str:
+            # If it's already a datetime object, return it
+            if isinstance(date_input, datetime):
+                return date_input
+            
+            # If it's None or empty, return None
+            if not date_input:
                 return None
+            
+            # Convert to string if it's not already
+            date_str = str(date_input)
             
             # Try RFC format first (common in email headers)
             try:
@@ -557,7 +571,7 @@ class EnhancedReceiptProcessor:
             return None
             
         except Exception as e:
-            logger.error(f"Error parsing date '{date_str}': {e}")
+            logger.error(f"Error parsing date '{date_input}': {e}")
             return None
     
     def _upload_matched_receipt(self, match: ReceiptMatch) -> bool:

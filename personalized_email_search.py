@@ -40,6 +40,7 @@ class EmailReceiptCandidate:
     ai_analysis: Optional[Dict] = None
     found_by_strategies: List[str] = field(default_factory=list)
     gmail_account: str = "unknown"  # Add gmail account field
+    body: str = ""  # Add email body field for comprehensive processing
 
 class PersonalizedEmailSearchSystem:
     """
@@ -586,13 +587,12 @@ class PersonalizedEmailSearchSystem:
         
         for msg_id in message_ids:
             try:
-                # Get full message
+                # Get full message with body content
                 full_message = await asyncio.to_thread(
                     lambda: self.service.users().messages().get(
                         userId='me',
                         id=msg_id,
-                        format='metadata',
-                        metadataHeaders=['From', 'Subject', 'Date']
+                        format='full'  # Get full message including body
                     ).execute()
                 )
                 
@@ -601,13 +601,16 @@ class PersonalizedEmailSearchSystem:
                 subject = self._get_header_value(headers, 'Subject')
                 date = self._get_header_value(headers, 'Date')
                 
+                # Extract email body content
+                body = self._extract_email_body(full_message)
+                
                 # Check against your merchant patterns
                 merchant_match = self._match_to_your_merchants(from_email, subject)
                 
                 # Analyze receipt type and attachments
                 receipt_analysis = await self._analyze_receipt_type(full_message)
                 
-                # Create candidate object
+                # Create candidate object with body content
                 candidate = EmailReceiptCandidate(
                     message_id=msg_id,
                     from_email=from_email,
@@ -619,7 +622,8 @@ class PersonalizedEmailSearchSystem:
                     has_receipt_link=receipt_analysis.get('has_receipt_link', False),
                     receipt_type=receipt_analysis.get('receipt_type', 'unknown'),
                     ai_analysis=receipt_analysis.get('ai_analysis', {}),
-                    gmail_account=self.config.get('gmail_account', 'unknown')
+                    gmail_account=self.config.get('gmail_account', 'unknown'),
+                    body=body  # Include the full email body
                 )
                 
                 validated_results.append(candidate)
@@ -922,18 +926,15 @@ class PersonalizedEmailSearchSystem:
         logging.info(f"✅ Learned {len(self.ai_memory)} new patterns")
 
     def run_personalized_search(self, days_back: int = 60, max_emails: int = 200) -> Dict[str, Any]:
-        """Synchronous wrapper for personalized email search with enhanced processing"""
+        """Synchronous wrapper for personalized email search with comprehensive processing"""
         try:
-            # Run the async search
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            search_results = loop.run_until_complete(self.execute_personalized_search(days_back))
-            loop.close()
+            # Run the search synchronously without creating new event loops
+            search_results = self._execute_personalized_search_sync(days_back)
             
-            # Process results with enhanced receipt processor
-            from enhanced_receipt_processor import EnhancedReceiptProcessor
+            # Process results with comprehensive receipt processor
+            from comprehensive_receipt_processor import ComprehensiveReceiptProcessor
             
-            # Initialize enhanced processor
+            # Initialize comprehensive processor
             r2_client = None
             try:
                 from r2_client import R2Client
@@ -941,7 +942,7 @@ class PersonalizedEmailSearchSystem:
             except Exception as e:
                 logging.warning(f"R2 client not available: {e}")
             
-            processor = EnhancedReceiptProcessor(self.mongo_client, r2_client)
+            processor = ComprehensiveReceiptProcessor(self.mongo_client, r2_client)
             
             # Get top results for processing
             top_results = search_results.get('results', [])[:max_emails]
@@ -949,13 +950,10 @@ class PersonalizedEmailSearchSystem:
             # Extract message IDs for validation
             message_ids = [result['message_id'] for result in top_results]
             
-            # Validate and extract actual email data
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            validated_candidates = loop.run_until_complete(self.validate_with_merchant_signatures(message_ids))
-            loop.close()
+            # Validate and extract actual email data synchronously
+            validated_candidates = self._validate_with_merchant_signatures_sync(message_ids)
             
-            # Convert to email candidates format
+            # Convert to email candidates format with body content
             email_candidates = []
             for candidate in validated_candidates:
                 email_candidates.append({
@@ -964,10 +962,11 @@ class PersonalizedEmailSearchSystem:
                     "from_email": candidate.from_email,
                     "date": candidate.date,
                     "confidence_score": candidate.confidence_score,
-                    "attachment_count": candidate.attachment_count
+                    "attachment_count": candidate.attachment_count,
+                    "body": candidate.body if hasattr(candidate, 'body') else ""
                 })
             
-            # Process with enhanced workflow
+            # Process with comprehensive workflow
             processing_results = processor.process_email_receipts(
                 email_candidates, 
                 self.config.get('gmail_account', 'unknown')
@@ -987,6 +986,9 @@ class PersonalizedEmailSearchSystem:
                 "processing_details": {
                     "receipts_matched": processing_results.get("receipts_matched", 0),
                     "receipts_uploaded": processing_results.get("receipts_uploaded", 0),
+                    "attachments_processed": processing_results.get("attachments_processed", 0),
+                    "body_screenshots": processing_results.get("body_screenshots", 0),
+                    "url_downloads": processing_results.get("url_downloads", 0),
                     "errors": [str(e) for e in processing_results.get("errors", [])]
                 }
             }
@@ -1001,6 +1003,257 @@ class PersonalizedEmailSearchSystem:
                 "attachments_uploaded": 0,
                 "transactions_matched": 0
             }
+
+    def _execute_personalized_search_sync(self, days_back: int = 60) -> Dict[str, List]:
+        """Synchronous version of personalized search"""
+        
+        since_date = (datetime.now() - timedelta(days=days_back)).strftime('%Y/%m/%d')
+        all_results = {}
+        strategy_results = {}
+        
+        logging.info(f"🎯 Starting personalized search for last {days_back} days")
+        logging.info(f"📊 Targeting {len(self.strategies)} specialized strategies")
+        
+        # Sort strategies by priority
+        sorted_strategies = sorted(self.strategies, key=lambda s: s.search_priority)
+        
+        for strategy in sorted_strategies:
+            logging.info(f"🔍 Executing: {strategy.name} (Priority: {strategy.search_priority})")
+            
+            try:
+                # Build query with date filter
+                full_query = f"({strategy.query}) after:{since_date}"
+                
+                # Execute Gmail search synchronously
+                response = self.service.users().messages().list(
+                    userId='me',
+                    q=full_query,
+                    maxResults=50
+                ).execute()
+                
+                messages = response.get('messages', [])
+                strategy_results[strategy.name] = {
+                    'found': len(messages),
+                    'expected': strategy.expected_matches,
+                    'confidence': strategy.confidence_weight,
+                    'messages': messages
+                }
+                
+                logging.info(f"  📧 Found {len(messages)} messages (expected: {strategy.expected_matches})")
+                
+                # Add to overall results
+                for msg in messages:
+                    msg_id = msg['id']
+                    if msg_id not in all_results:
+                        all_results[msg_id] = {
+                            'message_id': msg_id,
+                            'found_by_strategies': [strategy.name],
+                            'confidence_factors': [strategy.confidence_weight],
+                            'priority_scores': [strategy.search_priority]
+                        }
+                    else:
+                        all_results[msg_id]['found_by_strategies'].append(strategy.name)
+                        all_results[msg_id]['confidence_factors'].append(strategy.confidence_weight)
+                        all_results[msg_id]['priority_scores'].append(strategy.search_priority)
+                
+            except Exception as e:
+                logging.error(f"❌ Strategy {strategy.name} failed: {e}")
+                strategy_results[strategy.name] = {'error': str(e)}
+        
+        # Calculate final confidence scores with AI enhancement
+        final_results = []
+        for msg_data in all_results.values():
+            # Higher confidence for messages found by multiple strategies
+            strategy_count = len(msg_data['found_by_strategies'])
+            avg_confidence = sum(msg_data['confidence_factors']) / len(msg_data['confidence_factors'])
+            
+            # Boost confidence for multiple strategy hits
+            multiplier = min(1.0 + (strategy_count - 1) * 0.1, 1.5)
+            final_confidence = min(avg_confidence * multiplier, 1.0)
+            
+            # AI enhancement based on learned patterns
+            if self.ai_memory:
+                ai_boost = self._calculate_ai_confidence_boost(msg_data)
+                final_confidence = min(final_confidence + ai_boost, 1.0)
+            
+            msg_data['final_confidence'] = final_confidence
+            final_results.append(msg_data)
+        
+        # Sort by confidence
+        final_results.sort(key=lambda x: x['final_confidence'], reverse=True)
+        
+        # Generate performance report
+        performance_report = self._generate_performance_report(strategy_results, final_results)
+        
+        logging.info(f"✅ Search complete: {len(final_results)} unique messages found")
+        if final_results:
+            logging.info(f"📈 Average confidence: {sum(r['final_confidence'] for r in final_results) / len(final_results):.2f}")
+        else:
+            logging.info(f"📈 No results to calculate average confidence.")
+        
+        return {
+            'results': final_results,
+            'strategy_performance': strategy_results,
+            'performance_report': performance_report
+        }
+
+    def _validate_with_merchant_signatures_sync(self, message_ids: List[str]) -> List[EmailReceiptCandidate]:
+        """Synchronous version of merchant signature validation"""
+        
+        validated_results = []
+        
+        for msg_id in message_ids:
+            try:
+                # Get full message with body content
+                full_message = self.service.users().messages().get(
+                    userId='me',
+                    id=msg_id,
+                    format='full'  # Get full message including body
+                ).execute()
+                
+                headers = full_message.get('payload', {}).get('headers', [])
+                from_email = self._get_header_value(headers, 'From')
+                subject = self._get_header_value(headers, 'Subject')
+                date = self._get_header_value(headers, 'Date')
+                
+                # Extract email body content
+                body = self._extract_email_body(full_message)
+                
+                # Check against your merchant patterns
+                merchant_match = self._match_to_your_merchants(from_email, subject)
+                
+                # Analyze receipt type and attachments
+                receipt_analysis = self._analyze_receipt_type_sync(full_message)
+                
+                # Create candidate object with body content
+                candidate = EmailReceiptCandidate(
+                    message_id=msg_id,
+                    from_email=from_email,
+                    subject=subject,
+                    date=date,
+                    confidence_score=merchant_match.get('confidence', 0.5) if merchant_match else 0.3,
+                    merchant_match=merchant_match,
+                    attachment_count=receipt_analysis.get('attachment_count', 0),
+                    has_receipt_link=receipt_analysis.get('has_receipt_link', False),
+                    receipt_type=receipt_analysis.get('receipt_type', 'unknown'),
+                    ai_analysis=receipt_analysis.get('ai_analysis', {}),
+                    gmail_account=self.config.get('gmail_account', 'unknown'),
+                    body=body  # Include the full email body
+                )
+                
+                validated_results.append(candidate)
+                
+            except Exception as e:
+                logging.error(f"Validation failed for {msg_id}: {e}")
+        
+        return validated_results
+
+    def _analyze_receipt_type_sync(self, message: Dict) -> Dict[str, Any]:
+        """Synchronous version of receipt type analysis"""
+        analysis = {
+            'attachment_count': 0,
+            'has_receipt_link': False,
+            'receipt_type': 'unknown',
+            'ai_analysis': {}
+        }
+        
+        try:
+            payload = message.get('payload', {})
+            
+            # Count attachments
+            if 'parts' in payload:
+                for part in payload['parts']:
+                    if part.get('filename'):
+                        analysis['attachment_count'] += 1
+            
+            # Check for receipt links in body
+            body = self._extract_email_body(message)
+            if body:
+                receipt_keywords = ['receipt', 'invoice', 'payment', 'confirmation']
+                for keyword in receipt_keywords:
+                    if keyword.lower() in body.lower():
+                        analysis['has_receipt_link'] = True
+                        break
+                
+                # Simple AI analysis
+                analysis['ai_analysis'] = self._ai_analyze_content_sync(body)
+            
+        except Exception as e:
+            logging.error(f"Receipt type analysis failed: {e}")
+        
+        return analysis
+
+    def _ai_analyze_content_sync(self, body: str) -> Dict[str, Any]:
+        """Synchronous version of AI content analysis"""
+        analysis = {
+            'receipt_confidence': 0.0,
+            'keywords_found': [],
+            'amount_detected': False,
+            'merchant_detected': False
+        }
+        
+        try:
+            # Simple keyword-based analysis
+            receipt_keywords = [
+                'receipt', 'invoice', 'payment', 'confirmation', 'order',
+                'total', 'amount', 'due', 'paid', 'transaction'
+            ]
+            
+            found_keywords = []
+            for keyword in receipt_keywords:
+                if keyword.lower() in body.lower():
+                    found_keywords.append(keyword)
+                    analysis['receipt_confidence'] += 0.05
+            
+            analysis['keywords_found'] = found_keywords
+            analysis['receipt_confidence'] = min(analysis['receipt_confidence'], 1.0)
+            
+        except Exception as e:
+            logging.error(f"AI content analysis failed: {e}")
+        
+        return analysis
+
+    def _generate_performance_report(self, strategy_results: Dict, final_results: List) -> Dict[str, Any]:
+        """Generate performance report for search strategies"""
+        report = {
+            'total_strategies': len(strategy_results),
+            'successful_strategies': 0,
+            'failed_strategies': 0,
+            'total_messages_found': len(final_results),
+            'strategy_performance': {},
+            'recommendations': []
+        }
+        
+        for strategy_name, result in strategy_results.items():
+            if 'error' in result:
+                report['failed_strategies'] += 1
+                report['strategy_performance'][strategy_name] = {
+                    'status': 'failed',
+                    'error': result['error']
+                }
+            else:
+                report['successful_strategies'] += 1
+                found = result.get('found', 0)
+                expected = result.get('expected', 0)
+                confidence = result.get('confidence', 0.0)
+                
+                performance_score = found / max(expected, 1) if expected > 0 else 0.0
+                
+                report['strategy_performance'][strategy_name] = {
+                    'status': 'success',
+                    'found': found,
+                    'expected': expected,
+                    'performance_score': performance_score,
+                    'confidence': confidence
+                }
+                
+                # Generate recommendations
+                if performance_score < 0.5:
+                    report['recommendations'].append(f"Strategy '{strategy_name}' underperforming - consider refining query")
+                elif performance_score > 1.5:
+                    report['recommendations'].append(f"Strategy '{strategy_name}' overperforming - consider narrowing scope")
+        
+        return report
 
 # Usage example
 async def main():

@@ -339,23 +339,24 @@ class HuggingFaceReceiptProcessor:
             return self._create_error_response(str(e))
     
     def _load_and_encode_image(self, image_path: str) -> Optional[str]:
-        """Load image and encode as base64 for API"""
+        """Load image and return file path for multipart upload"""
         try:
             if isinstance(image_path, str):
-                with open(image_path, 'rb') as image_file:
-                    image_data = image_file.read()
+                # Validate file exists and is readable
+                if not os.path.exists(image_path):
+                    logger.error(f"Image file not found: {image_path}")
+                    return None
+                
+                # Return the file path for multipart upload
+                return image_path
             else:
-                # Assume it's a PIL Image
-                buffer = BytesIO()
-                image_path.save(buffer, format='PNG')
-                image_data = buffer.getvalue()
-            
-            # Encode as base64
-            encoded_image = base64.b64encode(image_data).decode('utf-8')
-            return encoded_image
+                # Handle PIL Image objects by saving to temp file
+                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
+                image_path.save(temp_file.name, format='PNG')
+                return temp_file.name
             
         except Exception as e:
-            logger.error(f"Failed to load and encode image: {str(e)}")
+            logger.error(f"Failed to load image: {str(e)}")
             return None
     
     def _process_with_cloud_model(self, image_data: str, model_name: str) -> Dict[str, Any]:
@@ -392,24 +393,29 @@ class HuggingFaceReceiptProcessor:
         try:
             self.processing_stats["api_calls"] += 1
             
-            payload = {
-                "inputs": {
-                    "image": image_data,
-                    "text": "Extract all receipt information including merchant, date, total amount, items, and payment method as structured JSON"
-                },
-                "parameters": {
-                    "max_new_tokens": 512,
-                    "temperature": 0.1,
-                    "return_full_text": False
+            # Use multipart form data instead of JSON with base64
+            with open(image_data, 'rb') as f:
+                files = {
+                    "file": ("receipt.png", f, "image/png")
                 }
-            }
-            
-            response = requests.post(
-                config["endpoint"],
-                headers=headers,
-                json=payload,
-                timeout=config["timeout"]
-            )
+                
+                # Add text prompt as form data
+                data = {
+                    "text": "Extract all receipt information including merchant, date, total amount, items, and payment method as structured JSON"
+                }
+                
+                # Remove Content-Type header to let requests set it for multipart
+                headers_copy = headers.copy()
+                if "Content-Type" in headers_copy:
+                    del headers_copy["Content-Type"]
+                
+                response = requests.post(
+                    config["endpoint"],
+                    headers=headers_copy,
+                    files=files,
+                    data=data,
+                    timeout=config["timeout"]
+                )
             
             if response.status_code == 200:
                 result = response.json()
@@ -457,19 +463,29 @@ class HuggingFaceReceiptProcessor:
         try:
             self.processing_stats["api_calls"] += 1
             
-            payload = {
-                "inputs": {
-                    "image": image_data,
+            # Use multipart form data
+            with open(image_data, 'rb') as f:
+                files = {
+                    "file": ("receipt.png", f, "image/png")
+                }
+                
+                # Add question as form data
+                data = {
                     "question": "What is the merchant name, date, total amount, and items on this receipt?"
                 }
-            }
-            
-            response = requests.post(
-                config["endpoint"],
-                headers=headers,
-                json=payload,
-                timeout=config["timeout"]
-            )
+                
+                # Remove Content-Type header to let requests set it for multipart
+                headers_copy = headers.copy()
+                if "Content-Type" in headers_copy:
+                    del headers_copy["Content-Type"]
+                
+                response = requests.post(
+                    config["endpoint"],
+                    headers=headers_copy,
+                    files=files,
+                    data=data,
+                    timeout=config["timeout"]
+                )
             
             if response.status_code == 200:
                 result = response.json()
@@ -505,14 +521,23 @@ class HuggingFaceReceiptProcessor:
         try:
             self.processing_stats["api_calls"] += 1
             
-            payload = {"inputs": image_data}
-            
-            response = requests.post(
-                config["endpoint"],
-                headers=headers,
-                json=payload,
-                timeout=config["timeout"]
-            )
+            # Use multipart form data
+            with open(image_data, 'rb') as f:
+                files = {
+                    "file": ("receipt.png", f, "image/png")
+                }
+                
+                # Remove Content-Type header to let requests set it for multipart
+                headers_copy = headers.copy()
+                if "Content-Type" in headers_copy:
+                    del headers_copy["Content-Type"]
+                
+                response = requests.post(
+                    config["endpoint"],
+                    headers=headers_copy,
+                    files=files,
+                    timeout=config["timeout"]
+                )
             
             if response.status_code == 200:
                 result = response.json()
@@ -547,14 +572,23 @@ class HuggingFaceReceiptProcessor:
         try:
             self.processing_stats["api_calls"] += 1
             
-            payload = {"inputs": image_data}
-            
-            response = requests.post(
-                config["endpoint"],
-                headers=headers,
-                json=payload,
-                timeout=config["timeout"]
-            )
+            # Use multipart form data
+            with open(image_data, 'rb') as f:
+                files = {
+                    "file": ("receipt.png", f, "image/png")
+                }
+                
+                # Remove Content-Type header to let requests set it for multipart
+                headers_copy = headers.copy()
+                if "Content-Type" in headers_copy:
+                    del headers_copy["Content-Type"]
+                
+                response = requests.post(
+                    config["endpoint"],
+                    headers=headers_copy,
+                    files=files,
+                    timeout=config["timeout"]
+                )
             
             if response.status_code == 200:
                 result = response.json()

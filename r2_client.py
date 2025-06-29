@@ -299,3 +299,45 @@ class R2Client:
                 'total_size': 0,
                 'receipts_count': 0
             }
+    
+    def delete_all_files(self, prefix: str = "", limit: int = 1000) -> int:
+        """Delete all files in the bucket (optionally with a prefix)"""
+        files = self.list_files(prefix=prefix, limit=limit)
+        deleted = 0
+        for f in files:
+            if self.delete_file(f['key']):
+                deleted += 1
+        return deleted
+    
+    def bulk_delete_files(self, keys: List[str]) -> int:
+        """Delete multiple files at once using bulk delete operation"""
+        if not self.is_connected():
+            logger.error("R2 not connected")
+            return 0
+        
+        if not keys:
+            return 0
+        
+        try:
+            # Prepare objects for deletion
+            objects = [{'Key': key} for key in keys]
+            
+            # Perform bulk delete
+            response = self.client.delete_objects(
+                Bucket=self.bucket_name,
+                Delete={'Objects': objects}
+            )
+            
+            # Count successfully deleted objects
+            deleted_count = len(response.get('Deleted', []))
+            errors = response.get('Errors', [])
+            
+            if errors:
+                logger.warning(f"Some files failed to delete: {errors}")
+            
+            logger.info(f"Bulk deleted {deleted_count}/{len(keys)} files from R2")
+            return deleted_count
+            
+        except Exception as e:
+            logger.error(f"Error bulk deleting files from R2: {str(e)}")
+            return 0

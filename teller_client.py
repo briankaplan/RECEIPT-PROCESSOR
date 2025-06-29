@@ -8,6 +8,7 @@ import ssl
 from urllib.parse import urljoin
 from dataclasses import dataclass
 import tempfile
+import base64
 
 logger = logging.getLogger(__name__)
 
@@ -35,61 +36,61 @@ class TellerAccount:
     institution_name: str
 
 def load_certificates_from_environment():
-    """Load certificates from environment variables (Render) or files (local)"""
-    try:
-        # First, try to get certificates from environment variables (Render)
-        cert_content = os.getenv('TELLER_CERTIFICATE_CONTENT')
-        key_content = os.getenv('TELLER_PRIVATE_KEY_CONTENT')
-        
-        if cert_content and key_content:
-            logger.info("🔐 Loading certificates from environment variables (Render)")
-            
-            # Handle base64 encoded certificates
-            if is_base64_content(cert_content):
-                import base64
-                cert_content = base64.b64decode(cert_content).decode('utf-8')
-            if is_base64_content(key_content):
-                import base64
-                key_content = base64.b64decode(key_content).decode('utf-8')
-            
-            # Validate PEM format
-            if not validate_pem_format(cert_content, 'CERTIFICATE'):
-                logger.error("❌ Invalid certificate format in environment")
-                return None, None
-            if not validate_pem_format(key_content, 'PRIVATE KEY'):
-                logger.error("❌ Invalid private key format in environment")
-                return None, None
-            
-            # Create temporary files
-            cert_temp_path, key_temp_path = create_temp_certificate_files(cert_content, key_content)
-            logger.info("✅ Certificates loaded from environment variables")
-            return cert_temp_path, key_temp_path
-        
-        # Try Render secret files at /etc/secrets/
-        render_cert_path = '/etc/secrets/teller_certificate.pem'
-        render_key_path = '/etc/secrets/teller_private_key.pem'
-        
-        if os.path.exists(render_cert_path) and os.path.exists(render_key_path):
-            logger.info("🔐 Loading certificates from Render secret files")
-            return render_cert_path, render_key_path
-        
-        # Fallback to file-based loading (local development)
-        logger.info("🔐 Loading certificates from files (local development)")
-        cert_path = os.getenv('TELLER_CERT_PATH', './credentials/teller_certificate.pem')
-        key_path = os.getenv('TELLER_KEY_PATH', './credentials/teller_private_key.pem')
-        
-        if not cert_path or not key_path:
-            logger.warning("⚠️ No certificate paths configured")
-            return None, None
-        
-        if os.path.exists(cert_path) and os.path.exists(key_path):
-            return cert_path, key_path
-        
-        return None, None
-        
-    except Exception as e:
-        logger.error(f"❌ Failed to load certificates: {e}")
-        return None, None
+    """
+    Load Teller client certificate and key from environment variables or files.
+    Supports both PEM and base64-encoded (.b64) files.
+    Returns (cert_path, key_path) to use for SSL connections.
+    Adds debug logging to print the first few lines of the decoded temp files and original PEM files.
+    """
+    cert_path = os.getenv('TELLER_CERT_PATH', './credentials/teller_certificate.pem')
+    key_path = os.getenv('TELLER_KEY_PATH', './credentials/teller_private_key.pem')
+    
+    def print_file_head(path, label):
+        if path and os.path.exists(path):
+            with open(path, 'r') as f:
+                lines = f.readlines()
+                logger.info(f"[DEBUG] {label} ({path}):\n" + ''.join(lines[:5]))
+        else:
+            logger.warning(f"[DEBUG] {label} not found: {path}")
+    
+    # Print original PEM file heads
+    if cert_path.endswith('.pem') and os.path.exists(cert_path):
+        print_file_head(cert_path, 'Original PEM Certificate')
+    if key_path.endswith('.pem') and os.path.exists(key_path):
+        print_file_head(key_path, 'Original PEM Key')
+    
+    # If .b64 files exist, decode them to temp .pem files
+    if cert_path.endswith('.b64') and os.path.exists(cert_path):
+        with open(cert_path, 'rb') as f:
+            b64_data = f.read()
+            pem_data = base64.b64decode(b64_data)
+            temp_cert = tempfile.NamedTemporaryFile(delete=False, suffix='.pem')
+            temp_cert.write(pem_data)
+            temp_cert.close()
+            cert_path = temp_cert.name
+            print_file_head(cert_path, 'Decoded Temp Certificate')
+    elif os.path.exists(cert_path):
+        # Use as-is if .pem
+        pass
+    else:
+        cert_path = None
+    
+    if key_path.endswith('.b64') and os.path.exists(key_path):
+        with open(key_path, 'rb') as f:
+            b64_data = f.read()
+            pem_data = base64.b64decode(b64_data)
+            temp_key = tempfile.NamedTemporaryFile(delete=False, suffix='.pem')
+            temp_key.write(pem_data)
+            temp_key.close()
+            key_path = temp_key.name
+            print_file_head(key_path, 'Decoded Temp Key')
+    elif os.path.exists(key_path):
+        # Use as-is if .pem
+        pass
+    else:
+        key_path = None
+    
+    return cert_path, key_path
 
 def is_base64_content(content: str) -> bool:
     """Check if content appears to be base64 encoded"""
@@ -548,27 +549,96 @@ class TellerClient:
         return any(indicator in description_lower for indicator in merchant_indicators)
     
     def get_stats(self) -> Dict:
-        """Get Teller client statistics"""
-        stats = {
-            'connected': self.is_connected(),
-            'credentials_configured': self._has_credentials(),
-            'connected_accounts': len(self.connected_accounts),
-            'environment': self.environment
-        }
-        
-        if self.connected_accounts:
-            stats['accounts'] = [
-                {
-                    'id': acc.id,
-                    'name': acc.name,
-                    'type': acc.type,
-                    'institution': acc.institution_name,
-                    'balance': acc.balance
+        """Get connection and transaction statistics"""
+        try:
+            if not self.is_connected():
+                return {
+                    'connected': False,
+                    'accounts_count': 0,
+                    'total_transactions': 0,
+                    'last_sync': None
                 }
-                for acc in self.connected_accounts
-            ]
-        
-        return stats
+            
+            accounts = self.get_connected_accounts()
+            total_transactions = 0
+            
+            for account in accounts:
+                try:
+                    transactions = self.get_transactions(account.id, limit=1)
+                    if transactions:
+                        # Get total count from account metadata if available
+                        total_transactions += len(transactions)
+                except Exception as e:
+                    logger.warning(f"Error getting transactions for account {account.id}: {e}")
+            
+            return {
+                'connected': True,
+                'accounts_count': len(accounts),
+                'total_transactions': total_transactions,
+                'last_sync': datetime.now().isoformat(),
+                'environment': self.environment
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting stats: {e}")
+            return {
+                'connected': False,
+                'error': str(e)
+            }
+
+    # ===== TELLER CONNECT METHODS =====
+    
+    def get_accounts_with_token(self, access_token: str) -> List[Dict]:
+        """Get accounts using Teller Connect access token"""
+        try:
+            headers = {
+                'Authorization': f'Bearer {access_token}',
+                'Content-Type': 'application/json'
+            }
+            
+            response = requests.get(f"{self.api_url}/accounts", headers=headers)
+            response.raise_for_status()
+            
+            accounts = response.json()
+            logger.info(f"Retrieved {len(accounts)} accounts from Teller")
+            return accounts
+            
+        except Exception as e:
+            logger.error(f"Error getting accounts with token: {e}")
+            return []
+    
+    def get_transactions_with_token(self, access_token: str, account_id: str, days_back: int = 30) -> List[Dict]:
+        """Get transactions using Teller Connect access token"""
+        try:
+            headers = {
+                'Authorization': f'Bearer {access_token}',
+                'Content-Type': 'application/json'
+            }
+            
+            # Calculate date range
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=days_back)
+            
+            params = {
+                'from': start_date.strftime('%Y-%m-%d'),
+                'to': end_date.strftime('%Y-%m-%d'),
+                'limit': 1000  # Get more transactions
+            }
+            
+            response = requests.get(
+                f"{self.api_url}/accounts/{account_id}/transactions", 
+                headers=headers, 
+                params=params
+            )
+            response.raise_for_status()
+            
+            transactions = response.json()
+            logger.info(f"Retrieved {len(transactions)} transactions from account {account_id}")
+            return transactions
+            
+        except Exception as e:
+            logger.error(f"Error getting transactions with token: {e}")
+            return []
     
     def setup_webhook(self) -> bool:
         """Set up webhook for real-time transaction notifications"""

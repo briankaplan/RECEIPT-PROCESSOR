@@ -156,7 +156,7 @@ class CalendarIntelligence:
         return None
     
     def _load_calendars(self):
-        """Load available calendars"""
+        """Load only the primary/default calendar"""
         try:
             if not self.service:
                 return
@@ -164,15 +164,27 @@ class CalendarIntelligence:
             calendars_result = self.service.calendarList().list().execute()
             calendars = calendars_result.get('items', [])
             
+            # Only keep the primary/default calendar
+            primary_calendar = None
             for calendar in calendars:
-                self.calendars.append({
-                    'id': calendar['id'],
-                    'name': calendar['summary'],
-                    'primary': calendar.get('primary', False),
-                    'business_type': self._classify_calendar_business_type(calendar['summary'])
-                })
+                if calendar.get('primary', False):
+                    primary_calendar = calendar
+                    break
             
-            logger.info(f"📅 Loaded {len(self.calendars)} calendars")
+            # If no primary calendar found, use the first one (usually the default)
+            if not primary_calendar and calendars:
+                primary_calendar = calendars[0]
+            
+            if primary_calendar:
+                self.calendars = [{
+                    'id': primary_calendar['id'],
+                    'name': primary_calendar['summary'],
+                    'primary': primary_calendar.get('primary', False),
+                    'business_type': self._classify_calendar_business_type(primary_calendar['summary'])
+                }]
+                logger.info(f"📅 Loaded primary calendar: {primary_calendar['summary']}")
+            else:
+                logger.warning("⚠️ No primary calendar found")
             
         except Exception as e:
             logger.error(f"❌ Failed to load calendars: {e}")

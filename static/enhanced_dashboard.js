@@ -1,23 +1,24 @@
 // ===== ENHANCED TALLYUPS DASHBOARD =====
 
 // ===== GLOBAL VARIABLES ===== 
-let transactions = [];
-let filteredTransactions = [];
-let sortDirection = 'asc';
-let sortColumn = '';
-let searchTerm = '';
-let activeFilters = {
-    category: '',
-    businessType: '',
-    receiptStatus: '',
-    dateFrom: '',
-    dateTo: ''
-};
+// Note: These variables are already declared in script.js, so we don't redeclare them here
+// let transactions = [];
+// let filteredTransactions = [];
+// let sortDirection = 'asc';
+// let sortColumn = '';
+// let searchTerm = '';
+// let activeFilters = {
+//     category: '',
+//     businessType: '',
+//     receiptStatus: '',
+//     dateFrom: '',
+//     dateTo: ''
+// };
 
 // ===== PAGINATION STATE =====
-let currentPage = 1;
-const pageSize = 50;
-let totalPages = 1;
+// let currentPage = 1;
+// const pageSize = 50;
+// let totalPages = 1;
 
 // ===== SEARCH, FILTER, AND SORT FUNCTIONALITY =====
 // Wrapper for backward compatibility
@@ -2429,3 +2430,16 @@ function autoSwitchView() {
 
 window.addEventListener('resize', autoSwitchView);
 window.addEventListener('load', autoSwitchView);
+
+// ===== INITIALIZATION =====
+// Initialize variables that are shared with script.js
+if (typeof sortDirection === 'undefined') window.sortDirection = 'asc';
+if (typeof sortColumn === 'undefined') window.sortColumn = '';
+if (typeof searchTerm === 'undefined') window.searchTerm = '';
+if (typeof activeFilters === 'undefined') window.activeFilters = {
+    category: '',
+    businessType: '',
+    receiptStatus: '',
+    dateFrom: '',
+    dateTo: ''
+};

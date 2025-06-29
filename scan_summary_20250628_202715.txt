@@ -1,0 +1,15 @@
+COMPREHENSIVE RECEIPT SCAN SUMMARY
+========================================
+
+Date Range: 2024-07-01 to 2025-06-28
+Total Days: 362
+
+Total Transactions: 0
+Total Receipts Found: 0
+Successful Matches: 0
+Match Rate: 0.0%
+Zero Amount Fixes: 0
+
+Emails Processed: 0
+Failed Extractions: 0
+

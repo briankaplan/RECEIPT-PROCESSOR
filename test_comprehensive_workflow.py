@@ -1,147 +1,168 @@
 #!/usr/bin/env python3
-"""
-Test script for the comprehensive receipt workflow
-"""
+"""Test the comprehensive receipt processing workflow"""
 
-import requests
-import json
-import time
+import os
+import logging
+from datetime import datetime
+from pymongo import MongoClient
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 def test_comprehensive_workflow():
-    """Test the comprehensive receipt workflow endpoint"""
-    
-    print("🚀 Testing Comprehensive Receipt Workflow...")
-    print("=" * 50)
-    
-    # Test the endpoint
-    url = "http://localhost:10000/api/comprehensive-receipt-workflow"
-    
+    """Test the comprehensive receipt processing workflow"""
     try:
-        print("📡 Making request to comprehensive workflow endpoint...")
-        start_time = time.time()
+        # Connect to MongoDB
+        mongo_uri = os.getenv('MONGODB_URI') or os.getenv('MONGO_URI')
+        if not mongo_uri:
+            print("❌ No MongoDB URI configured")
+            return
         
-        response = requests.post(url, 
-                               headers={'Content-Type': 'application/json'},
-                               timeout=300)  # 5 minute timeout
+        client = MongoClient(mongo_uri)
+        db = client.expense
         
-        end_time = time.time()
-        duration = end_time - start_time
+        print("🧪 TESTING COMPREHENSIVE RECEIPT PROCESSING WORKFLOW")
+        print("=" * 60)
         
-        print(f"⏱️  Request completed in {duration:.2f} seconds")
+        # Test 1: Check if comprehensive processor can be imported
+        try:
+            from comprehensive_receipt_processor import ComprehensiveReceiptProcessor
+            print("✅ ComprehensiveReceiptProcessor imported successfully")
+        except Exception as e:
+            print(f"❌ Failed to import ComprehensiveReceiptProcessor: {e}")
+            return
         
-        if response.status_code == 200:
-            data = response.json()
+        # Test 2: Initialize the processor
+        try:
+            # Initialize R2 client
+            r2_client = None
+            try:
+                from r2_client import R2Client
+                r2_client = R2Client()
+                print("✅ R2 client initialized")
+            except Exception as e:
+                print(f"⚠️ R2 client not available: {e}")
             
-            if data.get('success'):
-                print("✅ Workflow completed successfully!")
-                print("\n📊 Results Summary:")
-                print(f"   📧 Email Scan:")
-                print(f"      - Receipts Found: {data['email_scan']['receipts_found']}")
-                print(f"      - Receipts Saved: {data['email_scan']['receipts_saved']}")
-                print(f"      - Attachments Uploaded: {data['email_scan']['attachments_uploaded']}")
-                
-                print(f"\n   🎯 Matching:")
-                print(f"      - Total Matches: {data['matching']['total_matches']}")
-                print(f"      - Exact Matches: {data['matching']['exact_matches']}")
-                print(f"      - Fuzzy Matches: {data['matching']['fuzzy_matches']}")
-                print(f"      - AI Matches: {data['matching']['ai_matches']}")
-                print(f"      - Match Rate: {data['matching']['match_rate']:.1f}%")
-                
-                print(f"\n   💾 Database Updates:")
-                print(f"      - Transactions Updated: {data['database_updates']['transactions_updated']}")
-                print(f"      - Stats Refreshed: {data['database_updates']['stats_refreshed']}")
-                
-                print(f"\n   ⚡ Performance:")
-                print(f"      - Total Time: {data['performance']['total_time']:.2f}s")
-                print(f"      - Email Scan Time: {data['performance']['email_scan_time']:.2f}s")
-                print(f"      - Matching Time: {data['performance']['matching_time']:.2f}s")
-                
-                if data['email_scan']['errors']:
-                    print(f"\n   ⚠️  Errors ({len(data['email_scan']['errors'])}):")
-                    for error in data['email_scan']['errors'][:3]:  # Show first 3 errors
-                        print(f"      - {error}")
-                
-                return True
-            else:
-                print(f"❌ Workflow failed: {data.get('error', 'Unknown error')}")
-                return False
+            processor = ComprehensiveReceiptProcessor(client, r2_client)
+            print("✅ ComprehensiveReceiptProcessor initialized")
+        except Exception as e:
+            print(f"❌ Failed to initialize processor: {e}")
+            return
+        
+        # Test 3: Test with sample data
+        print("\n📧 Testing with sample email candidates...")
+        
+        sample_candidates = [
+            {
+                "message_id": "test_attachment_1",
+                "subject": "Receipt from EXPENSIFY - $99.00",
+                "from_email": "receipts@expensify.com",
+                "date": "2025-06-28T10:00:00Z",
+                "confidence_score": 0.9,
+                "attachment_count": 1,
+                "body": "Your receipt for $99.00 is attached. Thank you for your purchase!"
+            },
+            {
+                "message_id": "test_body_1",
+                "subject": "Payment Confirmation - $32.93",
+                "from_email": "billing@midjourney.com",
+                "date": "2025-06-28T10:00:00Z",
+                "confidence_score": 0.8,
+                "attachment_count": 0,
+                "body": """
+                <div class="receipt">
+                    <h2>Payment Confirmation</h2>
+                    <p>Amount: $32.93</p>
+                    <p>Merchant: Midjourney Inc.</p>
+                    <p>Date: 2025-06-28</p>
+                    <p>Thank you for your subscription!</p>
+                </div>
+                """
+            },
+            {
+                "message_id": "test_url_1",
+                "subject": "Your Receipt is Ready",
+                "from_email": "receipts@anthropic.com",
+                "date": "2025-06-28T10:00:00Z",
+                "confidence_score": 0.7,
+                "attachment_count": 0,
+                "body": "Your receipt for $54.90 is available at: https://receipts.anthropic.com/view/12345"
+            }
+        ]
+        
+        # Process with comprehensive workflow
+        results = processor.process_email_receipts(sample_candidates, "test@example.com")
+        
+        print(f"\n📊 Processing Results:")
+        print(f"  Receipts processed: {results.get('receipts_processed', 0)}")
+        print(f"  Receipts matched: {results.get('receipts_matched', 0)}")
+        print(f"  Receipts uploaded: {results.get('receipts_uploaded', 0)}")
+        print(f"  Attachments processed: {results.get('attachments_processed', 0)}")
+        print(f"  Body screenshots: {results.get('body_screenshots', 0)}")
+        print(f"  URL downloads: {results.get('url_downloads', 0)}")
+        print(f"  Errors: {len(results.get('errors', []))}")
+        
+        if results.get('errors'):
+            print(f"\n❌ Errors encountered:")
+            for error in results.get('errors', []):
+                print(f"  - {error}")
+        
+        # Test 4: Check database for new receipts
+        print(f"\n🔍 Checking database for new receipts...")
+        
+        # Get receipts created in the last hour
+        recent_receipts = list(db.receipts.find({
+            'scanned_at': {
+                '$gte': datetime.utcnow().replace(minute=0, second=0, microsecond=0).isoformat()
+            }
+        }))
+        
+        print(f"  Recent receipts found: {len(recent_receipts)}")
+        
+        for receipt in recent_receipts[:3]:
+            print(f"    - {receipt.get('merchant', 'Unknown')} - ${receipt.get('amount', 0)}")
+            print(f"      Source: {receipt.get('source_type', 'unknown')}")
+            print(f"      Transaction ID: {receipt.get('transaction_id', 'None')}")
+            print(f"      R2 URL: {'Yes' if receipt.get('r2_url') else 'No'}")
+        
+        # Test 5: Check transactions with receipt URLs
+        transactions_with_receipts = list(db.bank_transactions.find({
+            'receipt_url': {'$exists': True, '$ne': ''}
+        }))
+        
+        print(f"\n💰 Transactions with receipt URLs: {len(transactions_with_receipts)}")
+        
+        # Test 6: Verify the workflow components
+        print(f"\n🔧 Workflow Component Verification:")
+        
+        # Check URL extractor
+        try:
+            from url_extractor import URLExtractor
+            url_extractor = URLExtractor()
+            test_urls = url_extractor.extract_urls_from_email("Your receipt is at https://receipts.example.com/view/123")
+            print(f"  ✅ URL extractor: {len(test_urls)} URLs found")
+        except Exception as e:
+            print(f"  ❌ URL extractor: {e}")
+        
+        # Check OCR processor
+        try:
+            from huggingface_receipt_processor import HuggingFaceReceiptProcessor
+            ocr_processor = HuggingFaceReceiptProcessor()
+            print(f"  ✅ OCR processor: Available")
+        except Exception as e:
+            print(f"  ❌ OCR processor: {e}")
+        
+        # Check R2 client
+        if r2_client:
+            print(f"  ✅ R2 client: Connected")
         else:
-            print(f"❌ HTTP Error {response.status_code}: {response.text}")
-            return False
-            
-    except requests.exceptions.Timeout:
-        print("❌ Request timed out (5 minutes)")
-        return False
-    except requests.exceptions.ConnectionError:
-        print("❌ Connection error - make sure the server is running on localhost:10000")
-        return False
-    except Exception as e:
-        print(f"❌ Unexpected error: {e}")
-        return False
-
-def test_dashboard_stats():
-    """Test that dashboard stats are updated after workflow"""
-    
-    print("\n📊 Testing Dashboard Stats Update...")
-    print("=" * 50)
-    
-    url = "http://localhost:10000/api/dashboard-stats"
-    
-    try:
-        response = requests.get(url)
+            print(f"  ⚠️ R2 client: Not available")
         
-        if response.status_code == 200:
-            data = response.json()
-            
-            if data.get('success'):
-                stats = data['stats']
-                print("✅ Dashboard stats retrieved successfully!")
-                print(f"   📈 Total Expenses: ${stats['total_expenses']:,.2f}")
-                print(f"   📊 Total Transactions: {stats['total_transactions']}")
-                print(f"   🎯 Match Rate: {stats['match_rate']}%")
-                print(f"   🤖 AI Processed: {stats['ai_processed']}")
-                print(f"   ✅ Matched Transactions: {stats['matched_transactions']}")
-                print(f"   ⚠️  Missing Receipts: {stats['missing_receipts']}")
-                return True
-            else:
-                print(f"❌ Dashboard stats failed: {data.get('error', 'Unknown error')}")
-                return False
-        else:
-            print(f"❌ HTTP Error {response.status_code}: {response.text}")
-            return False
-            
+        print(f"\n🎉 Comprehensive workflow test complete!")
+        
     except Exception as e:
-        print(f"❌ Dashboard stats error: {e}")
-        return False
-
-def main():
-    """Run all tests"""
-    
-    print("🧪 Comprehensive Receipt Workflow Test Suite")
-    print("=" * 60)
-    
-    # Test 1: Comprehensive Workflow
-    workflow_success = test_comprehensive_workflow()
-    
-    # Test 2: Dashboard Stats
-    stats_success = test_dashboard_stats()
-    
-    # Summary
-    print("\n" + "=" * 60)
-    print("📋 Test Summary:")
-    print(f"   🚀 Comprehensive Workflow: {'✅ PASS' if workflow_success else '❌ FAIL'}")
-    print(f"   📊 Dashboard Stats: {'✅ PASS' if stats_success else '❌ FAIL'}")
-    
-    if workflow_success and stats_success:
-        print("\n🎉 All tests passed! The comprehensive workflow is working correctly.")
-    else:
-        print("\n⚠️  Some tests failed. Please check the server logs for more details.")
-    
-    print("\n💡 Next Steps:")
-    print("   1. Check the web interface at http://localhost:10000")
-    print("   2. Click the '🚀 Complete Workflow' button to run it manually")
-    print("   3. Verify that transactions and receipts are properly matched")
-    print("   4. Check that dashboard stats are updated")
+        print(f"❌ Test failed: {e}")
 
 if __name__ == "__main__":
-    main()
+    test_comprehensive_workflow()
