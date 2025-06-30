@@ -50,7 +50,7 @@ class ReceiptService:
             
             # Save to database
             receipt_id = None
-            if self.db and self.db.connected:
+            if self.db and self.db.client.connected:
                 receipt_record = {
                     **extracted_data,
                     'storage_url': storage_url,
@@ -88,21 +88,56 @@ class ReceiptService:
             'extraction_method': 'fallback'
         }
     
-    def get_receipts(self, limit: int = 50, skip: int = 0) -> List[Dict]:
-        """Get receipts from database"""
-        if not self.db or not self.db.connected:
-            return []
-        
-        return self.db.get_receipts(limit, skip)
-    
-    def get_receipt_by_id(self, receipt_id: str) -> Optional[Dict]:
-        """Get specific receipt by ID"""
-        if not self.db or not self.db.connected:
-            return None
-        
+    def get_receipt_stats(self) -> Dict:
+        """Get receipt statistics"""
         try:
-            from bson import ObjectId
-            return self.db.db.receipts.find_one({'_id': ObjectId(receipt_id)})
+            if self.db and hasattr(self.db, 'client') and self.db.client:
+                total_receipts = self.db.client.db.receipts.count_documents({})
+                processed_receipts = self.db.client.db.receipts.count_documents({'processed': True})
+                unprocessed_receipts = total_receipts - processed_receipts
+                
+                return {
+                    'total': total_receipts,
+                    'processed': processed_receipts,
+                    'unprocessed': unprocessed_receipts
+                }
+            else:
+                return {'total': 0, 'processed': 0, 'unprocessed': 0}
         except Exception as e:
-            logger.error(f"Error getting receipt {receipt_id}: {e}")
+            logger.error(f"Error getting receipt stats: {e}")
+            return {'total': 0, 'processed': 0, 'unprocessed': 0}
+    
+    def get_receipts(self, limit: int = 50, skip: int = 0) -> List[Dict]:
+        """Get receipts with pagination"""
+        try:
+            if not self.db or not self.db.client.connected:
+                return []
+            
+            cursor = self.db.client.db.receipts.find().sort('processed_at', -1).skip(skip).limit(limit)
+            receipts = list(cursor)
+            
+            # Convert ObjectId to string
+            for receipt in receipts:
+                receipt['_id'] = str(receipt['_id'])
+            
+            return receipts
+        except Exception as e:
+            logger.error(f"Error getting receipts: {e}")
+            return []
+    
+    def get_receipt(self, receipt_id: str) -> Optional[Dict]:
+        """Get a specific receipt by ID"""
+        try:
+            if not self.db or not self.db.client.connected:
+                return None
+            
+            from bson import ObjectId
+            receipt = self.db.client.db.receipts.find_one({'_id': ObjectId(receipt_id)})
+            
+            if receipt:
+                receipt['_id'] = str(receipt['_id'])
+            
+            return receipt
+        except Exception as e:
+            logger.error(f"Error getting receipt: {e}")
             return None 

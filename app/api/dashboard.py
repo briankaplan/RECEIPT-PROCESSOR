@@ -103,9 +103,11 @@ def get_transactions():
         
         # Convert ObjectId to string
         for transaction in transactions:
-            transaction['_id'] = str(transaction['_id'])
+            if '_id' in transaction:
+                transaction['_id'] = str(transaction['_id'])
             if 'date' in transaction:
-                transaction['date'] = transaction['date'].isoformat()
+                if isinstance(transaction['date'], datetime):
+                    transaction['date'] = transaction['date'].isoformat()
         
         return jsonify({
             'transactions': transactions,

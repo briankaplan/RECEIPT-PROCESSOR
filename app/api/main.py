@@ -63,41 +63,20 @@ def transactions():
         page_size = int(request.args.get('page_size', 50))
         date_from = request.args.get('date_from')
         date_to = request.args.get('date_to')
+        category = request.args.get('category')
+        search = request.args.get('search')
         
-        # Build query
-        query = {}
-        if date_from and date_to:
-            try:
-                from datetime import datetime
-                query['date'] = {
-                    '$gte': datetime.fromisoformat(date_from),
-                    '$lte': datetime.fromisoformat(date_to)
-                }
-            except ValueError:
-                pass
+        # Use transaction service
+        result = current_app.transaction_service.get_transactions(
+            page=page,
+            page_size=page_size,
+            date_from=date_from,
+            date_to=date_to,
+            category=category,
+            search=search
+        )
         
-        # Get total count
-        total = current_app.mongo_service.client.db.transactions.count_documents(query)
-        
-        # Get paginated results
-        skip = (page - 1) * page_size
-        transactions = list(current_app.mongo_service.client.db.transactions.find(query).skip(skip).limit(page_size))
-        
-        # Convert ObjectId to string
-        for transaction in transactions:
-            transaction['_id'] = str(transaction['_id'])
-            if 'date' in transaction:
-                transaction['date'] = transaction['date'].isoformat()
-        
-        return jsonify({
-            'transactions': transactions,
-            'pagination': {
-                'page': page,
-                'page_size': page_size,
-                'total': total,
-                'pages': (total + page_size - 1) // page_size
-            }
-        }), 200
+        return jsonify(result), 200
         
     except Exception as e:
         logger.error(f"Get transactions error: {e}")

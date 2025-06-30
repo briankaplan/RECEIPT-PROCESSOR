@@ -81,6 +81,7 @@ class Config:
     
     # Teller Configuration
     TELLER_APPLICATION_ID = os.getenv('TELLER_APPLICATION_ID')
+    TELLER_SECRET_KEY = os.getenv('TELLER_SECRET_KEY')
     TELLER_ENVIRONMENT = os.getenv('TELLER_ENVIRONMENT', 'development')
     TELLER_API_URL = os.getenv('TELLER_API_URL', 'https://api.teller.io')
     TELLER_WEBHOOK_URL = os.getenv('TELLER_WEBHOOK_URL', 'https://your-domain.com/api/banking/webhook')

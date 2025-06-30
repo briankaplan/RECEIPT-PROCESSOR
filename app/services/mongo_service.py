@@ -14,7 +14,15 @@ class MongoService:
     """MongoDB service wrapper for the application"""
     
     def __init__(self):
+        from .mongo_service import SafeMongoClient
         self.client = SafeMongoClient()
+        self.db = self.client.db
+        self.connected = self.client.connected
+    
+    def connect(self):
+        self.client._connect()
+        self.db = self.client.db
+        self.connected = self.client.connected
     
     def get_stats(self) -> Dict:
         """Get database statistics"""

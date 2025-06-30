@@ -77,13 +77,17 @@ def create_app(config_name=None):
         from .services.ai_service import AIService
         from .services.bank_service import BankService
         from .services.receipt_service import ReceiptService
+        from .services.transaction_service import TransactionService
         
         mongo_service = MongoService()
         teller_service = TellerService()
-        bank_service = BankService(mongo_service, teller_service)
+        teller_client = teller_service.client  # Get the SafeTellerClient from TellerService
+        bank_service = BankService(mongo_service, teller_client)
+        transaction_service = TransactionService(mongo_service)
         app.mongo_service = mongo_service
         app.teller_service = teller_service
         app.bank_service = bank_service
+        app.transaction_service = transaction_service
         app.r2_service = R2Service()
         app.ai_service = AIService()
         app.receipt_service = ReceiptService(app.mongo_service)
